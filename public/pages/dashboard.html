@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — Payroll System</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; }
+    .header {
+      background: #1a73e8;
+      color: white;
+      padding: 15px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header h1 { font-size: 20px; }
+    .header .user-info { font-size: 14px; }
+    .btn-logout {
+      background: white;
+      color: #1a73e8;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      margin-left: 15px;
+    }
+    .container { padding: 30px; }
+    .welcome {
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      margin-bottom: 25px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .welcome h2 { color: #333; margin-bottom: 5px; }
+    .welcome p { color: #666; font-size: 14px; }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+    }
+    .card {
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      text-align: center;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .card:hover { transform: translateY(-3px); }
+    .card .icon { font-size: 36px; margin-bottom: 12px; }
+    .card h3 { color: #333; font-size: 16px; margin-bottom: 5px; }
+    .card p { color: #666; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🏢 Payroll System</h1>
+    <div style="display:flex;align-items:center;">
+      <span class="user-info" id="userName">Loading...</span>
+      <button class="btn-logout" onclick="logout()">Logout</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="welcome">
+      <h2 id="welcomeMsg">Welcome!</h2>
+      <p id="roleMsg">Loading user info...</p>
+    </div>
+
+    <div class="cards">
+      <div class="card" onclick="window.location.href='/employees'">
+        <div class="icon">👥</div>
+        <h3>Employees</h3>
+        <p>Manage employee master data</p>
+      </div>
+      <div class="card">
+        <div class="icon">📋</div>
+        <h3>Attendance</h3>
+        <p>Upload monthly attendance</p>
+      </div>
+      <div class="card">
+        <div class="icon">💰</div>
+        <h3>Payroll</h3>
+        <p>Process monthly payroll</p>
+      </div>
+      <div class="card">
+        <div class="icon">🧾</div>
+        <h3>Payslip</h3>
+        <p>Generate employee payslips</p>
+      </div>
+      <div class="card">
+        <div class="icon">📁</div>
+        <h3>Archive</h3>
+        <p>View past payroll records</p>
+      </div>
+      <div class="card">
+        <div class="icon">📊</div>
+        <h3>Reports</h3>
+        <p>View payroll reports</p>
+      </div>
+      <div class="card" id="settingsCard" onclick="window.location.href='/settings'">
+        <div class="icon">⚙️</div>
+        <h3>Settings</h3>
+        <p>Configure payroll rules</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Check login
+    fetch('/api/auth/me')
+      .then(res => res.json())
+      .then(data => {
+        if (!data.success) {
+          window.location.href = '/';
+          return;
+        }
+        const user = data.user;
+        document.getElementById('userName').textContent = user.fullName;
+        document.getElementById('welcomeMsg').textContent = `Welcome, ${user.fullName}!`;
+        document.getElementById('roleMsg').textContent = `Role: ${user.role.toUpperCase()} | Branch: ${user.branch.toUpperCase()}`;
+
+        // Hide settings for accountant
+        if (user.role === 'accountant') {
+          document.getElementById('settingsCard').style.display = 'none';
+        }
+      });
+
+    async function logout() {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.href = '/';
+    }
+  </script>
+</body>
+</html>

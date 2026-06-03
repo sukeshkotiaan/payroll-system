@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings — Payroll System</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; }
+    .header {
+      background: #1a73e8;
+      color: white;
+      padding: 15px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header h1 { font-size: 20px; }
+    .btn-back {
+      background: white;
+      color: #1a73e8;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .container { padding: 30px; }
+    .card {
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .card h2 { color: #333; margin-bottom: 5px; }
+    .card p { color: #666; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>⚙️ Settings</h1>
+    <button class="btn-back" onclick="window.location.href='/dashboard'">← Back</button>
+  </div>
+  <div class="container">
+    <div class="card">
+      <h2>Settings Page</h2>
+      <p>Payroll calculation rules will be configured here. Coming soon.</p>
+    </div>
+  </div>
+
+  <script>
+    fetch('/api/auth/me')
+      .then(res => res.json())
+      .then(data => {
+        if (!data.success) window.location.href = '/';
+      });
+  </script>
+</body>
+</html>
