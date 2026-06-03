@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Employees — Payroll System</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; }
+
+    .header {
+      background: #1a73e8;
+      color: white;
+      padding: 15px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header h1 { font-size: 20px; }
+    .btn-back {
+      background: white;
+      color: #1a73e8;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      margin-left: 10px;
+    }
+    .container { padding: 25px; }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .filters {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .filters select, .filters input {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 13px;
+      outline: none;
+    }
+    .btn-primary {
+      background: #1a73e8;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .btn-primary:hover { background: #1557b0; }
+    .btn-primary:disabled { background: #aaa; cursor: not-allowed; }
+    .btn-success {
+      background: #34a853;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .btn-danger {
+      background: #ea4335;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .btn-edit {
+      background: #fbbc04;
+      color: #333;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .table-card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      overflow: hidden;
+    }
+    .table-header {
+      padding: 15px 20px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .table-header h3 { color: #333; font-size: 16px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th {
+      background: #f8f9fa;
+      padding: 12px 15px;
+      text-align: left;
+      font-weight: 600;
+      color: #555;
+      border-bottom: 1px solid #eee;
+    }
+    td {
+      padding: 12px 15px;
+      border-bottom: 1px solid #f5f5f5;
+      color: #333;
+    }
+    tr:hover { background: #f8f9ff; }
+    .badge {
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-active { background: #e6f4ea; color: #34a853; }
+    .badge-inactive { background: #fce8e6; color: #ea4335; }
+    .badge-restricted { background: #fef3c7; color: #d97706; }
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      overflow-y: auto;
+    }
+    .modal {
+      background: white;
+      margin: 30px auto;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 800px;
+      padding: 30px;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+    }
+    .modal-header h2 { color: #333; font-size: 20px; }
+    .btn-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #666;
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+    }
+    .form-group.full-width { grid-column: 1 / -1; }
+    .form-group label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #555;
+      margin-bottom: 5px;
+    }
+    .form-group label .required { color: #ea4335; }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-group input:focus,
+    .form-group select:focus { border-color: #1a73e8; }
+    .form-group textarea { resize: vertical; min-height: 70px; }
+    .salary-preview {
+      background: #f0f7ff;
+      border: 1px solid #1a73e8;
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 5px;
+    }
+    .salary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .salary-item label {
+      font-size: 11px;
+      color: #666;
+      font-weight: 600;
+      display: block;
+      margin-bottom: 4px;
+    }
+    .salary-item input {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 13px;
+      background: white;
+    }
+    .ein-box {
+      background: #e6f4ea;
+      border: 1px solid #34a853;
+      border-radius: 8px;
+      padding: 12px 15px;
+      display: none;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .ein-box .ein-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1a73e8;
+    }
+    .flags-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+    .flag-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .flag-item input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+    .flag-item label {
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      margin: 0;
+    }
+    .section-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1a73e8;
+      margin: 20px 0 10px 0;
+      padding-bottom: 5px;
+      border-bottom: 2px solid #e8f0fe;
+    }
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 25px;
+    }
+    .btn-secondary {
+      background: #f0f2f5;
+      color: #333;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .alert {
+      padding: 10px 15px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+      font-size: 13px;
+      display: none;
+    }
+    .alert-success { background: #e6f4ea; color: #34a853; }
+    .alert-error { background: #fce8e6; color: #ea4335; }
+    .photo-preview {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid #ddd;
+      display: none;
+      margin-top: 8px;
+    }
+    .age-display {
+      font-size: 12px;
+      color: #1a73e8;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 50px;
+      color: #999;
+    }
+    .empty-state p { font-size: 16px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>👥 Employee Master</h1>
+  <div>
+    <span id="headerUser" style="font-size:14px;margin-right:10px;"></span>
+    <button class="btn-back" onclick="window.location.href='/dashboard'">← Dashboard</button>
+  </div>
+</div>
+
+<div class="container">
+  <div class="top-bar">
+    <div class="filters">
+      <input type="text" id="searchInput" placeholder="🔍 Search name / EIN" onkeyup="filterEmployees()">
+      <select id="filterLocation" onchange="filterEmployees()">
+        <option value="">All Locations</option>
+        <option value="Thane">Thane</option>
+        <option value="Panvel">Panvel</option>
+      </select>
+      <select id="filterSection" onchange="filterEmployees()">
+        <option value="">All Sections</option>
+        <option value="Global">Global</option>
+        <option value="State">State</option>
+      </select>
+      <select id="filterProfile" onchange="filterEmployees()">
+        <option value="">All Profiles</option>
+        <option value="Teaching">Teaching</option>
+        <option value="Non-Teaching">Non-Teaching</option>
+      </select>
+      <select id="filterStatus" onchange="filterEmployees()">
+        <option value="">All Status</option>
+        <option value="active">Active</option>
+        <option value="inactive">Inactive</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn-success" onclick="openImportModal()">📥 Import Excel</button>
+      <button class="btn-primary" onclick="openAddModal()">+ Add Employee</button>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-header">
+      <h3>Employees <span id="empCount" style="color:#666;font-weight:400;font-size:14px;"></span></h3>
+    </div>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>EIN</th>
+            <th>Name</th>
+            <th>Designation</th>
+            <th>Location</th>
+            <th>Section</th>
+            <th>Profile</th>
+            <th>Joining Date</th>
+            <th>Monthly CTC</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="employeeTable">
+          <tr>
+            <td colspan="10">
+              <div class="empty-state">
+                <p>Loading employees...</p>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ADD/EDIT MODAL -->
+<div class="modal-overlay" id="empModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modalTitle">Add New Employee</h2>
+      <button class="btn-close" onclick="closeModal()">×</button>
+    </div>
+
+    <div class="alert alert-success" id="alertSuccess"></div>
+    <div class="alert alert-error" id="alertError"></div>
+
+    <form id="empForm" enctype="multipart/form-data">
+      <input type="hidden" id="empId">
+
+      <div class="section-title">📋 Personal Information</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Location <span class="required">*</span></label>
+          <select id="location" onchange="updateEINPreview()">
+            <option value="">Select Location</option>
+            <option value="Thane">Thane</option>
+            <option value="Panvel">Panvel</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Section <span class="required">*</span></label>
+          <select id="section" onchange="updateEINPreview()">
+            <option value="">Select Section</option>
+            <option value="Global">Global</option>
+            <option value="State">State</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Profile <span class="required">*</span></label>
+          <select id="profile" onchange="updateEINPreview()">
+            <option value="">Select Profile</option>
+            <option value="Teaching">Teaching</option>
+            <option value="Non-Teaching">Non-Teaching</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Designation <span class="required">*</span></label>
+          <input type="text" id="designation" placeholder="e.g. Senior Teacher">
+        </div>
+        <div class="form-group full-width">
+          <label>Employee Name <span class="required">*</span></label>
+          <input type="text" id="employeeName" placeholder="Full name">
+        </div>
+        <div class="form-group">
+          <label>Date of Birth <span class="required">*</span></label>
+          <input type="date" id="dateOfBirth" onchange="calculateAge()">
+          <div class="age-display" id="ageDisplay"></div>
+        </div>
+        <div class="form-group">
+          <label>Date of Joining <span class="required">*</span></label>
+          <input type="date" id="dateOfJoining">
+        </div>
+        <div class="form-group">
+          <label>PAN Number</label>
+          <input type="text" id="panNumber" placeholder="ABCDE1234F" maxlength="10">
+        </div>
+        <div class="form-group">
+          <label>Aadhaar Number</label>
+          <input type="text" id="aadhaarNumber" placeholder="12 digit number" maxlength="12">
+        </div>
+        <div class="form-group">
+          <label>Phone Number <span class="required">*</span></label>
+          <input type="text" id="phoneNumber" placeholder="10 digit mobile number" maxlength="10">
+        </div>
+        <div class="form-group">
+          <label>Email Address</label>
+          <input type="email" id="email" placeholder="email@example.com">
+        </div>
+        <div class="form-group full-width">
+          <label>Address</label>
+          <textarea id="address" placeholder="Full address"></textarea>
+        </div>
+        <div class="form-group">
+          <label>UAN Number (optional)</label>
+          <input type="text" id="uanNumber" placeholder="UAN / PF Number">
+        </div>
+        <div class="form-group">
+          <label>Photo (optional)</label>
+          <input type="file" id="photo" accept="image/jpeg,image/png" onchange="previewPhoto()">
+          <img id="photoPreview" class="photo-preview" src="" alt="Preview">
+        </div>
+      </div>
+
+      <div class="section-title">💰 Salary Information</div>
+      <div class="form-grid">
+        <div class="form-group full-width">
+          <label>CTC Annual (₹) <span class="required">*</span></label>
+          <input type="number" id="ctcAnnual" placeholder="e.g. 420000" onkeyup="calculateSalary()">
+          <div class="salary-preview" id="salaryPreview" style="display:none;">
+            <div style="font-size:13px;font-weight:600;color:#333;">Monthly Breakdown (Auto Calculated — Editable)</div>
+            <div class="salary-grid">
+              <div class="salary-item">
+                <label>Monthly CTC</label>
+                <input type="number" id="ctcMonthly" readonly style="background:#f5f5f5;">
+              </div>
+              <div class="salary-item">
+                <label>Basic</label>
+                <input type="number" id="basic" onchange="recalcDeductions()">
+              </div>
+              <div class="salary-item">
+                <label>HRA & Allowances</label>
+                <input type="number" id="hraAllowance">
+              </div>
+              <div class="salary-item">
+                <label>PF (Monthly)</label>
+                <input type="number" id="pf">
+              </div>
+              <div class="salary-item">
+                <label>PT (Monthly)</label>
+                <input type="number" id="pt" readonly style="background:#f5f5f5;">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title">⚙️ System Flags</div>
+      <div class="flags-grid">
+        <div class="flag-item">
+          <input type="checkbox" id="pfApplicable">
+          <label for="pfApplicable">PF Applicable</label>
+        </div>
+        <div class="flag-item">
+          <input type="checkbox" id="esicApplicable">
+          <label for="esicApplicable">ESIC Applicable</label>
+        </div>
+        <div class="flag-item">
+          <input type="checkbox" id="ptApplicable">
+          <label for="ptApplicable">PT Applicable</label>
+        </div>
+        <div class="flag-item" id="restrictedFlag">
+          <input type="checkbox" id="isRestricted">
+          <label for="isRestricted">🔒 Restricted</label>
+        </div>
+      </div>
+
+      <div class="section-title">🪪 Employee ID (EIN)</div>
+      <div style="display:flex;align-items:center;gap:15px;flex-wrap:wrap;">
+        <button type="button" class="btn-primary" id="generateEINBtn"
+          onclick="generateEIN()" disabled>
+          Generate EIN
+        </button>
+        <div class="ein-box" id="einBox">
+          <span>EIN:</span>
+          <span class="ein-value" id="einValue"></span>
+          <input type="hidden" id="ein">
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" onclick="closeModal()">Cancel</button>
+        <button type="button" class="btn-primary" onclick="saveEmployee()">
+          💾 Save Employee
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- IMPORT MODAL -->
+<div class="modal-overlay" id="importModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>📥 Import Employees from Excel</h2>
+      <button class="btn-close" onclick="closeImportModal()">×</button>
+    </div>
+    <div style="margin-bottom:20px;">
+      <button class="btn-success" onclick="downloadTemplate()">
+        ⬇️ Download Excel Template
+      </button>
+    </div>
+    <div class="form-group">
+      <label>Upload Filled Excel File</label>
+      <input type="file" id="importFile" accept=".xlsx,.xls">
+    </div>
+    <div id="importPreview" style="margin-top:15px;display:none;">
+      <h4 style="margin-bottom:10px;">Preview (first 5 rows)</h4>
+      <div style="overflow-x:auto;">
+        <table id="previewTable" style="font-size:12px;">
+          <thead id="previewHead"></thead>
+          <tbody id="previewBody"></tbody>
+        </table>
+      </div>
+      <div style="margin-top:15px;">
+        <span id="importCount" style="font-size:13px;color:#666;"></span>
+      </div>
+    </div>
+    <div class="alert alert-error" id="importError"></div>
+    <div class="alert alert-success" id="importSuccess"></div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeImportModal()">Cancel</button>
+      <button class="btn-primary" id="importBtn"
+        onclick="importEmployees()" style="display:none;">
+        📥 Import All Employees
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+  let allEmployees = [];
+  let importData = [];
+  let calcRules = {};
+  let currentUser = {};
+  let editMode = false;
+
+  window.onload = async () => {
+    await checkAuth();
+    await loadCalcRules();
+    await loadEmployees();
+  };
+
+  async function checkAuth() {
+    const res = await fetch('/api/auth/me');
+    const data = await res.json();
+    if (!data.success) { window.location.href = '/'; return; }
+    currentUser = data.user;
+    document.getElementById('headerUser').textContent = data.user.fullName;
+    if (currentUser.role === 'accountant') {
+      document.getElementById('restrictedFlag').style.display = 'none';
+    }
+  }
+
+  async function loadCalcRules() {
+    try {
+      const res = await fetch('/api/settings/calc-rules');
+      const data = await res.json();
+      if (data.success) calcRules = data.rules;
+    } catch(e) {
+      calcRules = {
+        basicPercent: 76.923,
+        hraPercent: 23.077,
+        pfRate: 12,
+        pfCap: 1800
+      };
+    }
+  }
+
+  async function loadEmployees() {
+    const location = document.getElementById('filterLocation').value;
+    const section = document.getElementById('filterSection').value;
+    const profile = document.getElementById('filterProfile').value;
+    const status = document.getElementById('filterStatus').value;
+    let url = '/api/employees?';
+    if (location) url += `location=${location}&`;
+    if (section) url += `section=${section}&`;
+    if (profile) url += `profile=${profile}&`;
+    if (status) url += `status=${status}&`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.success) {
+      allEmployees = data.employees;
+      renderTable(allEmployees);
+    }
+  }
+
+  function renderTable(employees) {
+    const tbody = document.getElementById('employeeTable');
+    document.getElementById('empCount').textContent =
+      `(${employees.length} employees)`;
+    if (employees.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="10">
+        <div class="empty-state"><p>No employees found</p></div>
+      </td></tr>`;
+      return;
+    }
+    tbody.innerHTML = employees.map(emp => `
+      <tr>
+        <td><strong>${emp.ein || '—'}</strong></td>
+        <td>
+          ${emp.photo ?
+            `<img src="${emp.photo}" style="width:28px;height:28px;
+            border-radius:50%;object-fit:cover;margin-right:6px;
+            vertical-align:middle;">` : ''}
+          ${emp.employeeName}
+          ${emp.isRestricted ?
+            '<span class="badge badge-restricted">🔒</span>' : ''}
+        </td>
+        <td>${emp.designation}</td>
+        <td>${emp.location}</td>
+        <td>${emp.section}</td>
+        <td>${emp.profile}</td>
+        <td>${emp.dateOfJoining ?
+          new Date(emp.dateOfJoining).toLocaleDateString('en-IN') : '—'}</td>
+        <td>₹${emp.ctcMonthly ?
+          Math.round(emp.ctcMonthly).toLocaleString('en-IN') : '—'}</td>
+        <td><span class="badge ${emp.isActive ?
+          'badge-active' : 'badge-inactive'}">
+          ${emp.isActive ? 'Active' : 'Inactive'}</span></td>
+        <td>
+          <button class="btn-edit"
+            onclick="editEmployee('${emp._id}')">Edit</button>
+          ${emp.isActive &&
+            (currentUser.role === 'admin' ||
+             currentUser.role === 'management') ?
+            `<button class="btn-danger"
+              onclick="deactivateEmployee('${emp._id}')"
+              style="margin-left:5px;">Deactivate</button>` : ''}
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function filterEmployees() { loadEmployees(); }
+
+  function resetFlags() {
+    document.getElementById('pfApplicable').checked = false;
+    document.getElementById('esicApplicable').checked = false;
+    document.getElementById('ptApplicable').checked = false;
+    document.getElementById('isRestricted').checked = false;
+  }
+
+  function calculateSalary() {
+    const ctcAnnual =
+      parseFloat(document.getElementById('ctcAnnual').value) || 0;
+    if (ctcAnnual <= 0) {
+      document.getElementById('salaryPreview').style.display = 'none';
+      return;
+    }
+    const ctcMonthly = ctcAnnual / 12;
+    const basicPct = calcRules.basicPercent || 76.923;
+    const hraPct = calcRules.hraPercent || 23.077;
+    const pfRate = calcRules.pfRate || 12;
+    const pfCap = calcRules.pfCap || 1800;
+
+    const basic =
+      Math.round((ctcMonthly * basicPct / 100) * 100) / 100;
+    const hra =
+      Math.round((ctcMonthly * hraPct / 100) * 100) / 100;
+    const pf = document.getElementById('pfApplicable').checked ?
+      Math.min(Math.round(basic * pfRate / 100), pfCap) : 0;
+    const pt = getPT(ctcMonthly);
+
+    document.getElementById('ctcMonthly').value = Math.round(ctcMonthly);
+    document.getElementById('basic').value = basic;
+    document.getElementById('hraAllowance').value = hra;
+    document.getElementById('pf').value = pf;
+    document.getElementById('pt').value = pt;
+    document.getElementById('salaryPreview').style.display = 'block';
+  }
+
+  function recalcDeductions() {
+    const basic =
+      parseFloat(document.getElementById('basic').value) || 0;
+    const pfRate = calcRules.pfRate || 12;
+    const pfCap = calcRules.pfCap || 1800;
+    const pf = document.getElementById('pfApplicable').checked ?
+      Math.min(Math.round(basic * pfRate / 100), pfCap) : 0;
+    document.getElementById('pf').value = pf;
+  }
+
+  function getPT(monthlySalary) {
+    if (!document.getElementById('ptApplicable').checked) return 0;
+    const slabs = calcRules.ptSlabs || [
+      { max: 7500, amount: 0 },
+      { max: 10000, amount: 175 },
+      { max: 999999, amount: 200 }
+    ];
+    for (const slab of slabs) {
+      if (monthlySalary <= slab.max) return slab.amount;
+    }
+    return 200;
+  }
+
+  function calculateAge() {
+    const dob = document.getElementById('dateOfBirth').value;
+    if (!dob) return;
+    const today = new Date();
+    const birth = new Date(dob);
+    let age = today.getFullYear() - birth.getFullYear();
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+    document.getElementById('ageDisplay').textContent =
+      `Age: ${age} years`;
+  }
+
+  function updateEINPreview() {
+    const loc = document.getElementById('location').value;
+    const sec = document.getElementById('section').value;
+    const pro = document.getElementById('profile').value;
+    const btn = document.getElementById('generateEINBtn');
+    if (loc && sec && pro && !editMode) {
+      btn.disabled = false;
+    } else {
+      btn.disabled = true;
+    }
+    document.getElementById('einBox').style.display = 'none';
+    document.getElementById('ein').value = '';
+  }
+
+  async function generateEIN() {
+    const location = document.getElementById('location').value;
+    const section = document.getElementById('section').value;
+    const profile = document.getElementById('profile').value;
+    if (!location || !section || !profile) {
+      alert('Please select Location, Section and Profile first');
+      return;
+    }
+    const res = await fetch('/api/employees/generate-ein', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ location, section, profile })
+    });
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById('einValue').textContent = data.ein;
+      document.getElementById('ein').value = data.ein;
+      document.getElementById('einBox').style.display = 'flex';
+    }
+  }
+
+  function previewPhoto() {
+    const file = document.getElementById('photo').files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = e => {
+        const preview = document.getElementById('photoPreview');
+        preview.src = e.target.result;
+        preview.style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  function openAddModal() {
+    editMode = false;
+    document.getElementById('modalTitle').textContent = 'Add New Employee';
+    document.getElementById('empId').value = '';
+    document.getElementById('location').value = '';
+    document.getElementById('section').value = '';
+    document.getElementById('profile').value = '';
+    document.getElementById('designation').value = '';
+    document.getElementById('employeeName').value = '';
+    document.getElementById('dateOfBirth').value = '';
+    document.getElementById('dateOfJoining').value = '';
+    document.getElementById('panNumber').value = '';
+    document.getElementById('aadhaarNumber').value = '';
+    document.getElementById('phoneNumber').value = '';
+    document.getElementById('email').value = '';
+    document.getElementById('address').value = '';
+    document.getElementById('uanNumber').value = '';
+    document.getElementById('ctcAnnual').value = '';
+    document.getElementById('ageDisplay').textContent = '';
+    resetFlags();
+    document.getElementById('einBox').style.display = 'none';
+    document.getElementById('ein').value = '';
+    document.getElementById('salaryPreview').style.display = 'none';
+    document.getElementById('photoPreview').style.display = 'none';
+    document.getElementById('alertSuccess').style.display = 'none';
+    document.getElementById('alertError').style.display = 'none';
+    document.getElementById('generateEINBtn').style.display = 'inline-block';
+    document.getElementById('generateEINBtn').disabled = true;
+    document.getElementById('empModal').style.display = 'block';
+  }
+
+  async function editEmployee(id) {
+    editMode = true;
+    const res = await fetch(`/api/employees/${id}`);
+    const data = await res.json();
+    if (!data.success) return;
+    const emp = data.employee;
+    document.getElementById('modalTitle').textContent = 'Edit Employee';
+    document.getElementById('empId').value = emp._id;
+    document.getElementById('location').value = emp.location || '';
+    document.getElementById('section').value = emp.section || '';
+    document.getElementById('profile').value = emp.profile || '';
+    document.getElementById('designation').value = emp.designation || '';
+    document.getElementById('employeeName').value = emp.employeeName || '';
+    document.getElementById('dateOfBirth').value =
+      emp.dateOfBirth ? emp.dateOfBirth.split('T')[0] : '';
+    document.getElementById('dateOfJoining').value =
+      emp.dateOfJoining ? emp.dateOfJoining.split('T')[0] : '';
+    document.getElementById('panNumber').value = emp.panNumber || '';
+    document.getElementById('aadhaarNumber').value = emp.aadhaarNumber || '';
+    document.getElementById('phoneNumber').value = emp.phoneNumber || '';
+    document.getElementById('email').value = emp.email || '';
+    document.getElementById('address').value = emp.address || '';
+    document.getElementById('uanNumber').value = emp.uanNumber || '';
+    document.getElementById('ctcAnnual').value = emp.ctcAnnual || '';
+    document.getElementById('pfApplicable').checked = emp.pfApplicable || false;
+    document.getElementById('esicApplicable').checked = emp.esicApplicable || false;
+    document.getElementById('ptApplicable').checked = emp.ptApplicable || false;
+    document.getElementById('isRestricted').checked = emp.isRestricted || false;
+    document.getElementById('generateEINBtn').style.display = 'none';
+    document.getElementById('einBox').style.display = 'flex';
+    document.getElementById('einValue').textContent = emp.ein || '—';
+    document.getElementById('ein').value = emp.ein || '';
+    document.getElementById('alertSuccess').style.display = 'none';
+    document.getElementById('alertError').style.display = 'none';
+    calculateAge();
+    calculateSalary();
+    document.getElementById('empModal').style.display = 'block';
+  }
+
+  function closeModal() {
+    document.getElementById('empModal').style.display = 'none';
+  }
+
+  async function saveEmployee() {
+    const id = document.getElementById('empId').value;
+    const formData = new FormData();
+    const fields = [
+      'location','section','profile','designation','employeeName',
+      'dateOfBirth','dateOfJoining','panNumber','aadhaarNumber',
+      'phoneNumber','email','address','uanNumber','ctcAnnual',
+      'ctcMonthly','basic','hraAllowance','pf','pt','ein'
+    ];
+    fields.forEach(f => {
+      const el = document.getElementById(f);
+      if (el) formData.append(f, el.value);
+    });
+    formData.append('pfApplicable',
+      document.getElementById('pfApplicable').checked);
+    formData.append('esicApplicable',
+      document.getElementById('esicApplicable').checked);
+    formData.append('ptApplicable',
+      document.getElementById('ptApplicable').checked);
+    formData.append('isRestricted',
+      document.getElementById('isRestricted').checked);
+    const photoFile = document.getElementById('photo').files[0];
+    if (photoFile) formData.append('photo', photoFile);
+
+    if (!formData.get('location') || !formData.get('section') ||
+        !formData.get('profile') || !formData.get('employeeName') ||
+        !formData.get('designation') || !formData.get('dateOfBirth') ||
+        !formData.get('dateOfJoining') || !formData.get('phoneNumber') ||
+        !formData.get('ctcAnnual')) {
+      showAlert('alertError',
+        'Please fill all mandatory fields marked with *');
+      return;
+    }
+
+    const url = id ? `/api/employees/${id}` : '/api/employees';
+    const method = id ? 'PUT' : 'POST';
+    const res = await fetch(url, { method, body: formData });
+    const data = await res.json();
+
+    if (data.success) {
+      showAlert('alertSuccess', data.message);
+      await loadEmployees();
+      setTimeout(closeModal, 1500);
+    } else {
+      showAlert('alertError', data.message);
+    }
+  }
+
+  async function deactivateEmployee(id) {
+    if (!confirm('Are you sure you want to deactivate this employee?'))
+      return;
+    const dateOfExit = prompt('Enter exit date (YYYY-MM-DD):') ||
+      new Date().toISOString().split('T')[0];
+    const res = await fetch(`/api/employees/${id}/deactivate`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dateOfExit })
+    });
+    const data = await res.json();
+    if (data.success) { await loadEmployees(); }
+  }
+
+  function showAlert(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 4000);
+  }
+
+  function openImportModal() {
+    document.getElementById('importModal').style.display = 'block';
+  }
+
+  function closeImportModal() {
+    document.getElementById('importModal').style.display = 'none';
+    importData = [];
+  }
+
+  document.getElementById('importFile').addEventListener('change',
+    function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(ev) {
+        const wb = XLSX.read(ev.target.result, { type: 'binary' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(ws, { defval: '' });
+        if (json.length === 0) {
+          showImportError('No data found in file');
+          return;
+        }
+        importData = json;
+        showPreview(json);
+      };
+      reader.readAsBinaryString(file);
+    }
+  );
+
+  function showPreview(data) {
+    const head = document.getElementById('previewHead');
+    const body = document.getElementById('previewBody');
+    const cols = Object.keys(data[0]);
+    head.innerHTML = `<tr>${cols.map(c =>
+      `<th style="padding:8px;background:#f0f2f5;">${c}</th>`
+    ).join('')}</tr>`;
+    body.innerHTML = data.slice(0, 5).map(row =>
+      `<tr>${cols.map(c =>
+        `<td style="padding:8px;border-bottom:1px solid #eee;">
+          ${row[c]}</td>`
+      ).join('')}</tr>`
+    ).join('');
+    document.getElementById('importCount').textContent =
+      `Total rows: ${data.length}`;
+    document.getElementById('importPreview').style.display = 'block';
+    document.getElementById('importBtn').style.display = 'inline-block';
+  }
+
+  async function importEmployees() {
+    if (importData.length === 0) return;
+    const mapped = importData.map(row => ({
+      ein: row['EIN'] || '',
+      location: row['Location'] || '',
+      section: row['Section'] || '',
+      profile: row['Profile'] || '',
+      employeeName: row['Employee Name'] || '',
+      designation: row['Designation'] || '',
+      dateOfBirth: row['Date of Birth'] || '',
+      dateOfJoining: row['Date of Joining'] || '',
+      panNumber: row['PAN Number'] || '',
+      aadhaarNumber: row['Aadhaar Number'] || '',
+      phoneNumber: row['Phone Number'] || '',
+      email: row['Email'] || '',
+      address: row['Address'] || '',
+      ctcAnnual: parseFloat(row['CTC Annual']) || 0,
+      ctcMonthly: (parseFloat(row['CTC Annual']) || 0) / 12,
+      pfApplicable: row['PF Applicable'] === 'Yes',
+      esicApplicable: row['ESIC Applicable'] === 'Yes',
+      ptApplicable: row['PT Applicable'] === 'Yes',
+      isRestricted: row['Restricted'] === 'Yes',
+      uanNumber: row['UAN Number'] || ''
+    }));
+
+    const res = await fetch('/api/employees/bulk-import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ employees: mapped })
+    });
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById('importSuccess').textContent = data.message;
+      document.getElementById('importSuccess').style.display = 'block';
+      await loadEmployees();
+      setTimeout(closeImportModal, 2000);
+    } else {
+      showImportError(data.message);
+    }
+  }
+
+  function showImportError(msg) {
+    const el = document.getElementById('importError');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  function downloadTemplate() {
+    const headers = [
+      'EIN', 'Location', 'Section', 'Profile', 'Employee Name',
+      'Designation', 'Date of Birth', 'Date of Joining', 'PAN Number',
+      'Aadhaar Number', 'Phone Number', 'Email', 'Address', 'CTC Annual',
+      'PF Applicable', 'ESIC Applicable', 'PT Applicable',
+      'Restricted', 'UAN Number'
+    ];
+    const sample = [
+      'GTT-1001', 'Thane', 'Global', 'Teaching', 'John Doe',
+      'Senior Teacher', '15/08/1985', '01/06/2020', 'ABCDE1234F',
+      '123456789012', '9876543210', 'john@example.com',
+      'Thane, Maharashtra', '420000',
+      'Yes', 'No', 'Yes', 'No', 'UAN123456'
+    ];
+    const ws = XLSX.utils.aoa_to_sheet([headers, sample]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Employees');
+    XLSX.writeFile(wb, 'Employee_Import_Template.xlsx');
+  }
+</script>
+</body>
+</html>
