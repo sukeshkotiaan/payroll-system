@@ -25,35 +25,1016 @@
       cursor: pointer;
       font-weight: 600;
     }
-    .container { padding: 30px; }
-    .card {
+    .container { padding: 25px; max-width: 950px; margin: 0 auto; }
+    .page-tabs {
+      display: flex;
+      gap: 5px;
+      margin-bottom: 20px;
+    }
+    .page-tab {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
       background: white;
-      padding: 25px;
+      color: #666;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+    .page-tab.active { background: #1a73e8; color: white; }
+    .location-tabs {
+      display: flex;
+      gap: 5px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .loc-tab {
+      padding: 10px 25px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      background: white;
+      color: #666;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+    .loc-tab.active { background: #1a73e8; color: white; }
+    .section-card {
+      background: white;
       border-radius: 12px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      margin-bottom: 20px;
+      overflow: hidden;
     }
-    .card h2 { color: #333; margin-bottom: 5px; }
-    .card p { color: #666; font-size: 14px; }
+    .section-header {
+      padding: 15px 20px;
+      background: #f8f9fa;
+      border-bottom: 1px solid #eee;
+      font-size: 15px;
+      font-weight: 700;
+      color: #1a73e8;
+    }
+    .section-body { padding: 20px; }
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group.full-width { grid-column: 1 / -1; }
+    .form-group label { font-size: 13px; font-weight: 600; color: #555; }
+    .form-group input,
+    .form-group select {
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 13px;
+      outline: none;
+    }
+    .form-group input:focus,
+    .form-group select:focus { border-color: #1a73e8; }
+    .hint { font-size: 11px; color: #999; }
+    .pt-slab-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr auto;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .pt-slab-row input {
+      padding: 8px 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 13px;
+      outline: none;
+      width: 100%;
+    }
+    .slab-headers {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr auto;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .slab-label { font-size: 12px; color: #666; font-weight: 600; }
+    .btn-add-slab {
+      background: #e8f0fe;
+      color: #1a73e8;
+      border: 1px solid #1a73e8;
+      padding: 8px 15px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      margin-top: 5px;
+    }
+    .btn-remove-slab {
+      background: #fce8e6;
+      color: #ea4335;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .effective-bar {
+      background: #e8f0fe;
+      border: 1px solid #1a73e8;
+      border-radius: 8px;
+      padding: 15px 20px;
+      margin-bottom: 20px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 2fr;
+      gap: 15px;
+      align-items: end;
+    }
+    .effective-bar label { font-size: 13px; font-weight: 600; color: #333; display: block; margin-bottom: 5px; }
+    .effective-bar select,
+    .effective-bar input {
+      padding: 10px 12px;
+      border: 1px solid #1a73e8;
+      border-radius: 6px;
+      font-size: 13px;
+      outline: none;
+      width: 100%;
+    }
+    .btn-save {
+      background: #34a853;
+      color: white;
+      border: none;
+      padding: 12px 30px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 700;
+      width: 100%;
+      margin-top: 10px;
+    }
+    .btn-save:hover { background: #2d9144; }
+    .btn-primary {
+      background: #1a73e8;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .btn-danger {
+      background: #ea4335;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .alert {
+      padding: 12px 15px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+      font-size: 13px;
+      display: none;
+    }
+    .alert-success { background: #e6f4ea; color: #34a853; }
+    .alert-error { background: #fce8e6; color: #ea4335; }
+    .last-updated {
+      font-size: 12px;
+      color: #999;
+      margin-bottom: 10px;
+      padding: 8px 12px;
+      background: #f8f9fa;
+      border-radius: 6px;
+    }
+    .history-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .history-table th {
+      background: #f8f9fa;
+      padding: 10px 15px;
+      text-align: left;
+      font-weight: 600;
+      color: #555;
+      border-bottom: 1px solid #eee;
+    }
+    .history-table td {
+      padding: 10px 15px;
+      border-bottom: 1px solid #f5f5f5;
+      color: #333;
+    }
+    .history-table tr:hover { background: #f8f9ff; }
+    .badge-current {
+      background: #e6f4ea;
+      color: #34a853;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .btn-view {
+      background: #e8f0fe;
+      color: #1a73e8;
+      border: none;
+      padding: 5px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      overflow-y: auto;
+    }
+    .modal {
+      background: white;
+      margin: 30px auto;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 600px;
+      padding: 30px;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .modal-header h3 { color: #333; font-size: 18px; }
+    .btn-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #666;
+    }
+    .rule-detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      font-size: 13px;
+    }
+    .rule-detail-item { padding: 8px; background: #f8f9fa; border-radius: 6px; }
+    .rule-detail-item .rkey { color: #666; font-size: 11px; }
+    .rule-detail-item .rval { color: #333; font-weight: 600; margin-top: 2px; }
+    .page-section { display: none; }
+    .page-section.active { display: block; }
   </style>
 </head>
 <body>
-  <div class="header">
-    <h1>⚙️ Settings</h1>
-    <button class="btn-back" onclick="window.location.href='/dashboard'">← Back</button>
+
+<div class="header">
+  <h1>⚙️ Settings</h1>
+  <button class="btn-back" onclick="window.location.href='/dashboard'">← Dashboard</button>
+</div>
+
+<div class="container">
+
+  <!-- PAGE TABS -->
+  <div class="page-tabs">
+    <button class="page-tab active" onclick="switchPageTab('rules', this)">
+      📊 Calculation Rules
+    </button>
+    <button class="page-tab" onclick="switchPageTab('history', this)">
+      🕐 Rule History
+    </button>
+    <button class="page-tab" onclick="switchPageTab('security', this)">
+      🔒 Security
+    </button>
   </div>
-  <div class="container">
-    <div class="card">
-      <h2>Settings Page</h2>
-      <p>Payroll calculation rules will be configured here. Coming soon.</p>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- PAGE 1 — CALCULATION RULES             -->
+  <!-- ═══════════════════════════════════════ -->
+  <div class="page-section active" id="page-rules">
+
+    <div class="location-tabs" id="locationTabs">
+      <div style="color:#999;font-size:14px;padding:10px;">Loading...</div>
+    </div>
+
+    <div class="alert alert-success" id="alertSuccess"></div>
+    <div class="alert alert-error" id="alertError"></div>
+
+    <!-- EFFECTIVE DATE BAR -->
+    <div class="effective-bar">
+      <div>
+        <label>Effective Month *</label>
+        <select id="effectiveMonth">
+          <option value="January">January</option>
+          <option value="February">February</option>
+          <option value="March">March</option>
+          <option value="April">April</option>
+          <option value="May">May</option>
+          <option value="June">June</option>
+          <option value="July">July</option>
+          <option value="August">August</option>
+          <option value="September">September</option>
+          <option value="October">October</option>
+          <option value="November">November</option>
+          <option value="December">December</option>
+        </select>
+      </div>
+      <div>
+        <label>Effective Year *</label>
+        <input type="number" id="effectiveYear" placeholder="e.g. 2026" min="2020" max="2099">
+      </div>
+      <div>
+        <label>Note / Reason for Change</label>
+        <input type="text" id="changeNote" placeholder="e.g. Govt revised PF rules">
+      </div>
+    </div>
+
+    <div class="last-updated" id="lastUpdated"></div>
+
+    <!-- SALARY SPLIT -->
+    <div class="section-card">
+      <div class="section-header">📊 Salary Split (% of Monthly Salary)</div>
+      <div class="section-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Basic %</label>
+            <input type="number" id="basicPercent" step="0.001" placeholder="e.g. 76.923">
+            <span class="hint">Basic = Monthly Salary × Basic %</span>
+          </div>
+          <div class="form-group">
+            <label>HRA & Allowance %</label>
+            <input type="number" id="hraPercent" step="0.001" placeholder="e.g. 23.077">
+            <span class="hint">HRA = Monthly Salary × HRA %</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LOP -->
+    <div class="section-card">
+      <div class="section-header">📅 LOP (Loss of Pay) Formula</div>
+      <div class="section-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>LOP Base</label>
+            <select id="lopBase">
+              <option value="total_salary">Total Monthly Salary</option>
+              <option value="basic_only">Basic Only</option>
+            </select>
+            <span class="hint">Which amount to use for LOP calculation</span>
+          </div>
+          <div class="form-group">
+            <label>LOP Divisor</label>
+            <select id="lopDivisor">
+              <option value="actual_days_in_month">Actual Days in Month</option>
+              <option value="fixed_26">Fixed 26 Days</option>
+              <option value="fixed_30">Fixed 30 Days</option>
+            </select>
+            <span class="hint">LOP = Base ÷ Divisor × Absent Days</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PF -->
+    <div class="section-card">
+      <div class="section-header">🏦 PF (Provident Fund) Rules</div>
+      <div class="section-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>PF Rate %</label>
+            <input type="number" id="pfRate" step="0.01" placeholder="e.g. 12">
+            <span class="hint">Employee PF = Basic × PF Rate %</span>
+          </div>
+          <div class="form-group">
+            <label>PF Cap Amount (₹)</label>
+            <input type="number" id="pfCap" placeholder="e.g. 1800">
+            <span class="hint">Maximum PF deduction per month</span>
+          </div>
+          <div class="form-group">
+            <label>Auto-exempt above age limit</label>
+            <select id="pfAgeExemption">
+              <option value="Yes">Yes</option>
+              <option value="No">No</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>PF Age Exemption Limit (years)</label>
+            <input type="number" id="pfAgeLimit" placeholder="e.g. 58">
+            <span class="hint">PF stops when employee reaches this age</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ESIC -->
+    <div class="section-card">
+      <div class="section-header">🏥 ESIC Rules</div>
+      <div class="section-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>ESIC Applicable</label>
+            <select id="esicApplicable">
+              <option value="No">No</option>
+              <option value="Yes">Yes</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>ESIC Salary Limit (₹)</label>
+            <input type="number" id="esicSalaryLimit" placeholder="e.g. 21000">
+            <span class="hint">ESIC applies only if salary ≤ this limit</span>
+          </div>
+          <div class="form-group">
+            <label>Employee ESIC Rate %</label>
+            <input type="number" id="esicEmployeeRate" step="0.01" placeholder="e.g. 0.75">
+            <span class="hint">Employee contribution</span>
+          </div>
+          <div class="form-group">
+            <label>Employer ESIC Rate %</label>
+            <input type="number" id="esicEmployerRate" step="0.01" placeholder="e.g. 3.25">
+            <span class="hint">Employer contribution (for records)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PT SLABS -->
+    <div class="section-card">
+      <div class="section-header">📋 Professional Tax (PT) Slabs</div>
+      <div class="section-body">
+        <div class="form-grid" style="margin-bottom:15px;">
+          <div class="form-group">
+            <label>PT Applicable</label>
+            <select id="ptApplicable">
+              <option value="Yes">Yes</option>
+              <option value="No">No</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>February PT Override (₹)</label>
+            <input type="number" id="februaryPT" placeholder="e.g. 300">
+            <span class="hint">Special PT amount for February</span>
+          </div>
+        </div>
+        <div class="slab-headers">
+          <div class="slab-label">Min Salary (₹)</div>
+          <div class="slab-label">Max Salary (₹)</div>
+          <div class="slab-label">PT Amount (₹)</div>
+          <div></div>
+        </div>
+        <div id="ptSlabs"></div>
+        <button class="btn-add-slab" onclick="addPTSlab()">+ Add Slab</button>
+      </div>
+    </div>
+
+    <!-- TDS -->
+    <div class="section-card">
+      <div class="section-header">💸 TDS Rules</div>
+      <div class="section-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>TDS Type</label>
+            <select id="tdsType">
+              <option value="manual">Manual Entry per employee</option>
+              <option value="percent">% of Gross Salary</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Default TDS Rate %</label>
+            <input type="number" id="tdsRate" step="0.01" placeholder="e.g. 10">
+            <span class="hint">Used when TDS type is % of Gross</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EIN FORMAT -->
+    <div class="section-card">
+      <div class="section-header">🪪 EIN Format</div>
+      <div class="section-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>EIN Separator</label>
+            <select id="einSeparator">
+              <option value="-">Hyphen ( - ) → GTT-1001</option>
+              <option value="">None → GTT1001</option>
+              <option value="/">Slash ( / ) → GTT/1001</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>EIN Starting Number</label>
+            <input type="number" id="einStartNumber" placeholder="e.g. 1001">
+            <span class="hint">First EIN number for new employees</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-save" onclick="saveRules()">
+      💾 Save Rules for <span id="saveLocationLabel">this location</span>
+    </button>
+  </div>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- PAGE 2 — RULE HISTORY                  -->
+  <!-- ═══════════════════════════════════════ -->
+  <div class="page-section" id="page-history">
+    <div class="location-tabs" id="historyLocationTabs">
+      <div style="color:#999;font-size:14px;padding:10px;">Loading...</div>
+    </div>
+    <div class="section-card">
+      <div class="section-header">🕐 Rule Version History</div>
+      <div style="overflow-x:auto;">
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Effective Month</th>
+              <th>Saved By</th>
+              <th>Saved On</th>
+              <th>Note</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="historyTable">
+            <tr><td colspan="7" style="text-align:center;padding:30px;color:#999;">
+              Select a location to view history
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 
-  <script>
-    fetch('/api/auth/me')
-      .then(res => res.json())
-      .then(data => {
-        if (!data.success) window.location.href = '/';
+  <!-- ═══════════════════════════════════════ -->
+  <!-- PAGE 3 — SECURITY                      -->
+  <!-- ═══════════════════════════════════════ -->
+  <div class="page-section" id="page-security">
+    <div class="alert alert-success" id="secAlertSuccess"></div>
+    <div class="alert alert-error" id="secAlertError"></div>
+
+    <div class="section-card">
+      <div class="section-header">🔒 Correction Password</div>
+      <div class="section-body">
+        <p style="font-size:13px;color:#666;margin-bottom:20px;">
+          This password is required to modify any approved/locked payroll record.
+          Keep it confidential. Only the top Admin should know this password.
+          After 3 wrong attempts, that user will be locked for 1 hour.
+        </p>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>New Correction Password</label>
+            <input type="password" id="correctionPassword" placeholder="Minimum 6 characters">
+          </div>
+          <div class="form-group">
+            <label>Confirm Password</label>
+            <input type="password" id="correctionPasswordConfirm" placeholder="Repeat password">
+          </div>
+        </div>
+        <button class="btn-primary" style="margin-top:15px;" onclick="saveCorrectionPassword()">
+          🔒 Set Correction Password
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- RULE DETAIL MODAL -->
+<div class="modal-overlay" id="ruleDetailModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="ruleDetailTitle">Rule Details</h3>
+      <button class="btn-close" onclick="closeRuleDetail()">×</button>
+    </div>
+    <div id="ruleDetailContent"></div>
+  </div>
+</div>
+
+<script>
+  let currentLocation = '';
+  let locations = [];
+  let historyLocation = '';
+
+  const MONTHS = ['January','February','March','April','May','June',
+    'July','August','September','October','November','December'];
+
+  window.onload = async () => {
+    await checkAuth();
+    await loadLocations();
+    setDefaultEffectiveDate();
+  };
+
+  async function checkAuth() {
+    const res = await fetch('/api/auth/me');
+    const data = await res.json();
+    if (!data.success) { window.location.href = '/'; return; }
+    if (data.user.role === 'accountant') window.location.href = '/dashboard';
+  }
+
+  function setDefaultEffectiveDate() {
+    const now = new Date();
+    document.getElementById('effectiveMonth').value =
+      MONTHS[now.getMonth()];
+    document.getElementById('effectiveYear').value = now.getFullYear();
+  }
+
+  async function loadLocations() {
+    try {
+      const res = await fetch('/api/masters/location');
+      const data = await res.json();
+      if (data.success && data.masters.length > 0) {
+        locations = data.masters.map(m => m.value);
+        renderLocationTabs();
+        renderHistoryLocationTabs();
+        await loadRules(locations[0]);
+      }
+    } catch(e) {
+      showAlert('alertError', 'Error loading locations');
+    }
+  }
+
+  function renderLocationTabs() {
+    const tabs = document.getElementById('locationTabs');
+    tabs.innerHTML = locations.map((loc, i) => `
+      <button class="loc-tab ${i === 0 ? 'active' : ''}"
+        onclick="switchLocation('${loc}', this)">
+        📍 ${loc}
+      </button>
+    `).join('');
+  }
+
+  function renderHistoryLocationTabs() {
+    const tabs = document.getElementById('historyLocationTabs');
+    tabs.innerHTML = locations.map((loc, i) => `
+      <button class="loc-tab ${i === 0 ? 'active' : ''}"
+        onclick="switchHistoryLocation('${loc}', this)">
+        📍 ${loc}
+      </button>
+    `).join('');
+    if (locations.length > 0) loadHistory(locations[0]);
+  }
+
+  function switchPageTab(page, btn) {
+    document.querySelectorAll('.page-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('page-' + page).classList.add('active');
+  }
+
+  async function switchLocation(location, btn) {
+    document.querySelectorAll('#locationTabs .loc-tab')
+      .forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    await loadRules(location);
+  }
+
+  async function switchHistoryLocation(location, btn) {
+    document.querySelectorAll('#historyLocationTabs .loc-tab')
+      .forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    await loadHistory(location);
+  }
+
+  async function loadRules(location) {
+    try {
+      currentLocation = location;
+      document.getElementById('saveLocationLabel').textContent = location;
+      const res = await fetch('/api/settings/calc-rules/' +
+        encodeURIComponent(location));
+      const data = await res.json();
+      if (data.success) populateForm(data.rules);
+    } catch(e) {
+      showAlert('alertError', 'Error loading rules for ' + location);
+    }
+  }
+
+  function populateForm(rules) {
+    if (!rules) return;
+    document.getElementById('basicPercent').value = rules.basicPercent || 76.923;
+    document.getElementById('hraPercent').value = rules.hraPercent || 23.077;
+    document.getElementById('lopBase').value = rules.lopBase || 'total_salary';
+    document.getElementById('lopDivisor').value =
+      rules.lopDivisor || 'actual_days_in_month';
+    document.getElementById('pfRate').value = rules.pfRate || 12;
+    document.getElementById('pfCap').value = rules.pfCap || 1800;
+    document.getElementById('pfAgeExemption').value =
+      rules.pfAgeExemption || 'Yes';
+    document.getElementById('pfAgeLimit').value = rules.pfAgeLimit || 58;
+    document.getElementById('esicApplicable').value =
+      rules.esicApplicable || 'No';
+    document.getElementById('esicEmployeeRate').value =
+      rules.esicEmployeeRate || 0.75;
+    document.getElementById('esicEmployerRate').value =
+      rules.esicEmployerRate || 3.25;
+    document.getElementById('esicSalaryLimit').value =
+      rules.esicSalaryLimit || 21000;
+    document.getElementById('ptApplicable').value =
+      rules.ptApplicable || 'Yes';
+    document.getElementById('februaryPT').value = rules.februaryPT || 300;
+    document.getElementById('tdsType').value = rules.tdsType || 'manual';
+    document.getElementById('tdsRate').value = rules.tdsRate || 10;
+    document.getElementById('einSeparator').value = rules.einSeparator || '-';
+    document.getElementById('einStartNumber').value =
+      rules.einStartNumber || 1001;
+    renderPTSlabs(rules.ptSlabs || [
+      { min: 0, max: 7500, amount: 0 },
+      { min: 7501, max: 10000, amount: 175 },
+      { min: 10001, max: 999999, amount: 200 }
+    ]);
+    if (rules.savedBy && rules.savedAt) {
+      document.getElementById('lastUpdated').textContent =
+        '📝 Last updated by ' + rules.savedBy + ' on ' +
+        new Date(rules.savedAt).toLocaleString('en-IN') +
+        (rules.changeNote ? ' — ' + rules.changeNote : '') +
+        ' (Effective: ' + rules.effectiveMonth + ' ' + rules.effectiveYear + ')';
+    } else {
+      document.getElementById('lastUpdated').textContent = '';
+    }
+  }
+
+  function renderPTSlabs(slabs) {
+    const container = document.getElementById('ptSlabs');
+    container.innerHTML = (slabs || []).map((slab, i) => `
+      <div class="pt-slab-row" id="slab-${i}">
+        <input type="number" placeholder="Min" value="${slab.min}"
+          id="slabMin${i}">
+        <input type="number" placeholder="Max" value="${slab.max}"
+          id="slabMax${i}">
+        <input type="number" placeholder="PT Amount" value="${slab.amount}"
+          id="slabAmt${i}">
+        <button class="btn-remove-slab"
+          onclick="removePTSlab(${i})">✕</button>
+      </div>
+    `).join('');
+  }
+
+  function addPTSlab() {
+    const container = document.getElementById('ptSlabs');
+    const count = container.children.length;
+    const div = document.createElement('div');
+    div.className = 'pt-slab-row';
+    div.id = 'slab-' + count;
+    div.innerHTML = `
+      <input type="number" placeholder="Min" id="slabMin${count}" value="0">
+      <input type="number" placeholder="Max" id="slabMax${count}" value="0">
+      <input type="number" placeholder="PT Amount" id="slabAmt${count}" value="0">
+      <button class="btn-remove-slab"
+        onclick="removePTSlab(${count})">✕</button>
+    `;
+    container.appendChild(div);
+  }
+
+  function removePTSlab(index) {
+    const el = document.getElementById('slab-' + index);
+    if (el) el.remove();
+    reindexSlabs();
+  }
+
+  function reindexSlabs() {
+    const container = document.getElementById('ptSlabs');
+    Array.from(container.children).forEach((row, i) => {
+      row.id = 'slab-' + i;
+      const inputs = row.querySelectorAll('input');
+      inputs[0].id = 'slabMin' + i;
+      inputs[1].id = 'slabMax' + i;
+      inputs[2].id = 'slabAmt' + i;
+      row.querySelector('button')
+        .setAttribute('onclick', 'removePTSlab(' + i + ')');
+    });
+  }
+
+  function getPTSlabs() {
+    const container = document.getElementById('ptSlabs');
+    return Array.from(container.children).map((row, i) => ({
+      min: parseFloat(document.getElementById('slabMin' + i).value) || 0,
+      max: parseFloat(document.getElementById('slabMax' + i).value) || 0,
+      amount: parseFloat(document.getElementById('slabAmt' + i).value) || 0
+    }));
+  }
+
+  async function saveRules() {
+    const effectiveMonth = document.getElementById('effectiveMonth').value;
+    const effectiveYear = document.getElementById('effectiveYear').value;
+    if (!effectiveMonth || !effectiveYear) {
+      showAlert('alertError', 'Please select effective month and year');
+      return;
+    }
+    const rules = {
+      effectiveMonth,
+      effectiveYear: parseInt(effectiveYear),
+      changeNote: document.getElementById('changeNote').value,
+      basicPercent: parseFloat(document.getElementById('basicPercent').value) || 76.923,
+      hraPercent: parseFloat(document.getElementById('hraPercent').value) || 23.077,
+      lopBase: document.getElementById('lopBase').value,
+      lopDivisor: document.getElementById('lopDivisor').value,
+      pfRate: parseFloat(document.getElementById('pfRate').value) || 12,
+      pfCap: parseFloat(document.getElementById('pfCap').value) || 1800,
+      pfAgeExemption: document.getElementById('pfAgeExemption').value,
+      pfAgeLimit: parseInt(document.getElementById('pfAgeLimit').value) || 58,
+      esicApplicable: document.getElementById('esicApplicable').value,
+      esicEmployeeRate: parseFloat(document.getElementById('esicEmployeeRate').value) || 0.75,
+      esicEmployerRate: parseFloat(document.getElementById('esicEmployerRate').value) || 3.25,
+      esicSalaryLimit: parseFloat(document.getElementById('esicSalaryLimit').value) || 21000,
+      ptApplicable: document.getElementById('ptApplicable').value,
+      ptSlabs: getPTSlabs(),
+      februaryPT: parseFloat(document.getElementById('februaryPT').value) || 300,
+      tdsType: document.getElementById('tdsType').value,
+      tdsRate: parseFloat(document.getElementById('tdsRate').value) || 10,
+      einSeparator: document.getElementById('einSeparator').value,
+      einStartNumber: parseInt(document.getElementById('einStartNumber').value) || 1001
+    };
+    try {
+      const res = await fetch(
+        '/api/settings/calc-rules/' + encodeURIComponent(currentLocation),
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(rules)
+        }
+      );
+      const data = await res.json();
+      if (data.success) {
+        showAlert('alertSuccess', data.message);
+        await loadRules(currentLocation);
+      } else {
+        showAlert('alertError', data.message);
+      }
+    } catch(e) {
+      showAlert('alertError', 'Error saving: ' + e.message);
+    }
+  }
+
+  async function loadHistory(location) {
+    historyLocation = location;
+    try {
+      const res = await fetch('/api/settings/rule-history/' +
+        encodeURIComponent(location));
+      const data = await res.json();
+      if (data.success) renderHistory(data.history);
+    } catch(e) {}
+  }
+
+  function renderHistory(history) {
+    const tbody = document.getElementById('historyTable');
+    if (!history || history.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:#999;">No history found</td></tr>';
+      return;
+    }
+    tbody.innerHTML = history.map((h, i) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td><strong>${h.effectiveMonth} ${h.effectiveYear}</strong></td>
+        <td>${h.savedBy || '—'}</td>
+        <td>${h.savedAt ? new Date(h.savedAt).toLocaleDateString('en-IN') : '—'}</td>
+        <td>${h.changeNote || '—'}</td>
+        <td>${i === 0 ?
+          '<span class="badge-current">Current</span>' :
+          '<span style="color:#999;font-size:12px;">Historical</span>'}</td>
+        <td><button class="btn-view" onclick="viewRuleDetail(${i})">View</button></td>
+      </tr>
+    `).join('');
+    window._historyData = history;
+  }
+
+  function viewRuleDetail(index) {
+    const h = window._historyData[index];
+    if (!h) return;
+    document.getElementById('ruleDetailTitle').textContent =
+      historyLocation + ' Rules — ' + h.effectiveMonth + ' ' + h.effectiveYear;
+    document.getElementById('ruleDetailContent').innerHTML = `
+      <div class="rule-detail-grid">
+        <div class="rule-detail-item">
+          <div class="rkey">Basic %</div>
+          <div class="rval">${h.basicPercent}%</div>
+        </div>
+        <div class="rule-detail-item">
+          <div class="rkey">HRA %</div>
+          <div class="rval">${h.hraPercent}%</div>
+        </div>
+        <div class="rule-detail-item">
+          <div class="rkey">LOP Base</div>
+          <div class="rval">${h.lopBase}</div>
+        </div>
+        <div class="rule-detail-item">
+          <div class="rkey">LOP Divisor</div>
+          <div class="rval">${h.lopDivisor}</div>
+        </div>
+        <div class="rule-detail-item">
+          <div class="rkey">PF Rate</div>
+          <div class="rval">${h.pfRate}%</div>
+        </div>
+        <div class="rule-detail-item">
+          <div class="rkey">PF Cap</div>
+          <div class="rval">₹${h.pfCap}</div>
+        </div>
+        <div class="rule-detail-item">
+          <div class="rkey">PF Age Exemption</div>
+          <div class="rval">${h.pfAgeExemption} (${h.pfAgeLimit} yrs)</div>
+        </div>
+        <div class="rule-detail-item">
+          <div class="rkey">ESIC Applicable</div>
+          <div class="rval">${h.esicApplicable}</div>
+        </div>
+        <div class="rule-detail-item">
+          <div class="rkey">ESIC Employee Rate</div>
+          <div class="rval">${h.esicEmployeeRate}%</div>
+        </div>
+        <div class="rule-detail-item">
+          <div class="rkey">ESIC Salary Limit</div>
+          <div class="rval">₹${h.esicSalaryLimit}</div>
+        </div>
+        <div class="rule-detail-item">
+          <div class="rkey">PT Applicable</div>
+          <div class="rval">${h.ptApplicable}</div>
+        </div>
+        <div class="rule-detail-item">
+          <div class="rkey">February PT</div>
+          <div class="rval">₹${h.februaryPT}</div>
+        </div>
+        <div class="rule-detail-item">
+          <div class="rkey">TDS Type</div>
+          <div class="rval">${h.tdsType}</div>
+        </div>
+        <div class="rule-detail-item">
+          <div class="rkey">TDS Rate</div>
+          <div class="rval">${h.tdsRate}%</div>
+        </div>
+        <div class="rule-detail-item">
+          <div class="rkey">EIN Format</div>
+          <div class="rval">GTT${h.einSeparator}${h.einStartNumber}</div>
+        </div>
+        <div class="rule-detail-item">
+          <div class="rkey">Change Note</div>
+          <div class="rval">${h.changeNote || '—'}</div>
+        </div>
+      </div>
+      <div style="margin-top:15px;padding:10px;background:#f8f9fa;border-radius:6px;">
+        <strong>PT Slabs:</strong>
+        <table style="width:100%;margin-top:8px;font-size:12px;border-collapse:collapse;">
+          ${(h.ptSlabs || []).map(s =>
+            '<tr><td style="padding:4px 8px;border:1px solid #eee;">₹' + s.min +
+            ' – ₹' + s.max + '</td><td style="padding:4px 8px;border:1px solid #eee;">₹' +
+            s.amount + '</td></tr>'
+          ).join('')}
+        </table>
+      </div>
+    `;
+    document.getElementById('ruleDetailModal').style.display = 'block';
+  }
+
+  function closeRuleDetail() {
+    document.getElementById('ruleDetailModal').style.display = 'none';
+  }
+
+  async function saveCorrectionPassword() {
+    const password = document.getElementById('correctionPassword').value;
+    const confirm = document.getElementById('correctionPasswordConfirm').value;
+    if (!password) {
+      showSecAlert('secAlertError', 'Please enter a password');
+      return;
+    }
+    if (password.length < 6) {
+      showSecAlert('secAlertError', 'Password must be at least 6 characters');
+      return;
+    }
+    if (password !== confirm) {
+      showSecAlert('secAlertError', 'Passwords do not match');
+      return;
+    }
+    try {
+      const res = await fetch('/api/settings/correction-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password })
       });
-  </script>
+      const data = await res.json();
+      if (data.success) {
+        showSecAlert('secAlertSuccess', data.message);
+        document.getElementById('correctionPassword').value = '';
+        document.getElementById('correctionPasswordConfirm').value = '';
+      } else {
+        showSecAlert('secAlertError', data.message);
+      }
+    } catch(e) {
+      showSecAlert('secAlertError', 'Error: ' + e.message);
+    }
+  }
+
+  function showAlert(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 4000);
+  }
+
+  function showSecAlert(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 4000);
+  }
+</script>
 </body>
 </html>
