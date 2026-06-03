@@ -23,8 +23,7 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   store: MongoStore.create({
-    mongoUrl: process.env.MONGODB_URI,
-    ttl: 24 * 60 * 60
+    mongoUrl: process.env.MONGODB_URI
   }),
   cookie: {
     maxAge: 24 * 60 * 60 * 1000,
@@ -32,27 +31,32 @@ app.use(session({
   }
 }));
 
-// Routes
+// API Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/employees', require('./routes/employees'));
 app.use('/api/settings', require('./routes/settings'));
+app.use('/api/masters', require('./routes/masters'));
 
-// Serve login page as default
+// Page Routes
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
-
-// Serve other pages
 app.get('/dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'pages', 'dashboard.html'));
 });
-
 app.get('/employees', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'pages', 'employees.html'));
 });
-
 app.get('/settings', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'pages', 'settings.html'));
+});
+app.get('/masters', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'pages', 'masters.html'));
+});
+
+// Test route
+app.get('/api/test', (req, res) => {
+  res.json({ success: true, message: 'API working' });
 });
 
 const PORT = process.env.PORT || 3000;

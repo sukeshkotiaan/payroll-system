@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Masters — Payroll System</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; }
+    .header {
+      background: #1a73e8;
+      color: white;
+      padding: 15px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header h1 { font-size: 20px; }
+    .btn-back {
+      background: white;
+      color: #1a73e8;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .container { padding: 25px; }
+    .tabs {
+      display: flex;
+      gap: 5px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .tab {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      background: white;
+      color: #666;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+    .tab.active { background: #1a73e8; color: white; }
+    .card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      overflow: hidden;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 25px;
+      border-bottom: 1px solid #eee;
+    }
+    .card-header h3 { color: #333; font-size: 16px; }
+    .add-form {
+      display: flex;
+      gap: 10px;
+      padding: 20px 25px;
+      border-bottom: 1px solid #eee;
+      background: #f8f9fa;
+    }
+    .add-form input {
+      flex: 1;
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+      outline: none;
+      max-width: 400px;
+    }
+    .add-form input:focus { border-color: #1a73e8; }
+    .btn-primary {
+      background: #1a73e8;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .btn-primary:hover { background: #1557b0; }
+    .alert {
+      padding: 10px 20px;
+      font-size: 13px;
+      display: none;
+    }
+    .alert-success { background: #e6f4ea; color: #34a853; }
+    .alert-error { background: #fce8e6; color: #ea4335; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    th {
+      background: #f8f9fa;
+      padding: 12px 25px;
+      text-align: left;
+      font-weight: 600;
+      color: #555;
+      border-bottom: 1px solid #eee;
+    }
+    td {
+      padding: 12px 25px;
+      border-bottom: 1px solid #f5f5f5;
+      color: #333;
+    }
+    tr:hover { background: #f8f9ff; }
+    tr.inactive td { color: #999; }
+    .badge {
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-active { background: #e6f4ea; color: #34a853; }
+    .badge-inactive { background: #fce8e6; color: #ea4335; }
+    .btn-edit {
+      background: #fbbc04;
+      color: #333;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .btn-deactivate {
+      background: #ea4335;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      margin-left: 6px;
+    }
+    .btn-activate {
+      background: #34a853;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      margin-left: 6px;
+    }
+    .btn-save {
+      background: #34a853;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .btn-cancel {
+      background: #999;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      margin-left: 6px;
+    }
+    .edit-input {
+      padding: 6px 10px;
+      border: 1px solid #1a73e8;
+      border-radius: 4px;
+      font-size: 13px;
+      width: 200px;
+      outline: none;
+    }
+    .empty {
+      text-align: center;
+      padding: 40px;
+      color: #999;
+      font-size: 14px;
+    }
+    .count-badge {
+      background: #e8f0fe;
+      color: #1a73e8;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-left: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📋 Masters</h1>
+  <button class="btn-back" onclick="window.location.href='/dashboard'">← Dashboard</button>
+</div>
+
+<div class="container">
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('location', this)">📍 Locations</button>
+    <button class="tab" onclick="switchTab('section', this)">🏫 Sections</button>
+    <button class="tab" onclick="switchTab('profile', this)">👤 Profiles</button>
+    <button class="tab" onclick="switchTab('department', this)">🏢 Departments</button>
+    <button class="tab" onclick="switchTab('designation', this)">🎓 Designations</button>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h3 id="cardTitle">
+        Locations
+        <span class="count-badge" id="countBadge">0</span>
+      </h3>
+    </div>
+
+    <div class="add-form">
+      <input type="text" id="newValue" placeholder="Type new value and press Add or Enter">
+      <button class="btn-primary" onclick="addMaster()">+ Add</button>
+    </div>
+
+    <div class="alert alert-success" id="alertSuccess"></div>
+    <div class="alert alert-error" id="alertError"></div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Value</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="mastersList">
+        <tr><td colspan="4"><div class="empty">Loading...</div></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  let currentType = 'location';
+  let allMasters = [];
+
+  const titles = {
+    location: 'Locations',
+    section: 'Sections',
+    profile: 'Profiles',
+    department: 'Departments',
+    designation: 'Designations'
+  };
+
+  window.onload = async () => {
+    await checkAuth();
+    await loadMasters('location');
+  };
+
+  async function checkAuth() {
+    const res = await fetch('/api/auth/me');
+    const data = await res.json();
+    if (!data.success) { window.location.href = '/'; return; }
+    if (data.user.role === 'accountant') {
+      window.location.href = '/dashboard';
+    }
+  }
+
+  function switchTab(type, btn) {
+    currentType = type;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('cardTitle').childNodes[0].textContent = titles[type] + ' ';
+    document.getElementById('newValue').placeholder =
+      'Type new ' + type + ' and press Add or Enter';
+    document.getElementById('alertSuccess').style.display = 'none';
+    document.getElementById('alertError').style.display = 'none';
+    document.getElementById('newValue').value = '';
+    loadMasters(type);
+  }
+
+  async function loadMasters(type) {
+    try {
+      const res = await fetch('/api/masters/' + type);
+      const data = await res.json();
+      if (data.success) {
+        allMasters = data.masters;
+        renderMasters(data.masters);
+      }
+    } catch(e) {
+      showAlert('alertError', 'Error loading data');
+    }
+  }
+
+  function renderMasters(masters) {
+    const tbody = document.getElementById('mastersList');
+    document.getElementById('countBadge').textContent = masters.length;
+
+    if (masters.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="4">
+        <div class="empty">No items yet. Add one above.</div>
+      </td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = masters.map((m, index) => `
+      <tr class="${m.isActive ? '' : 'inactive'}" id="row-${m._id}">
+        <td style="color:#999;width:50px;">${index + 1}</td>
+        <td id="name-${m._id}"><strong>${m.value}</strong></td>
+        <td>
+          <span class="badge ${m.isActive ? 'badge-active' : 'badge-inactive'}">
+            ${m.isActive ? 'Active' : 'Inactive'}
+          </span>
+        </td>
+        <td id="actions-${m._id}">
+          <button class="btn-edit"
+            onclick="editMaster('${m._id}', '${m.value}')">Edit</button>
+          <button class="${m.isActive ? 'btn-deactivate' : 'btn-activate'}"
+            onclick="toggleMaster('${m._id}')">
+            ${m.isActive ? 'Deactivate' : 'Activate'}
+          </button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  async function addMaster() {
+    const value = document.getElementById('newValue').value.trim();
+    if (!value) {
+      showAlert('alertError', 'Please enter a value');
+      return;
+    }
+    try {
+      const res = await fetch('/api/masters', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: currentType, value })
+      });
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById('newValue').value = '';
+        showAlert('alertSuccess', data.message);
+        await loadMasters(currentType);
+      } else {
+        showAlert('alertError', data.message);
+      }
+    } catch(e) {
+      showAlert('alertError', 'Error adding');
+    }
+  }
+
+  function editMaster(id, currentValue) {
+    const nameEl = document.getElementById('name-' + id);
+    const actionsEl = document.getElementById('actions-' + id);
+    nameEl.innerHTML =
+      `<input class="edit-input" id="edit-${id}" value="${currentValue}">`;
+    actionsEl.innerHTML = `
+      <button class="btn-save" onclick="saveMaster('${id}')">✅ Save</button>
+      <button class="btn-cancel" onclick="loadMasters('${currentType}')">Cancel</button>
+    `;
+    document.getElementById('edit-' + id).focus();
+  }
+
+  async function saveMaster(id) {
+    const value = document.getElementById('edit-' + id).value.trim();
+    if (!value) return;
+    try {
+      const res = await fetch('/api/masters/' + id, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showAlert('alertSuccess', 'Updated successfully');
+        await loadMasters(currentType);
+      } else {
+        showAlert('alertError', data.message);
+      }
+    } catch(e) {
+      showAlert('alertError', 'Error updating');
+    }
+  }
+
+  async function toggleMaster(id) {
+    try {
+      const res = await fetch('/api/masters/' + id + '/toggle', {
+        method: 'PATCH'
+      });
+      const data = await res.json();
+      if (data.success) {
+        showAlert('alertSuccess', data.message);
+        await loadMasters(currentType);
+      }
+    } catch(e) {
+      showAlert('alertError', 'Error updating status');
+    }
+  }
+
+  function showAlert(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 3000);
+  }
+
+  document.getElementById('newValue').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') addMaster();
+  });
+</script>
+</body>
+</html>
