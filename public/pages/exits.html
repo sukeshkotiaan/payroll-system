@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Employee Exit — Payroll System</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; }
+    .header {
+      background: #1a73e8;
+      color: white;
+      padding: 15px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header h1 { font-size: 20px; }
+    .btn-back {
+      background: white;
+      color: #1a73e8;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .container { padding: 25px; max-width: 1100px; margin: 0 auto; }
+    .page-tabs {
+      display: flex;
+      gap: 5px;
+      margin-bottom: 20px;
+    }
+    .page-tab {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      background: white;
+      color: #666;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+    .page-tab.active { background: #1a73e8; color: white; }
+    .page-section { display: none; }
+    .page-section.active { display: block; }
+    .card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 15px 20px;
+      background: #f8f9fa;
+      border-bottom: 1px solid #eee;
+      font-size: 15px;
+      font-weight: 700;
+      color: #1a73e8;
+    }
+    .card-body { padding: 20px; }
+    .ein-search {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .ein-search input {
+      flex: 1;
+      max-width: 300px;
+      padding: 10px 15px;
+      border: 2px solid #1a73e8;
+      border-radius: 6px;
+      font-size: 14px;
+      outline: none;
+      text-transform: uppercase;
+    }
+    .btn-primary {
+      background: #1a73e8;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .btn-success {
+      background: #34a853;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+    }
+    .btn-danger {
+      background: #ea4335;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+    }
+    .btn-secondary {
+      background: #f0f2f5;
+      color: #333;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .emp-info-bar {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 15px;
+      padding: 15px;
+      background: #e8f0fe;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .emp-info-item label {
+      font-size: 11px;
+      color: #666;
+      font-weight: 600;
+      display: block;
+    }
+    .emp-info-item span {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1a73e8;
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group.full-width { grid-column: 1 / -1; }
+    .form-group label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #555;
+    }
+    .form-group label .required { color: #ea4335; }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 13px;
+      outline: none;
+    }
+    .form-group input:focus,
+    .form-group select:focus { border-color: #1a73e8; }
+    .section-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1a73e8;
+      margin: 20px 0 10px 0;
+      padding-bottom: 5px;
+      border-bottom: 2px solid #e8f0fe;
+    }
+    .form-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .alert {
+      padding: 10px 15px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+      font-size: 13px;
+      display: none;
+    }
+    .alert-success { background: #e6f4ea; color: #34a853; }
+    .alert-error { background: #fce8e6; color: #ea4335; }
+    .notice-days {
+      font-size: 12px;
+      color: #1a73e8;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th {
+      background: #f8f9fa;
+      padding: 12px 15px;
+      text-align: left;
+      font-weight: 600;
+      color: #555;
+      border-bottom: 1px solid #eee;
+    }
+    td { padding: 12px 15px; border-bottom: 1px solid #f5f5f5; color: #333; }
+    tr:hover { background: #f8f9ff; }
+    .badge { padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+    .badge-pending { background: #fef3c7; color: #d97706; }
+    .badge-approved { background: #e6f4ea; color: #34a853; }
+    .badge-rejected { background: #fce8e6; color: #ea4335; }
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      overflow-y: auto;
+    }
+    .modal {
+      background: white;
+      margin: 30px auto;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 600px;
+      padding: 30px;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .modal-header h3 { color: #333; }
+    .btn-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+    }
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .detail-item { padding: 10px; background: #f8f9fa; border-radius: 6px; }
+    .detail-item .dkey { font-size: 11px; color: #666; }
+    .detail-item .dval { font-size: 13px; font-weight: 600; color: #333; margin-top: 2px; }
+    .empty-state { text-align: center; padding: 40px; color: #999; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🚪 Employee Exit Management</h1>
+  <button class="btn-back" onclick="window.location.href='/dashboard'">← Dashboard</button>
+</div>
+
+<div class="container">
+  <div class="page-tabs">
+    <button class="page-tab active" onclick="switchTab('new', this)">
+      ➕ New Exit Request
+    </button>
+    <button class="page-tab" onclick="switchTab('list', this)">
+      📋 Exit Requests
+    </button>
+  </div>
+
+  <!-- NEW EXIT REQUEST -->
+  <div class="page-section active" id="page-new">
+    <div class="alert alert-success" id="alertSuccess"></div>
+    <div class="alert alert-error" id="alertError"></div>
+
+    <div class="card">
+      <div class="card-header">🔍 Search Employee by EIN</div>
+      <div class="card-body">
+        <div class="ein-search">
+          <input type="text" id="einSearch"
+            placeholder="Enter EIN (e.g. GTT-1001)"
+            onkeypress="if(event.key==='Enter') searchEmployee()">
+          <button class="btn-primary" onclick="searchEmployee()">
+            🔍 Search
+          </button>
+        </div>
+        <div id="empInfoBar" style="display:none;">
+          <div class="emp-info-bar">
+            <div class="emp-info-item">
+              <label>EIN</label>
+              <span id="infoEIN">—</span>
+            </div>
+            <div class="emp-info-item">
+              <label>Employee Name</label>
+              <span id="infoName">—</span>
+            </div>
+            <div class="emp-info-item">
+              <label>Designation</label>
+              <span id="infoDesignation">—</span>
+            </div>
+            <div class="emp-info-item">
+              <label>Department</label>
+              <span id="infoDept">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="exitFormCard" style="display:none;">
+      <div class="card-header">📝 Exit Details</div>
+      <div class="card-body">
+        <input type="hidden" id="employeeId">
+
+        <div class="section-title">📅 Exit Timeline</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Resignation Date <span class="required">*</span></label>
+            <input type="date" id="resignationDate"
+              onchange="calcNoticeDays()">
+          </div>
+          <div class="form-group">
+            <label>Last Working Date <span class="required">*</span></label>
+            <input type="date" id="lastWorkingDate"
+              onchange="calcNoticeDays()">
+            <div class="notice-days" id="noticeDaysDisplay"></div>
+          </div>
+        </div>
+
+        <div class="section-title">📋 Exit Information</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Reason for Leaving <span class="required">*</span></label>
+            <select id="reasonForLeaving" onchange="toggleReasonDetails()">
+              <option value="">Select Reason</option>
+              <option value="Resignation">Resignation</option>
+              <option value="Retirement">Retirement</option>
+              <option value="Termination">Termination</option>
+              <option value="End of Contract">End of Contract</option>
+              <option value="Absconding">Absconding</option>
+              <option value="Death">Death</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Notice Period</label>
+            <select id="noticePeriod">
+              <option value="Serving">Serving</option>
+              <option value="Not Serving">Not Serving</option>
+            </select>
+          </div>
+          <div class="form-group full-width" id="reasonDetailsGroup"
+            style="display:none;">
+            <label>Reason Details</label>
+            <textarea id="reasonDetails"
+              placeholder="Please specify reason..."></textarea>
+          </div>
+        </div>
+
+        <div class="section-title">✅ Exit Clearance</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>FnF Settlement</label>
+            <select id="fnfSettlement">
+              <option value="Pending">Pending</option>
+              <option value="Yes">Yes — Completed</option>
+              <option value="No">No</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Relieving Letter</label>
+            <select id="relievingLetter">
+              <option value="Pending">Pending</option>
+              <option value="Yes">Yes — Issued</option>
+              <option value="No">No</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Eligible for Rehire</label>
+            <select id="eligibleForRehire">
+              <option value="Yes">Yes</option>
+              <option value="No">No</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="section-title">📝 Additional Remarks</div>
+        <div class="form-group full-width">
+          <textarea id="remarks" rows="3"
+            placeholder="Any additional remarks..."></textarea>
+        </div>
+
+        <div class="form-footer">
+          <button class="btn-secondary" onclick="resetExitForm()">
+            Clear
+          </button>
+          <button class="btn-primary" onclick="submitExitRequest()">
+            📤 Submit for Approval
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EXIT REQUESTS LIST -->
+  <div class="page-section" id="page-list">
+    <div class="card">
+      <div class="card-header"
+        style="display:flex;justify-content:space-between;align-items:center;">
+        <span>Exit Requests</span>
+        <div style="display:flex;gap:10px;">
+          <select id="filterStatus" onchange="loadExits()"
+            style="padding:6px 12px;border:1px solid #ddd;border-radius:6px;font-size:13px;">
+            <option value="">All Status</option>
+            <option value="Pending">Pending</option>
+            <option value="Approved">Approved</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>EIN</th>
+              <th>Name</th>
+              <th>Designation</th>
+              <th>Resignation Date</th>
+              <th>Last Working Day</th>
+              <th>Reason</th>
+              <th>FnF</th>
+              <th>Relieving</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="exitsTable">
+            <tr><td colspan="10">
+              <div class="empty-state">Loading...</div>
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- APPROVE MODAL -->
+<div class="modal-overlay" id="approveModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>✅ Approve Exit Request</h3>
+      <button class="btn-close" onclick="closeApproveModal()">×</button>
+    </div>
+    <input type="hidden" id="approveExitId">
+    <div class="detail-grid" id="approveDetails"></div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>FnF Settlement</label>
+        <select id="approveFnF">
+          <option value="Pending">Pending</option>
+          <option value="Yes">Yes — Completed</option>
+          <option value="No">No</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Relieving Letter</label>
+        <select id="approveRelieving">
+          <option value="Pending">Pending</option>
+          <option value="Yes">Yes — Issued</option>
+          <option value="No">No</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Eligible for Rehire</label>
+        <select id="approveRehire">
+          <option value="Yes">Yes</option>
+          <option value="No">No</option>
+        </select>
+      </div>
+    </div>
+    <div style="background:#fef3c7;border-radius:8px;padding:12px;margin:15px 0;font-size:13px;color:#d97706;">
+      ⚠️ On approval, employee will be moved to <strong>Inactive</strong> status automatically.
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:15px;">
+      <button class="btn-secondary" onclick="closeApproveModal()">Cancel</button>
+      <button class="btn-success" onclick="approveExit()">✅ Approve & Deactivate</button>
+    </div>
+  </div>
+</div>
+
+<!-- REJECT MODAL -->
+<div class="modal-overlay" id="rejectModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>❌ Reject Exit Request</h3>
+      <button class="btn-close" onclick="closeRejectModal()">×</button>
+    </div>
+    <input type="hidden" id="rejectExitId">
+    <div class="form-group" style="margin-bottom:15px;">
+      <label>Reason for Rejection <span class="required">*</span></label>
+      <textarea id="rejectionReason" rows="3"
+        placeholder="Enter reason for rejection..."></textarea>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button class="btn-secondary" onclick="closeRejectModal()">Cancel</button>
+      <button class="btn-danger" onclick="rejectExit()">❌ Reject</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let currentUser = {};
+  let currentEmployeeData = null;
+
+  window.onload = async () => {
+    await checkAuth();
+    await loadExits();
+  };
+
+  async function checkAuth() {
+    const res = await fetch('/api/auth/me');
+    const data = await res.json();
+    if (!data.success) { window.location.href = '/'; return; }
+    currentUser = data.user;
+  }
+
+  function switchTab(tab, btn) {
+    document.querySelectorAll('.page-tab')
+      .forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.page-section')
+      .forEach(s => s.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('page-' + tab).classList.add('active');
+    if (tab === 'list') loadExits();
+  }
+
+  async function searchEmployee() {
+    const ein = document.getElementById('einSearch').value.trim().toUpperCase();
+    if (!ein) {
+      showAlert('alertError', 'Please enter an EIN');
+      return;
+    }
+    try {
+      const res = await fetch('/api/exits/find-employee/' + ein);
+      const data = await res.json();
+      if (data.success) {
+        const emp = data.employee;
+        currentEmployeeData = emp;
+        document.getElementById('infoEIN').textContent = emp.ein;
+        document.getElementById('infoName').textContent = emp.employeeName;
+        document.getElementById('infoDesignation').textContent = emp.designation;
+        document.getElementById('infoDept').textContent = emp.department || '—';
+        document.getElementById('employeeId').value = emp._id;
+        document.getElementById('empInfoBar').style.display = 'block';
+        document.getElementById('exitFormCard').style.display = 'block';
+        showAlert('alertSuccess', 'Employee found: ' + emp.employeeName);
+      } else {
+        showAlert('alertError', data.message);
+        document.getElementById('empInfoBar').style.display = 'none';
+        document.getElementById('exitFormCard').style.display = 'none';
+      }
+    } catch(e) {
+      showAlert('alertError', 'Error: ' + e.message);
+    }
+  }
+
+  function calcNoticeDays() {
+    const resign = document.getElementById('resignationDate').value;
+    const lwd = document.getElementById('lastWorkingDate').value;
+    if (resign && lwd) {
+      const days = Math.ceil(
+        (new Date(lwd) - new Date(resign)) / (1000 * 60 * 60 * 24)
+      );
+      document.getElementById('noticeDaysDisplay').textContent =
+        days >= 0 ? 'Notice Period: ' + days + ' days' : '⚠️ LWD before resignation date';
+    }
+  }
+
+  function toggleReasonDetails() {
+    const val = document.getElementById('reasonForLeaving').value;
+    document.getElementById('reasonDetailsGroup').style.display =
+      val === 'Other' || val === 'Termination' || val === 'Absconding'
+        ? 'block' : 'none';
+  }
+
+  async function submitExitRequest() {
+    const employeeId = document.getElementById('employeeId').value;
+    const resignationDate = document.getElementById('resignationDate').value;
+    const lastWorkingDate = document.getElementById('lastWorkingDate').value;
+    const reasonForLeaving = document.getElementById('reasonForLeaving').value;
+
+    if (!employeeId || !resignationDate || !lastWorkingDate || !reasonForLeaving) {
+      showAlert('alertError', 'Please fill all required fields');
+      return;
+    }
+    if (new Date(lastWorkingDate) < new Date(resignationDate)) {
+      showAlert('alertError', 'Last working date cannot be before resignation date');
+      return;
+    }
+
+    const payload = {
+      ein: currentEmployeeData.ein,
+      employeeId,
+      employeeName: currentEmployeeData.employeeName,
+      designation: currentEmployeeData.designation,
+      department: currentEmployeeData.department,
+      location: currentEmployeeData.location,
+      resignationDate,
+      lastWorkingDate,
+      reasonForLeaving,
+      reasonDetails: document.getElementById('reasonDetails').value,
+      noticePeriod: document.getElementById('noticePeriod').value,
+      fnfSettlement: document.getElementById('fnfSettlement').value,
+      relievingLetter: document.getElementById('relievingLetter').value,
+      eligibleForRehire: document.getElementById('eligibleForRehire').value,
+      remarks: document.getElementById('remarks').value
+    };
+
+    try {
+      const res = await fetch('/api/exits', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        showAlert('alertSuccess', data.message);
+        resetExitForm();
+      } else {
+        showAlert('alertError', data.message);
+      }
+    } catch(e) {
+      showAlert('alertError', 'Error: ' + e.message);
+    }
+  }
+
+  function resetExitForm() {
+    document.getElementById('einSearch').value = '';
+    document.getElementById('employeeId').value = '';
+    document.getElementById('resignationDate').value = '';
+    document.getElementById('lastWorkingDate').value = '';
+    document.getElementById('reasonForLeaving').value = '';
+    document.getElementById('reasonDetails').value = '';
+    document.getElementById('noticePeriod').value = 'Serving';
+    document.getElementById('fnfSettlement').value = 'Pending';
+    document.getElementById('relievingLetter').value = 'Pending';
+    document.getElementById('eligibleForRehire').value = 'Yes';
+    document.getElementById('remarks').value = '';
+    document.getElementById('noticeDaysDisplay').textContent = '';
+    document.getElementById('empInfoBar').style.display = 'none';
+    document.getElementById('exitFormCard').style.display = 'none';
+    document.getElementById('reasonDetailsGroup').style.display = 'none';
+    currentEmployeeData = null;
+  }
+
+  async function loadExits() {
+    const status = document.getElementById('filterStatus') ?
+      document.getElementById('filterStatus').value : '';
+    try {
+      const res = await fetch('/api/exits?status=' + status);
+      const data = await res.json();
+      if (data.success) renderExits(data.exits);
+    } catch(e) {}
+  }
+
+  function renderExits(exits) {
+    const tbody = document.getElementById('exitsTable');
+    if (exits.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="10"><div class="empty-state">No exit requests found</div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = exits.map(e => `
+      <tr>
+        <td><strong>${e.ein}</strong></td>
+        <td>${e.employeeName}</td>
+        <td>${e.designation || '—'}</td>
+        <td>${new Date(e.resignationDate).toLocaleDateString('en-IN')}</td>
+        <td>${new Date(e.lastWorkingDate).toLocaleDateString('en-IN')}</td>
+        <td>${e.reasonForLeaving}</td>
+        <td>${e.fnfSettlement}</td>
+        <td>${e.relievingLetter}</td>
+        <td><span class="badge badge-${e.status.toLowerCase()}">${e.status}</span></td>
+        <td>
+          ${e.status === 'Pending' &&
+            (currentUser.role === 'admin' || currentUser.role === 'management') ? `
+            <button class="btn-success" style="font-size:11px;padding:5px 10px;"
+              onclick="openApproveModal('${e._id}', ${JSON.stringify(e).replace(/"/g, '&quot;')})">
+              Approve
+            </button>
+            <button class="btn-danger" style="font-size:11px;padding:5px 10px;margin-left:4px;"
+              onclick="openRejectModal('${e._id}')">
+              Reject
+            </button>
+          ` : `<span style="color:#999;font-size:12px;">${e.status === 'Approved' ? '✅ ' + (e.approvedBy || '') : '❌ ' + (e.rejectedBy || '')}</span>`}
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function openApproveModal(id, exitData) {
+    document.getElementById('approveExitId').value = id;
+    document.getElementById('approveFnF').value = exitData.fnfSettlement || 'Pending';
+    document.getElementById('approveRelieving').value = exitData.relievingLetter || 'Pending';
+    document.getElementById('approveRehire').value = exitData.eligibleForRehire || 'Yes';
+    document.getElementById('approveDetails').innerHTML = `
+      <div class="detail-item">
+        <div class="dkey">Employee</div>
+        <div class="dval">${exitData.employeeName}</div>
+      </div>
+      <div class="detail-item">
+        <div class="dkey">EIN</div>
+        <div class="dval">${exitData.ein}</div>
+      </div>
+      <div class="detail-item">
+        <div class="dkey">Last Working Day</div>
+        <div class="dval">${new Date(exitData.lastWorkingDate).toLocaleDateString('en-IN')}</div>
+      </div>
+      <div class="detail-item">
+        <div class="dkey">Reason</div>
+        <div class="dval">${exitData.reasonForLeaving}</div>
+      </div>
+    `;
+    document.getElementById('approveModal').style.display = 'block';
+  }
+
+  function closeApproveModal() {
+    document.getElementById('approveModal').style.display = 'none';
+  }
+
+  async function approveExit() {
+    const id = document.getElementById('approveExitId').value;
+    try {
+      const res = await fetch('/api/exits/' + id + '/approve', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fnfSettlement: document.getElementById('approveFnF').value,
+          relievingLetter: document.getElementById('approveRelieving').value,
+          eligibleForRehire: document.getElementById('approveRehire').value
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        closeApproveModal();
+        showAlert('alertSuccess', data.message);
+        await loadExits();
+      } else {
+        alert(data.message);
+      }
+    } catch(e) { alert('Error: ' + e.message); }
+  }
+
+  function openRejectModal(id) {
+    document.getElementById('rejectExitId').value = id;
+    document.getElementById('rejectionReason').value = '';
+    document.getElementById('rejectModal').style.display = 'block';
+  }
+
+  function closeRejectModal() {
+    document.getElementById('rejectModal').style.display = 'none';
+  }
+
+  async function rejectExit() {
+    const id = document.getElementById('rejectExitId').value;
+    const reason = document.getElementById('rejectionReason').value.trim();
+    if (!reason) { alert('Please enter rejection reason'); return; }
+    try {
+      const res = await fetch('/api/exits/' + id + '/reject', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rejectionReason: reason })
+      });
+      const data = await res.json();
+      if (data.success) {
+        closeRejectModal();
+        await loadExits();
+      }
+    } catch(e) { alert('Error: ' + e.message); }
+  }
+
+  function showAlert(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 4000);
+  }
+</script>
+</body>
+</html>
