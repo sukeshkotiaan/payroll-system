@@ -1,5 +1,12 @@
 const mongoose = require('mongoose');
 
+const qualificationSchema = new mongoose.Schema({
+  degree: { type: String, default: '' },
+  institution: { type: String, default: '' },
+  yearOfPassing: { type: String, default: '' },
+  grade: { type: String, default: '' }
+}, { _id: false });
+
 const employeeSchema = new mongoose.Schema({
   ein: { type: String, unique: true, sparse: true },
   location: { type: String, required: true },
@@ -7,6 +14,7 @@ const employeeSchema = new mongoose.Schema({
   profile: { type: String, required: true },
   department: { type: String, default: '' },
   employeeName: { type: String, required: true, trim: true },
+  gender: { type: String, enum: ['Male', 'Female', 'Other'], default: 'Male' },
   designation: { type: String, required: true, trim: true },
   dateOfBirth: { type: Date, required: true },
   dateOfJoining: { type: Date, required: true },
@@ -18,6 +26,7 @@ const employeeSchema = new mongoose.Schema({
   address: { type: String, trim: true, default: '' },
   photo: { type: String, default: '' },
   uanNumber: { type: String, trim: true, default: '' },
+  qualifications: { type: [qualificationSchema], default: [] },
   monthlySalary: { type: Number, default: 0 },
   ctcAnnual: { type: Number, required: true },
   ctcMonthly: { type: Number, default: 0 },

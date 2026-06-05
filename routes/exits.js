@@ -4,7 +4,6 @@ const Exit = require('../models/Exit');
 const Employee = require('../models/Employee');
 const { isLoggedIn, isAdmin } = require('../middleware/auth');
 
-// GET employee by EIN for exit form
 router.get('/find-employee/:ein', isLoggedIn, async (req, res) => {
   try {
     const employee = await Employee.findOne({
@@ -23,13 +22,13 @@ router.get('/find-employee/:ein', isLoggedIn, async (req, res) => {
   }
 });
 
-// GET all exit requests
 router.get('/', isLoggedIn, async (req, res) => {
   try {
     const user = req.session.user;
     let filter = {};
     if (user.role === 'accountant') filter.location = user.branch;
     if (req.query.status) filter.status = req.query.status;
+    if (req.query.employeeId) filter.employeeId = req.query.employeeId;
     const exits = await Exit.find(filter).sort({ submittedAt: -1 });
     return res.json({ success: true, exits });
   } catch (err) {
@@ -37,16 +36,12 @@ router.get('/', isLoggedIn, async (req, res) => {
   }
 });
 
-// SUBMIT exit request
 router.post('/', isLoggedIn, async (req, res) => {
   try {
     const data = req.body;
     const employee = await Employee.findById(data.employeeId);
     if (!employee) {
-      return res.status(404).json({
-        success: false,
-        message: 'Employee not found'
-      });
+      return res.status(404).json({ success: false, message: 'Employee not found' });
     }
     const existing = await Exit.findOne({
       employeeId: data.employeeId,
@@ -67,23 +62,16 @@ router.post('/', isLoggedIn, async (req, res) => {
       submittedBy: req.session.user.username,
       submittedAt: new Date()
     });
-    return res.json({
-      success: true,
-      message: 'Exit request submitted for approval',
-      exit
-    });
+    return res.json({ success: true, message: 'Exit request submitted for approval', exit });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
 });
 
-// APPROVE exit
 router.patch('/:id/approve', isLoggedIn, isAdmin, async (req, res) => {
   try {
     const exit = await Exit.findById(req.params.id);
-    if (!exit) {
-      return res.status(404).json({ success: false, message: 'Exit not found' });
-    }
+    if (!exit) return res.status(404).json({ success: false, message: 'Exit not found' });
     exit.status = 'Approved';
     exit.approvedBy = req.session.user.username;
     exit.approvedAt = new Date();
@@ -95,23 +83,16 @@ router.patch('/:id/approve', isLoggedIn, isAdmin, async (req, res) => {
       isActive: false,
       dateOfExit: exit.lastWorkingDate
     });
-    return res.json({
-      success: true,
-      message: 'Exit approved. Employee moved to inactive.',
-      exit
-    });
+    return res.json({ success: true, message: 'Exit approved. Employee moved to inactive.', exit });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
 });
 
-// REJECT exit
 router.patch('/:id/reject', isLoggedIn, isAdmin, async (req, res) => {
   try {
     const exit = await Exit.findById(req.params.id);
-    if (!exit) {
-      return res.status(404).json({ success: false, message: 'Exit not found' });
-    }
+    if (!exit) return res.status(404).json({ success: false, message: 'Exit not found' });
     exit.status = 'Rejected';
     exit.rejectedBy = req.session.user.username;
     exit.rejectedAt = new Date();
@@ -123,7 +104,6 @@ router.patch('/:id/reject', isLoggedIn, isAdmin, async (req, res) => {
   }
 });
 
-// UPDATE exit details
 router.put('/:id', isLoggedIn, isAdmin, async (req, res) => {
   try {
     const exit = await Exit.findByIdAndUpdate(
