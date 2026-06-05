@@ -22,9 +22,9 @@ const userSchema = new mongoose.Schema({
     enum: ['admin', 'management', 'accountant'],
     required: true
   },
-  branch: {
-    type: String,
-    default: 'all'
+  branches: {
+    type: [String],
+    default: ['all']
   },
   isActive: {
     type: Boolean,
@@ -33,10 +33,13 @@ const userSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
+  },
+  lastLogin: {
+    type: Date,
+    default: null
   }
 });
 
-// Compare password method
 userSchema.methods.comparePassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };

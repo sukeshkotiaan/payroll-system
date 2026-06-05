@@ -37,6 +37,7 @@ app.use('/api/employees', require('./routes/employees'));
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/masters', require('./routes/masters'));
 app.use('/api/exits', require('./routes/exits'));
+app.use('/api/users', require('./routes/users'));
 
 // Page Routes
 app.get('/', (req, res) => {
@@ -53,6 +54,11 @@ app.get('/settings', (req, res) => {
 });
 app.get('/exits', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'pages', 'exits.html'));
+});
+app.use('/api/users', require('./routes/users'));
+
+app.get('/users', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'pages', 'users.html'));
 });
 app.get('/masters', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'pages', 'masters.html'));

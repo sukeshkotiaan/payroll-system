@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Management — Payroll System</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; }
+    .header {
+      background: #1a73e8;
+      color: white;
+      padding: 15px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header h1 { font-size: 20px; }
+    .btn-back {
+      background: white;
+      color: #1a73e8;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .view { display: none; }
+    .view.active { display: block; }
+    .container { padding: 25px; max-width: 1100px; margin: 0 auto; }
+    .btn-primary {
+      background: #1a73e8;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .btn-primary:hover { background: #1557b0; }
+    .btn-primary:disabled { background: #aaa; cursor: not-allowed; }
+    .btn-secondary {
+      background: #f0f2f5;
+      color: #333;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .btn-success {
+      background: #34a853;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .btn-warning {
+      background: #fbbc04;
+      color: #333;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .btn-danger {
+      background: #ea4335;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .table-card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      overflow: hidden;
+    }
+    .table-card-header {
+      padding: 15px 20px;
+      border-bottom: 1px solid #eee;
+    }
+    .table-card-header h3 { font-size: 16px; color: #333; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th {
+      background: #f8f9fa;
+      padding: 12px 15px;
+      text-align: left;
+      font-weight: 600;
+      color: #555;
+      border-bottom: 1px solid #eee;
+    }
+    td { padding: 12px 15px; border-bottom: 1px solid #f5f5f5; color: #333; }
+    tr:hover { background: #f8f9ff; }
+    .badge { padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+    .badge-active { background: #e6f4ea; color: #34a853; }
+    .badge-inactive { background: #fce8e6; color: #ea4335; }
+    .badge-admin { background: #e8f0fe; color: #1a73e8; }
+    .badge-management { background: #fce8e6; color: #d93025; }
+    .badge-accountant { background: #e6f4ea; color: #137333; }
+
+    /* FORM VIEW */
+    .form-view-header {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #e8f0fe;
+    }
+    .btn-back-list {
+      background: #e8f0fe;
+      color: #1a73e8;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+    }
+    .form-view-header h2 { color: #333; font-size: 20px; }
+    .form-card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      padding: 25px;
+      max-width: 700px;
+    }
+    .section-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1a73e8;
+      margin: 20px 0 12px 0;
+      padding-bottom: 5px;
+      border-bottom: 2px solid #e8f0fe;
+    }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group.full-width { grid-column: 1 / -1; }
+    .form-group label { font-size: 13px; font-weight: 600; color: #555; }
+    .form-group label .req { color: #ea4335; }
+    .form-group input,
+    .form-group select {
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 13px;
+      outline: none;
+    }
+    .form-group input:focus,
+    .form-group select:focus { border-color: #1a73e8; }
+    .hint { font-size: 11px; color: #999; }
+
+    /* BRANCH CHECKBOXES */
+    .branch-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 5px;
+    }
+    .branch-option {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .branch-option:hover { border-color: #1a73e8; background: #f0f7ff; }
+    .branch-option input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; }
+    .branch-option label { font-size: 13px; font-weight: 600; cursor: pointer; margin: 0; }
+    .branch-option.checked { border-color: #1a73e8; background: #e8f0fe; }
+
+    .form-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 25px;
+      padding-top: 15px;
+      border-top: 1px solid #eee;
+    }
+    .alert { padding: 10px 14px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; display: none; }
+    .alert-success { background: #e6f4ea; color: #34a853; }
+    .alert-error { background: #fce8e6; color: #ea4335; }
+    .empty-state { text-align: center; padding: 40px; color: #999; }
+
+    /* RESET PASSWORD MODAL */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+    }
+    .modal {
+      background: white;
+      margin: 100px auto;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 400px;
+      padding: 25px;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .modal-header h3 { color: #333; }
+    .btn-close { background: none; border: none; font-size: 22px; cursor: pointer; }
+    .you-badge {
+      background: #e8f0fe;
+      color: #1a73e8;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-left: 6px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>👤 User Management</h1>
+  <button class="btn-back" onclick="window.location.href='/dashboard'">← Dashboard</button>
+</div>
+
+<!-- LIST VIEW -->
+<div id="listView" class="view active">
+  <div class="container">
+    <div class="top-bar">
+      <h2 style="color:#333;font-size:18px;">System Users</h2>
+      <button class="btn-primary" onclick="showAddForm()">+ Add User</button>
+    </div>
+    <div class="table-card">
+      <div class="table-card-header">
+        <h3>Users <span id="userCount" style="color:#666;font-weight:400;font-size:13px;"></span></h3>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Full Name</th>
+            <th>Username</th>
+            <th>Role</th>
+            <th>Branches</th>
+            <th>Status</th>
+            <th>Last Login</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="usersTable">
+          <tr><td colspan="7"><div class="empty-state">Loading...</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- FORM VIEW -->
+<div id="formView" class="view">
+  <div class="container">
+    <div class="form-view-header">
+      <button class="btn-back-list" onclick="showListView()">← Back to List</button>
+      <h2 id="formTitle">Add New User</h2>
+    </div>
+    <div class="form-card">
+      <div class="alert alert-success" id="alertSuccess"></div>
+      <div class="alert alert-error" id="alertError"></div>
+      <input type="hidden" id="userId">
+
+      <div class="section-title">👤 User Details</div>
+      <div class="form-grid">
+        <div class="form-group full-width">
+          <label>Full Name <span class="req">*</span></label>
+          <input type="text" id="fullName" placeholder="e.g. Rahul Sharma">
+        </div>
+        <div class="form-group">
+          <label>Username <span class="req">*</span></label>
+          <input type="text" id="username" placeholder="e.g. rahul.sharma" autocomplete="off">
+          <div class="hint">Lowercase only, no spaces</div>
+        </div>
+        <div class="form-group">
+          <label>Role <span class="req">*</span></label>
+          <select id="role" onchange="onRoleChange()">
+            <option value="">Select Role</option>
+            <option value="admin">Admin</option>
+            <option value="management">Management</option>
+            <option value="accountant">Accountant</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="section-title">🏢 Branch Access</div>
+      <div class="form-group">
+        <label>Assign Branches <span class="req">*</span></label>
+        <div class="branch-options" id="branchOptions">
+          <div style="color:#999;font-size:13px;">Loading branches...</div>
+        </div>
+        <div class="hint" id="branchHint">Select one or more branches</div>
+      </div>
+
+      <div class="section-title" id="passwordSection">🔒 Password</div>
+      <div class="form-grid" id="passwordFields">
+        <div class="form-group">
+          <label id="passwordLabel">Password <span class="req">*</span></label>
+          <input type="password" id="password" placeholder="Minimum 6 characters" autocomplete="new-password">
+        </div>
+        <div class="form-group">
+          <label>Confirm Password <span class="req">*</span></label>
+          <input type="password" id="confirmPassword" placeholder="Repeat password">
+        </div>
+      </div>
+
+      <div class="form-footer">
+        <button class="btn-secondary" onclick="showListView()">Cancel</button>
+        <button class="btn-primary" onclick="saveUser()">💾 Save User</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RESET PASSWORD MODAL -->
+<div class="modal-overlay" id="resetModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>🔒 Reset Password</h3>
+      <button class="btn-close" onclick="closeResetModal()">×</button>
+    </div>
+    <div class="alert alert-success" id="resetSuccess"></div>
+    <div class="alert alert-error" id="resetError"></div>
+    <input type="hidden" id="resetUserId">
+    <div style="margin-bottom:15px;font-size:13px;color:#666;">
+      Resetting password for: <strong id="resetUserName"></strong>
+    </div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label style="font-size:13px;font-weight:600;margin-bottom:5px;display:block;">
+        New Password <span style="color:#ea4335;">*</span>
+      </label>
+      <input type="password" id="newPassword" placeholder="Minimum 6 characters">
+    </div>
+    <div class="form-group" style="margin-bottom:20px;">
+      <label style="font-size:13px;font-weight:600;margin-bottom:5px;display:block;">
+        Confirm Password <span style="color:#ea4335;">*</span>
+      </label>
+      <input type="password" id="confirmNewPassword" placeholder="Repeat password">
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button class="btn-secondary" onclick="closeResetModal()">Cancel</button>
+      <button class="btn-primary" onclick="resetPassword()">🔒 Reset Password</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let currentUser = {};
+  let editMode = false;
+  let locations = [];
+
+  window.onload = async () => {
+    await checkAuth();
+    await loadLocations();
+    await loadUsers();
+  };
+
+  async function checkAuth() {
+    const res = await fetch('/api/auth/me');
+    const data = await res.json();
+    if (!data.success) { window.location.href = '/'; return; }
+    currentUser = data.user;
+    if (currentUser.role !== 'admin' && currentUser.role !== 'management') {
+      window.location.href = '/dashboard';
+    }
+  }
+
+  async function loadLocations() {
+    try {
+      const res = await fetch('/api/masters/location');
+      const data = await res.json();
+      if (data.success) {
+        locations = data.masters.map(m => m.value);
+        renderBranchOptions(['all']);
+      }
+    } catch(e) {
+      locations = ['Thane', 'Panvel'];
+      renderBranchOptions(['all']);
+    }
+  }
+
+  function renderBranchOptions(selectedBranches) {
+    const container = document.getElementById('branchOptions');
+    const allBranches = ['all', ...locations];
+    container.innerHTML = allBranches.map(branch => `
+      <div class="branch-option ${selectedBranches.includes(branch) ? 'checked' : ''}"
+        id="branchOpt-${branch}" onclick="toggleBranch('${branch}')">
+        <input type="checkbox" id="branch-${branch}"
+          ${selectedBranches.includes(branch) ? 'checked' : ''}
+          onclick="event.stopPropagation()">
+        <label for="branch-${branch}">
+          ${branch === 'all' ? '🌐 All Branches' : '📍 ' + branch}
+        </label>
+      </div>
+    `).join('');
+  }
+
+  function toggleBranch(branch) {
+    const checkbox = document.getElementById('branch-' + branch);
+    checkbox.checked = !checkbox.checked;
+    const opt = document.getElementById('branchOpt-' + branch);
+    if (checkbox.checked) {
+      opt.classList.add('checked');
+      if (branch === 'all') {
+        ['all', ...locations].forEach(b => {
+          if (b !== 'all') {
+            document.getElementById('branch-' + b).checked = false;
+            document.getElementById('branchOpt-' + b).classList.remove('checked');
+          }
+        });
+      } else {
+        document.getElementById('branch-all').checked = false;
+        document.getElementById('branchOpt-all').classList.remove('checked');
+      }
+    } else {
+      opt.classList.remove('checked');
+    }
+  }
+
+  function getSelectedBranches() {
+    const allBranches = ['all', ...locations];
+    const selected = allBranches.filter(b => {
+      const cb = document.getElementById('branch-' + b);
+      return cb && cb.checked;
+    });
+    return selected.length > 0 ? selected : ['all'];
+  }
+
+  function onRoleChange() {
+    const role = document.getElementById('role').value;
+    const hint = document.getElementById('branchHint');
+    if (role === 'admin' || role === 'management') {
+      renderBranchOptions(['all']);
+      hint.textContent = 'Admin and Management have access to all branches by default';
+    } else {
+      renderBranchOptions([]);
+      hint.textContent = 'Select one or more branches for this accountant';
+    }
+  }
+
+  async function loadUsers() {
+    try {
+      const res = await fetch('/api/users');
+      const data = await res.json();
+      if (data.success) renderUsers(data.users);
+    } catch(e) { console.error(e); }
+  }
+
+  function renderUsers(users) {
+    const tbody = document.getElementById('usersTable');
+    document.getElementById('userCount').textContent = '(' + users.length + ' users)';
+    if (users.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state">No users found</div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = users.map(u => `
+      <tr>
+        <td>
+          <strong>${u.fullName}</strong>
+          ${u._id === currentUser.id || u.username === currentUser.username ?
+            '<span class="you-badge">You</span>' : ''}
+        </td>
+        <td>${u.username}</td>
+        <td><span class="badge badge-${u.role}">${u.role.charAt(0).toUpperCase() + u.role.slice(1)}</span></td>
+        <td>${(u.branches || ['all']).join(', ')}</td>
+        <td><span class="badge ${u.isActive ? 'badge-active' : 'badge-inactive'}">${u.isActive ? 'Active' : 'Inactive'}</span></td>
+        <td>${u.lastLogin ? new Date(u.lastLogin).toLocaleDateString('en-IN') : 'Never'}</td>
+        <td>
+          <button class="btn-warning" onclick="editUser('${u._id}')">Edit</button>
+          <button class="btn-primary" style="margin-left:4px;padding:6px 12px;font-size:12px;"
+            onclick="openResetModal('${u._id}', '${u.fullName}')">
+            🔒 Reset Password
+          </button>
+          ${u.username !== currentUser.username ? `
+          <button class="${u.isActive ? 'btn-danger' : 'btn-success'}"
+            style="margin-left:4px;"
+            onclick="toggleUser('${u._id}', '${u.fullName}', ${u.isActive})">
+            ${u.isActive ? 'Deactivate' : 'Activate'}
+          </button>` : ''}
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function showAddForm() {
+    editMode = false;
+    document.getElementById('formTitle').textContent = 'Add New User';
+    document.getElementById('userId').value = '';
+    document.getElementById('fullName').value = '';
+    document.getElementById('username').value = '';
+    document.getElementById('username').disabled = false;
+    document.getElementById('role').value = '';
+    document.getElementById('password').value = '';
+    document.getElementById('confirmPassword').value = '';
+    document.getElementById('alertSuccess').style.display = 'none';
+    document.getElementById('alertError').style.display = 'none';
+    document.getElementById('passwordSection').style.display = 'block';
+    document.getElementById('passwordFields').style.display = 'grid';
+    document.getElementById('passwordLabel').innerHTML = 'Password <span class="req">*</span>';
+    renderBranchOptions(['all']);
+    switchView('formView');
+  }
+
+  async function editUser(id) {
+    editMode = true;
+    try {
+      const res = await fetch('/api/users/' + id);
+      const data = await res.json();
+      if (!data.success) return;
+      const u = data.user;
+      document.getElementById('formTitle').textContent = 'Edit User — ' + u.fullName;
+      document.getElementById('userId').value = u._id;
+      document.getElementById('fullName').value = u.fullName;
+      document.getElementById('username').value = u.username;
+      document.getElementById('username').disabled = true;
+      document.getElementById('role').value = u.role;
+      document.getElementById('password').value = '';
+      document.getElementById('confirmPassword').value = '';
+      document.getElementById('alertSuccess').style.display = 'none';
+      document.getElementById('alertError').style.display = 'none';
+      document.getElementById('passwordSection').style.display = 'none';
+      document.getElementById('passwordFields').style.display = 'none';
+      renderBranchOptions(u.branches || ['all']);
+      switchView('formView');
+    } catch(e) { console.error(e); }
+  }
+
+  async function saveUser() {
+    const id = document.getElementById('userId').value;
+    const fullName = document.getElementById('fullName').value.trim();
+    const username = document.getElementById('username').value.trim().toLowerCase();
+    const role = document.getElementById('role').value;
+    const password = document.getElementById('password').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    const branches = getSelectedBranches();
+
+    if (!fullName || !username || !role) {
+      showAlert('alertError', 'Full name, username and role are required');
+      return;
+    }
+    if (branches.length === 0) {
+      showAlert('alertError', 'Please select at least one branch');
+      return;
+    }
+    if (!editMode) {
+      if (!password) { showAlert('alertError', 'Password is required'); return; }
+      if (password.length < 6) { showAlert('alertError', 'Password must be at least 6 characters'); return; }
+      if (password !== confirmPassword) { showAlert('alertError', 'Passwords do not match'); return; }
+    }
+
+    const payload = { fullName, role, branches };
+    if (!editMode) { payload.username = username; payload.password = password; }
+
+    try {
+      const url = editMode ? '/api/users/' + id : '/api/users';
+      const method = editMode ? 'PUT' : 'POST';
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        showAlert('alertSuccess', data.message);
+        await loadUsers();
+        setTimeout(showListView, 1500);
+      } else {
+        showAlert('alertError', data.message);
+      }
+    } catch(e) { showAlert('alertError', 'Error: ' + e.message); }
+  }
+
+  async function toggleUser(id, name, isActive) {
+    const action = isActive ? 'deactivate' : 'activate';
+    if (!confirm('Are you sure you want to ' + action + ' ' + name + '?')) return;
+    try {
+      const res = await fetch('/api/users/' + id + '/toggle', { method: 'PATCH' });
+      const data = await res.json();
+      if (data.success) await loadUsers();
+      else alert(data.message);
+    } catch(e) { alert('Error: ' + e.message); }
+  }
+
+  function openResetModal(id, name) {
+    document.getElementById('resetUserId').value = id;
+    document.getElementById('resetUserName').textContent = name;
+    document.getElementById('newPassword').value = '';
+    document.getElementById('confirmNewPassword').value = '';
+    document.getElementById('resetSuccess').style.display = 'none';
+    document.getElementById('resetError').style.display = 'none';
+    document.getElementById('resetModal').style.display = 'block';
+  }
+
+  function closeResetModal() {
+    document.getElementById('resetModal').style.display = 'none';
+  }
+
+  async function resetPassword() {
+    const id = document.getElementById('resetUserId').value;
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmNewPassword = document.getElementById('confirmNewPassword').value;
+    if (!newPassword || newPassword.length < 6) {
+      showResetAlert('resetError', 'Password must be at least 6 characters');
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      showResetAlert('resetError', 'Passwords do not match');
+      return;
+    }
+    try {
+      const res = await fetch('/api/users/' + id + '/reset-password', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newPassword })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showResetAlert('resetSuccess', data.message);
+        setTimeout(closeResetModal, 1500);
+      } else {
+        showResetAlert('resetError', data.message);
+      }
+    } catch(e) { showResetAlert('resetError', 'Error: ' + e.message); }
+  }
+
+  function showListView() {
+    switchView('listView');
+    editMode = false;
+  }
+
+  function switchView(viewId) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById(viewId).classList.add('active');
+    window.scrollTo(0, 0);
+  }
+
+  function showAlert(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 4000);
+  }
+
+  function showResetAlert(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+</script>
+</body>
+</html>

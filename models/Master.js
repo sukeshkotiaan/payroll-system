@@ -3,13 +3,17 @@ const mongoose = require('mongoose');
 const masterSchema = new mongoose.Schema({
   type: {
     type: String,
-    enum: ['location', 'section', 'profile', 'department', 'designation'],
+    enum: ['location', 'section', 'profile', 'department', 'designation', 'role', 'export-permission'],
     required: true
   },
   value: {
     type: String,
     required: true,
     trim: true
+  },
+  permissions: {
+    type: [String],
+    default: []
   },
   isActive: {
     type: Boolean,
