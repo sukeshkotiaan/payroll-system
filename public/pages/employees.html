@@ -8,126 +8,61 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; }
     .header {
-      background: #1a73e8;
-      color: white;
+      background: #1a73e8; color: white;
       padding: 15px 30px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      position: sticky;
-      top: 0;
-      z-index: 100;
+      display: flex; justify-content: space-between; align-items: center;
+      position: sticky; top: 0; z-index: 100;
     }
     .header h1 { font-size: 20px; }
     .btn-back {
-      background: white;
-      color: #1a73e8;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
+      background: white; color: #1a73e8; border: none;
+      padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600;
     }
     .view { display: none; }
     .view.active { display: block; }
     .container { padding: 20px; }
-
-    /* BUTTONS */
     .btn-primary {
-      background: #1a73e8;
-      color: white;
-      border: none;
-      padding: 9px 18px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 13px;
+      background: #1a73e8; color: white; border: none;
+      padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px;
     }
     .btn-primary:hover { background: #1557b0; }
     .btn-primary:disabled { background: #aaa; cursor: not-allowed; }
     .btn-success {
-      background: #34a853;
-      color: white;
-      border: none;
-      padding: 9px 18px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 13px;
+      background: #34a853; color: white; border: none;
+      padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px;
     }
     .btn-secondary {
-      background: #f0f2f5;
-      color: #333;
-      border: none;
-      padding: 9px 18px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 13px;
+      background: #f0f2f5; color: #333; border: none;
+      padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px;
     }
     .btn-danger {
-      background: #ea4335;
-      color: white;
-      border: none;
-      padding: 5px 10px;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 12px;
+      background: #ea4335; color: white; border: none;
+      padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 12px;
     }
     .btn-edit {
-      background: #fbbc04;
-      color: #333;
-      border: none;
-      padding: 5px 10px;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 12px;
+      background: #fbbc04; color: #333; border: none;
+      padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 12px;
     }
-
-    /* LIST VIEW */
     .top-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 15px;
-      flex-wrap: wrap;
-      gap: 10px;
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 15px; flex-wrap: wrap; gap: 10px;
     }
-    .filters {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
+    .filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
     .filters input, .filters select {
-      padding: 7px 11px;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      font-size: 12px;
-      outline: none;
+      padding: 7px 11px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; outline: none;
     }
     .filters input { min-width: 180px; }
     .action-btns { display: flex; gap: 8px; }
     .table-card {
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-      overflow: hidden;
+      background: white; border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden;
     }
-    .table-card-header {
-      padding: 12px 20px;
-      border-bottom: 1px solid #eee;
-    }
+    .table-card-header { padding: 12px 20px; border-bottom: 1px solid #eee; }
     .table-card-header h3 { font-size: 15px; color: #333; }
     table { width: 100%; border-collapse: collapse; font-size: 12px; }
     th {
-      background: #f8f9fa;
-      padding: 10px 12px;
-      text-align: left;
-      font-weight: 600;
-      color: #555;
-      border-bottom: 1px solid #eee;
-      white-space: nowrap;
+      background: #f8f9fa; padding: 10px 12px; text-align: left;
+      font-weight: 600; color: #555; border-bottom: 1px solid #eee; white-space: nowrap;
     }
     td { padding: 10px 12px; border-bottom: 1px solid #f5f5f5; color: #333; }
     tr:hover { background: #f8f9ff; }
@@ -135,200 +70,69 @@
     .badge-active { background: #e6f4ea; color: #34a853; }
     .badge-inactive { background: #fce8e6; color: #ea4335; }
     .badge-restricted { background: #fef3c7; color: #d97706; font-size: 10px; }
-
-    /* FORM VIEW */
     .form-view-header {
-      display: flex;
-      align-items: center;
-      gap: 15px;
-      margin-bottom: 20px;
-      padding-bottom: 15px;
-      border-bottom: 2px solid #e8f0fe;
+      display: flex; align-items: center; gap: 15px;
+      margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #e8f0fe;
     }
     .btn-back-list {
-      background: #e8f0fe;
-      color: #1a73e8;
-      border: none;
-      padding: 8px 15px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 13px;
-      display: flex;
-      align-items: center;
-      gap: 5px;
+      background: #e8f0fe; color: #1a73e8; border: none;
+      padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px;
     }
     .form-view-header h2 { color: #333; font-size: 20px; }
     .form-card {
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-      padding: 25px;
-      max-width: 900px;
-      margin: 0 auto;
+      background: white; border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 25px; max-width: 900px; margin: 0 auto;
     }
     .section-title {
-      font-size: 13px;
-      font-weight: 700;
-      color: #1a73e8;
-      margin: 20px 0 12px 0;
-      padding-bottom: 5px;
-      border-bottom: 2px solid #e8f0fe;
+      font-size: 13px; font-weight: 700; color: #1a73e8;
+      margin: 20px 0 12px 0; padding-bottom: 5px; border-bottom: 2px solid #e8f0fe;
     }
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
     .form-group { display: flex; flex-direction: column; gap: 5px; }
     .form-group.full-width { grid-column: 1 / -1; }
     .form-group label { font-size: 13px; font-weight: 600; color: #555; }
     .form-group label .req { color: #ea4335; }
-    .form-group input,
-    .form-group select,
-    .form-group textarea {
-      padding: 9px 11px;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      font-size: 13px;
-      outline: none;
+    .form-group input, .form-group select, .form-group textarea {
+      padding: 9px 11px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; outline: none;
     }
-    .form-group input:focus,
-    .form-group select:focus { border-color: #1a73e8; }
+    .form-group input:focus, .form-group select:focus { border-color: #1a73e8; }
     .form-group textarea { resize: vertical; min-height: 70px; }
     .hint { font-size: 11px; color: #999; }
     .age-display { font-size: 12px; color: #1a73e8; font-weight: 600; margin-top: 3px; }
-
-    /* SALARY */
     .salary-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 5px; }
     .salary-preview {
-      background: #f0f7ff;
-      border: 1px solid #1a73e8;
-      border-radius: 8px;
-      padding: 15px;
-      margin-top: 10px;
+      background: #f0f7ff; border: 1px solid #1a73e8; border-radius: 8px; padding: 15px; margin-top: 10px;
     }
     .salary-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 8px; }
     .salary-item label { font-size: 11px; color: #666; font-weight: 600; display: block; margin-bottom: 3px; }
     .salary-item input { width: 100%; padding: 7px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; }
-
-    /* EIN */
     .ein-box {
-      background: #e6f4ea;
-      border: 1px solid #34a853;
-      border-radius: 6px;
-      padding: 10px 15px;
-      display: none;
-      align-items: center;
-      gap: 10px;
-      margin-top: 8px;
+      background: #e6f4ea; border: 1px solid #34a853; border-radius: 6px;
+      padding: 10px 15px; display: none; align-items: center; gap: 10px; margin-top: 8px;
     }
     .ein-value { font-size: 20px; font-weight: 700; color: #1a73e8; }
-
-    /* FLAGS */
     .flags-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
     .flag-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px;
-      border: 1px solid #ddd;
-      border-radius: 6px;
+      display: flex; align-items: center; gap: 8px; padding: 10px; border: 1px solid #ddd; border-radius: 6px;
     }
     .flag-item input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; }
     .flag-item label { font-size: 12px; font-weight: 600; cursor: pointer; margin: 0; }
-
-    /* QUALIFICATIONS */
-    .qual-headers {
-      display: grid;
-      grid-template-columns: 2fr 2fr 1fr 1fr 30px;
-      gap: 8px;
-      margin-bottom: 6px;
-    }
+    .qual-headers { display: grid; grid-template-columns: 2fr 2fr 1fr 1fr 30px; gap: 8px; margin-bottom: 6px; }
     .qual-header-label { font-size: 11px; color: #666; font-weight: 600; }
-    .qual-row {
-      display: grid;
-      grid-template-columns: 2fr 2fr 1fr 1fr 30px;
-      gap: 8px;
-      margin-bottom: 8px;
-      align-items: center;
-    }
-    .qual-row input {
-      padding: 8px 10px;
-      border: 1px solid #ddd;
-      border-radius: 5px;
-      font-size: 12px;
-      outline: none;
-      width: 100%;
-    }
+    .qual-row { display: grid; grid-template-columns: 2fr 2fr 1fr 1fr 30px; gap: 8px; margin-bottom: 8px; align-items: center; }
+    .qual-row input { padding: 8px 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 12px; outline: none; width: 100%; }
     .qual-row input:focus { border-color: #1a73e8; }
-    .btn-remove-qual {
-      background: #fce8e6;
-      color: #ea4335;
-      border: none;
-      width: 28px;
-      height: 28px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 14px;
-    }
-    .btn-add-qual {
-      background: #e8f0fe;
-      color: #1a73e8;
-      border: 1px solid #1a73e8;
-      padding: 8px 16px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 12px;
-      font-weight: 600;
-      margin-top: 5px;
-    }
-
-    /* PHOTO */
-    .photo-preview {
-      width: 70px; height: 70px; border-radius: 50%;
-      object-fit: cover; border: 2px solid #ddd;
-      display: none; margin-top: 6px;
-    }
-
-    /* FORM FOOTER */
-    .form-footer {
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-      margin-top: 25px;
-      padding-top: 15px;
-      border-top: 1px solid #eee;
-    }
-
-    /* ALERTS */
+    .btn-remove-qual { background: #fce8e6; color: #ea4335; border: none; width: 28px; height: 28px; border-radius: 4px; cursor: pointer; font-size: 14px; }
+    .btn-add-qual { background: #e8f0fe; color: #1a73e8; border: 1px solid #1a73e8; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; margin-top: 5px; }
+    .photo-preview { width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 2px solid #ddd; display: none; margin-top: 6px; }
+    .form-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px; padding-top: 15px; border-top: 1px solid #eee; }
     .alert { padding: 10px 14px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; display: none; }
     .alert-success { background: #e6f4ea; color: #34a853; }
     .alert-error { background: #fce8e6; color: #ea4335; }
-
-    /* EMPTY */
     .empty-state { text-align: center; padding: 40px; color: #999; }
-
-    /* IMPORT MODAL */
-    .modal-overlay {
-      display: none;
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.5);
-      z-index: 1000;
-      overflow-y: auto;
-    }
-    .modal {
-      background: white;
-      margin: 30px auto;
-      border-radius: 12px;
-      width: 90%;
-      max-width: 700px;
-      padding: 25px;
-    }
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-    }
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; overflow-y: auto; }
+    .modal { background: white; margin: 30px auto; border-radius: 12px; width: 90%; max-width: 700px; padding: 25px; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
     .modal-header h3 { color: #333; }
     .btn-close { background: none; border: none; font-size: 22px; cursor: pointer; }
   </style>
@@ -343,24 +147,16 @@
   </div>
 </div>
 
-<!-- ═══════════════════════ LIST VIEW ═══════════════════════ -->
+<!-- LIST VIEW -->
 <div id="listView" class="view active">
   <div class="container">
     <div class="top-bar">
       <div class="filters">
         <input type="text" id="searchInput" placeholder="🔍 Search name / EIN" oninput="filterEmployees()">
-        <select id="filterLocation" onchange="filterEmployees()">
-          <option value="">All Locations</option>
-        </select>
-        <select id="filterSection" onchange="filterEmployees()">
-          <option value="">All Sections</option>
-        </select>
-        <select id="filterProfile" onchange="filterEmployees()">
-          <option value="">All Profiles</option>
-        </select>
-        <select id="filterDepartment" onchange="filterEmployees()">
-          <option value="">All Departments</option>
-        </select>
+        <select id="filterLocation" onchange="filterEmployees()"><option value="">All Locations</option></select>
+        <select id="filterSection" onchange="filterEmployees()"><option value="">All Sections</option></select>
+        <select id="filterProfile" onchange="filterEmployees()"><option value="">All Profiles</option></select>
+        <select id="filterDepartment" onchange="filterEmployees()"><option value="">All Departments</option></select>
         <select id="filterStatus" onchange="filterEmployees()">
           <option value="">All Status</option>
           <option value="active">Active</option>
@@ -373,7 +169,6 @@
         <button class="btn-primary" onclick="showAddForm()">+ Add Employee</button>
       </div>
     </div>
-
     <div class="table-card">
       <div class="table-card-header">
         <h3>Employees <span id="empCount" style="color:#666;font-weight:400;font-size:13px;"></span></h3>
@@ -382,17 +177,9 @@
         <table>
           <thead>
             <tr>
-              <th>EIN</th>
-              <th>Name</th>
-              <th>Designation</th>
-              <th>Department</th>
-              <th>Location</th>
-              <th>Section</th>
-              <th>Profile</th>
-              <th>Joining Date</th>
-              <th>Exit Date</th>
-              <th>Status</th>
-              <th>Actions</th>
+              <th>EIN</th><th>Name</th><th>Designation</th><th>Department</th>
+              <th>Location</th><th>Section</th><th>Profile</th>
+              <th>Joining Date</th><th>Exit Date</th><th>Status</th><th>Actions</th>
             </tr>
           </thead>
           <tbody id="employeeTable">
@@ -404,62 +191,48 @@
   </div>
 </div>
 
-<!-- ═══════════════════════ FORM VIEW ═══════════════════════ -->
+<!-- FORM VIEW -->
 <div id="formView" class="view">
   <div class="container">
     <div class="form-view-header">
       <button class="btn-back-list" onclick="showListView()">← Back to List</button>
       <h2 id="formTitle">Add New Employee</h2>
     </div>
-
     <div class="form-card">
       <div class="alert alert-success" id="alertSuccess"></div>
       <div class="alert alert-error" id="alertError"></div>
-
       <input type="hidden" id="empId">
 
-      <!-- PERSONAL INFO -->
       <div class="section-title">📋 Personal Information</div>
       <div class="form-grid">
         <div class="form-group">
           <label>Location <span class="req">*</span></label>
-          <select id="location" onchange="updateEINPreview()">
-            <option value="">Select Location</option>
-          </select>
+          <select id="location" onchange="updateEINPreview()"><option value="">Select Location</option></select>
         </div>
         <div class="form-group">
           <label>Section <span class="req">*</span></label>
-          <select id="section" onchange="updateEINPreview()">
-            <option value="">Select Section</option>
-          </select>
+          <select id="section" onchange="updateEINPreview()"><option value="">Select Section</option></select>
         </div>
         <div class="form-group">
           <label>Profile <span class="req">*</span></label>
-          <select id="profile" onchange="updateEINPreview()">
-            <option value="">Select Profile</option>
-          </select>
+          <select id="profile" onchange="updateEINPreview()"><option value="">Select Profile</option></select>
         </div>
         <div class="form-group">
           <label>Department <span class="req">*</span></label>
-          <select id="department">
-            <option value="">Select Department</option>
-          </select>
+          <select id="department"><option value="">Select Department</option></select>
+        </div>
+        <div class="form-group">
+          <label>Title <span class="req">*</span></label>
+          <select id="title"><option value="">Select Title</option></select>
         </div>
         <div class="form-group">
           <label>Gender <span class="req">*</span></label>
-          <select id="gender">
-            <option value="">Select Gender</option>
-            <option value="Male">Male</option>
-            <option value="Female">Female</option>
-            <option value="Other">Other</option>
-          </select>
+          <select id="gender"><option value="">Select Gender</option></select>
         </div>
         <div class="form-group">
           <label>Designation <span class="req">*</span></label>
           <div style="display:flex;gap:8px;align-items:center;">
-            <select id="designationSelect" onchange="onDesignationChange()" style="flex:1;">
-              <option value="">Select Designation</option>
-            </select>
+            <select id="designationSelect" onchange="onDesignationChange()" style="flex:1;"><option value="">Select Designation</option></select>
             <button type="button" style="background:#e8f0fe;color:#1a73e8;border:1px solid #1a73e8;padding:8px 10px;border-radius:6px;cursor:pointer;font-size:11px;white-space:nowrap;" onclick="toggleCustomDesignation()">+ Custom</button>
           </div>
           <input type="text" id="designationCustom" placeholder="Type custom designation" style="display:none;margin-top:5px;">
@@ -509,7 +282,6 @@
         </div>
       </div>
 
-      <!-- EDUCATION QUALIFICATIONS -->
       <div class="section-title">🎓 Education Qualifications</div>
       <div class="qual-headers">
         <div class="qual-header-label">Degree / Certificate</div>
@@ -519,11 +291,8 @@
         <div></div>
       </div>
       <div id="qualContainer"></div>
-      <button type="button" class="btn-add-qual" onclick="addQualification()">
-        + Add Qualification
-      </button>
+      <button type="button" class="btn-add-qual" onclick="addQualification()">+ Add Qualification</button>
 
-      <!-- SALARY -->
       <div class="section-title">💰 Salary Information</div>
       <div class="salary-inputs">
         <div class="form-group">
@@ -540,55 +309,25 @@
       <div class="salary-preview" id="salaryPreview" style="display:none;">
         <div style="font-size:13px;font-weight:600;color:#333;">Monthly Breakdown — Editable</div>
         <div class="salary-grid">
-          <div class="salary-item">
-            <label>Monthly CTC</label>
-            <input type="number" id="ctcMonthly" readonly style="background:#f0f2f5;">
-          </div>
-          <div class="salary-item">
-            <label>Basic</label>
-            <input type="number" id="basic" oninput="recalcDeductions()">
-          </div>
-          <div class="salary-item">
-            <label>HRA & Allow</label>
-            <input type="number" id="hraAllowance">
-          </div>
-          <div class="salary-item">
-            <label>PF</label>
-            <input type="number" id="pf">
-          </div>
-          <div class="salary-item">
-            <label>PT</label>
-            <input type="number" id="pt" readonly style="background:#f0f2f5;">
-          </div>
+          <div class="salary-item"><label>Monthly CTC</label><input type="number" id="ctcMonthly" readonly style="background:#f0f2f5;"></div>
+          <div class="salary-item"><label>Basic</label><input type="number" id="basic" oninput="recalcDeductions()"></div>
+          <div class="salary-item"><label>HRA & Allow</label><input type="number" id="hraAllowance"></div>
+          <div class="salary-item"><label>PF</label><input type="number" id="pf"></div>
+          <div class="salary-item"><label>PT</label><input type="number" id="pt" readonly style="background:#f0f2f5;"></div>
         </div>
       </div>
 
-      <!-- FLAGS -->
       <div class="section-title">⚙️ System Flags</div>
       <div class="flags-grid">
-        <div class="flag-item">
-          <input type="checkbox" id="pfApplicable" onchange="calculateSalary()">
-          <label for="pfApplicable">PF Applicable</label>
-        </div>
-        <div class="flag-item">
-          <input type="checkbox" id="esicApplicable" onchange="calculateSalary()">
-          <label for="esicApplicable">ESIC Applicable</label>
-        </div>
-        <div class="flag-item">
-          <input type="checkbox" id="ptApplicable" onchange="calculateSalary()">
-          <label for="ptApplicable">PT Applicable</label>
-        </div>
-        <div class="flag-item" id="restrictedFlag">
-          <input type="checkbox" id="isRestricted">
-          <label for="isRestricted">🔒 Restricted</label>
-        </div>
+        <div class="flag-item"><input type="checkbox" id="pfApplicable" onchange="calculateSalary()"><label for="pfApplicable">PF Applicable</label></div>
+        <div class="flag-item"><input type="checkbox" id="esicApplicable" onchange="calculateSalary()"><label for="esicApplicable">ESIC Applicable</label></div>
+        <div class="flag-item"><input type="checkbox" id="ptApplicable" onchange="calculateSalary()"><label for="ptApplicable">PT Applicable</label></div>
+        <div class="flag-item" id="restrictedFlag"><input type="checkbox" id="isRestricted"><label for="isRestricted">🔒 Restricted</label></div>
       </div>
 
-      <!-- EIN -->
       <div class="section-title">🪪 Employee ID (EIN)</div>
       <div style="display:flex;align-items:center;gap:15px;flex-wrap:wrap;">
-        <button type="button" class="btn-primary" id="generateEINBtn"
-          onclick="generateEIN()" disabled>Generate EIN</button>
+        <button type="button" class="btn-primary" id="generateEINBtn" onclick="generateEIN()" disabled>Generate EIN</button>
         <div class="ein-box" id="einBox">
           <span>EIN:</span>
           <span class="ein-value" id="einValue"></span>
@@ -626,17 +365,13 @@
           <tbody id="previewBody"></tbody>
         </table>
       </div>
-      <div style="margin-top:8px;">
-        <span id="importCount" style="font-size:12px;color:#666;"></span>
-      </div>
+      <div style="margin-top:8px;"><span id="importCount" style="font-size:12px;color:#666;"></span></div>
     </div>
     <div class="alert alert-error" id="importError"></div>
     <div class="alert alert-success" id="importSuccess"></div>
     <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:15px;">
       <button class="btn-secondary" onclick="closeImportModal()">Cancel</button>
-      <button class="btn-primary" id="importBtn" onclick="importEmployees()" style="display:none;">
-        📥 Import All
-      </button>
+      <button class="btn-primary" id="importBtn" onclick="importEmployees()" style="display:none;">📥 Import All</button>
     </div>
   </div>
 </div>
@@ -671,44 +406,35 @@
   }
 
   async function checkExportPermission() {
-  if (currentUser.role === 'admin' || currentUser.role === 'management') {
-    document.getElementById('exportBtn').style.display = 'inline-block';
-    return;
-  }
-  try {
-    const res = await fetch('/api/masters/export-permission');
-    const data = await res.json();
-    if (data.success) {
-      const perm = data.masters.find(m => m.value === currentUser.role);
-      if (perm) document.getElementById('exportBtn').style.display = 'inline-block';
+    if (currentUser.role === 'admin' || currentUser.role === 'management') {
+      document.getElementById('exportBtn').style.display = 'inline-block';
+      return;
     }
-  } catch(e) {}
-}
+    try {
+      const res = await fetch('/api/masters/export-permission');
+      const data = await res.json();
+      if (data.success) {
+        const perm = data.masters.find(m => m.value === currentUser.role);
+        if (perm) document.getElementById('exportBtn').style.display = 'inline-block';
+      }
+    } catch(e) {}
+  }
 
   async function loadCalcRules() {
     try {
       const res = await fetch('/api/settings/calc-rules');
       const data = await res.json();
-      if (data.success && data.rules && data.rules.length > 0) {
-        calcRules = data.rules[0];
-      } else { calcRules = getDefaultRules(); }
+      if (data.success && data.rules && data.rules.length > 0) calcRules = data.rules[0];
+      else calcRules = getDefaultRules();
     } catch(e) { calcRules = getDefaultRules(); }
   }
 
   function getDefaultRules() {
-    return {
-      basicPercent: 76.923, hraPercent: 23.077,
-      pfRate: 12, pfCap: 1800, esicRate: 0.75, esicLimit: 21000,
-      ptSlabs: [
-        { min: 0, max: 7500, amount: 0 },
-        { min: 7501, max: 10000, amount: 175 },
-        { min: 10001, max: 999999, amount: 200 }
-      ]
-    };
+    return { basicPercent: 76.923, hraPercent: 23.077, pfRate: 12, pfCap: 1800, esicRate: 0.75, esicLimit: 21000, ptSlabs: [{ min: 0, max: 7500, amount: 0 }, { min: 7501, max: 10000, amount: 175 }, { min: 10001, max: 999999, amount: 200 }] };
   }
 
   async function loadMasterDropdowns() {
-    const types = ['location','section','profile','department','designation'];
+    const types = ['location','section','profile','department','designation','title','gender'];
     for (const type of types) {
       try {
         const res = await fetch('/api/masters/' + type);
@@ -724,7 +450,9 @@
       section: ['section','filterSection'],
       profile: ['profile','filterProfile'],
       department: ['department','filterDepartment'],
-      designation: ['designationSelect']
+      designation: ['designationSelect'],
+      title: ['title'],
+      gender: ['gender']
     };
     (map[type] || []).forEach(id => {
       const el = document.getElementById(id);
@@ -735,7 +463,10 @@
         '<option value="">All ' + label + 's</option>' :
         '<option value="">Select ' + label + '</option>';
       masters.forEach(m => {
-        el.innerHTML += '<option value="' + m.value + '">' + m.value + '</option>';
+        const opt = document.createElement("option");
+        opt.value = m.value;
+        opt.textContent = m.value;
+        el.appendChild(opt);
       });
     });
   }
@@ -759,57 +490,45 @@
     const profile = document.getElementById('filterProfile').value;
     const department = document.getElementById('filterDepartment').value;
     const status = document.getElementById('filterStatus').value;
-
     filteredEmployees = allEmployees.filter(emp => {
-      const matchSearch = !search ||
-        emp.employeeName.toLowerCase().includes(search) ||
-        (emp.ein && emp.ein.toLowerCase().includes(search));
+      const matchSearch = !search || emp.employeeName.toLowerCase().includes(search) || (emp.ein && emp.ein.toLowerCase().includes(search));
       const matchLocation = !location || emp.location === location;
       const matchSection = !section || emp.section === section;
       const matchProfile = !profile || emp.profile === profile;
       const matchDept = !department || emp.department === department;
-      const matchStatus = !status ||
-        (status === 'active' ? emp.isActive : !emp.isActive);
-      return matchSearch && matchLocation && matchSection &&
-        matchProfile && matchDept && matchStatus;
+      const matchStatus = !status || (status === 'active' ? emp.isActive : !emp.isActive);
+      return matchSearch && matchLocation && matchSection && matchProfile && matchDept && matchStatus;
     });
     renderTable(filteredEmployees);
   }
 
   function renderTable(employees) {
     const tbody = document.getElementById('employeeTable');
-    document.getElementById('empCount').textContent =
-      '(' + employees.length + ' employees)';
+    document.getElementById('empCount').textContent = '(' + employees.length + ' employees)';
     if (employees.length === 0) {
       tbody.innerHTML = '<tr><td colspan="11"><div class="empty-state">No employees found</div></td></tr>';
       return;
     }
-    tbody.innerHTML = employees.map(emp => `
-      <tr>
-        <td><strong>${emp.ein || '—'}</strong></td>
-        <td>
-          ${emp.photo ? '<img src="' + emp.photo + '" style="width:24px;height:24px;border-radius:50%;object-fit:cover;margin-right:5px;vertical-align:middle;">' : ''}
-          ${emp.employeeName}
-          ${emp.isRestricted ? ' <span class="badge badge-restricted">🔒</span>' : ''}
-        </td>
-        <td>${emp.designation}</td>
-        <td>${emp.department || '—'}</td>
-        <td>${emp.location}</td>
-        <td>${emp.section}</td>
-        <td>${emp.profile}</td>
-        <td>${emp.dateOfJoining ? new Date(emp.dateOfJoining).toLocaleDateString('en-IN') : '—'}</td>
-        <td>${emp.dateOfExit ? new Date(emp.dateOfExit).toLocaleDateString('en-IN') : '—'}</td>
-        <td><span class="badge ${emp.isActive ? 'badge-active' : 'badge-inactive'}">${emp.isActive ? 'Active' : 'Inactive'}</span></td>
-        <td>
-          <button class="btn-edit" onclick="editEmployee('${emp._id}')">Edit</button>
-          ${emp.isActive && (currentUser.role === 'admin' || currentUser.role === 'management') ?
-            '<button class="btn-danger" onclick="goToExit()" style="margin-left:4px;">Exit</button>' : ''}
-        </td>
-      </tr>
-    `).join('');
+    tbody.innerHTML = employees.map(emp =>
+      '<tr>' +
+      '<td><strong>' + (emp.ein || '—') + '</strong></td>' +
+      '<td>' + (emp.photo ? '<img src="' + emp.photo + '" style="width:24px;height:24px;border-radius:50%;object-fit:cover;margin-right:5px;vertical-align:middle;">' : '') + (emp.title ? emp.title + ' ' : '') + emp.employeeName + (emp.isRestricted ? ' <span class="badge badge-restricted">🔒</span>' : '') + '</td>' +
+      '<td>' + emp.designation + '</td>' +
+      '<td>' + (emp.department || '—') + '</td>' +
+      '<td>' + emp.location + '</td>' +
+      '<td>' + emp.section + '</td>' +
+      '<td>' + emp.profile + '</td>' +
+      '<td>' + (emp.dateOfJoining ? new Date(emp.dateOfJoining).toLocaleDateString('en-IN') : '—') + '</td>' +
+      '<td>' + (emp.dateOfExit ? new Date(emp.dateOfExit).toLocaleDateString('en-IN') : '—') + '</td>' +
+      '<td><span class="badge ' + (emp.isActive ? 'badge-active' : 'badge-inactive') + '">' + (emp.isActive ? 'Active' : 'Inactive') + '</span></td>' +
+      '<td>' +
+      '<button class="btn-edit" onclick="editEmployee(\'' + emp._id + '\')">Edit</button>' +
+      (emp.isActive && (currentUser.role === 'admin' || currentUser.role === 'management') ? '<button class="btn-danger" onclick="goToExit()" style="margin-left:4px;">Exit</button>' : '') +
+      '</td>' +
+      '</tr>'
+    ).join('');
   }
 
-  // VIEW SWITCHING
   function showAddForm() {
     editMode = false;
     document.getElementById('formTitle').textContent = 'Add New Employee';
@@ -819,10 +538,7 @@
     switchView('formView');
   }
 
-  function showListView() {
-    switchView('listView');
-    editMode = false;
-  }
+  function showListView() { switchView('listView'); editMode = false; }
 
   function switchView(viewId) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -830,29 +546,20 @@
     window.scrollTo(0, 0);
   }
 
-  function goToExit() {
-    window.location.href = '/exits';
-  }
+  function goToExit() { window.location.href = '/exits'; }
 
-  // QUALIFICATIONS
   function addQualification(qual) {
     const container = document.getElementById('qualContainer');
     const index = Date.now();
     const div = document.createElement('div');
     div.className = 'qual-row';
     div.id = 'qual-' + index;
-    div.innerHTML = `
-      <input type="text" placeholder="e.g. B.Ed" id="qualDegree${index}"
-        value="${qual ? qual.degree : ''}">
-      <input type="text" placeholder="Institution" id="qualInst${index}"
-        value="${qual ? qual.institution : ''}">
-      <input type="text" placeholder="Year" id="qualYear${index}"
-        value="${qual ? qual.yearOfPassing : ''}">
-      <input type="text" placeholder="Grade/%" id="qualGrade${index}"
-        value="${qual ? qual.grade : ''}">
-      <button type="button" class="btn-remove-qual"
-        onclick="this.parentElement.remove()">✕</button>
-    `;
+    div.innerHTML =
+      '<input type="text" placeholder="e.g. B.Ed" id="qualDegree' + index + '" value="' + (qual ? qual.degree : '') + '">' +
+      '<input type="text" placeholder="Institution" id="qualInst' + index + '" value="' + (qual ? qual.institution : '') + '">' +
+      '<input type="text" placeholder="Year" id="qualYear' + index + '" value="' + (qual ? qual.yearOfPassing : '') + '">' +
+      '<input type="text" placeholder="Grade/%" id="qualGrade' + index + '" value="' + (qual ? qual.grade : '') + '">' +
+      '<button type="button" class="btn-remove-qual" onclick="this.parentElement.remove()">✕</button>';
     container.appendChild(div);
   }
 
@@ -862,56 +569,35 @@
     Array.from(container.children).forEach(row => {
       const inputs = row.querySelectorAll('input[type="text"]');
       if (inputs[0] && inputs[0].value.trim()) {
-        quals.push({
-          degree: inputs[0].value.trim(),
-          institution: inputs[1] ? inputs[1].value.trim() : '',
-          yearOfPassing: inputs[2] ? inputs[2].value.trim() : '',
-          grade: inputs[3] ? inputs[3].value.trim() : ''
-        });
+        quals.push({ degree: inputs[0].value.trim(), institution: inputs[1] ? inputs[1].value.trim() : '', yearOfPassing: inputs[2] ? inputs[2].value.trim() : '', grade: inputs[3] ? inputs[3].value.trim() : '' });
       }
     });
     return quals;
   }
 
-  // SALARY
   function onMonthlyChange() {
     const monthly = parseFloat(document.getElementById('monthlySalary').value) || 0;
-    if (monthly > 0) {
-      document.getElementById('ctcAnnual').value = Math.round(monthly * 12);
-      calculateSalary();
-    } else {
-      document.getElementById('ctcAnnual').value = '';
-      document.getElementById('salaryPreview').style.display = 'none';
-    }
+    if (monthly > 0) { document.getElementById('ctcAnnual').value = Math.round(monthly * 12); calculateSalary(); }
+    else { document.getElementById('ctcAnnual').value = ''; document.getElementById('salaryPreview').style.display = 'none'; }
   }
 
   function onAnnualChange() {
     const annual = parseFloat(document.getElementById('ctcAnnual').value) || 0;
-    if (annual > 0) {
-      document.getElementById('monthlySalary').value = Math.round(annual / 12);
-      calculateSalary();
-    } else {
-      document.getElementById('monthlySalary').value = '';
-      document.getElementById('salaryPreview').style.display = 'none';
-    }
+    if (annual > 0) { document.getElementById('monthlySalary').value = Math.round(annual / 12); calculateSalary(); }
+    else { document.getElementById('monthlySalary').value = ''; document.getElementById('salaryPreview').style.display = 'none'; }
   }
 
   function calculateSalary() {
     const monthly = parseFloat(document.getElementById('monthlySalary').value) || 0;
-    if (monthly <= 0) {
-      document.getElementById('salaryPreview').style.display = 'none';
-      return;
-    }
+    if (monthly <= 0) { document.getElementById('salaryPreview').style.display = 'none'; return; }
     const basicPct = calcRules.basicPercent || 76.923;
     const hraPct = calcRules.hraPercent || 23.077;
     const pfRate = calcRules.pfRate || 12;
     const pfCap = calcRules.pfCap || 1800;
     const basic = parseFloat((monthly * basicPct / 100).toFixed(2));
     const hra = parseFloat((monthly * hraPct / 100).toFixed(2));
-    const pf = document.getElementById('pfApplicable').checked ?
-      Math.min(Math.round(basic * pfRate / 100), pfCap) : 0;
-    const pt = document.getElementById('ptApplicable').checked ?
-      getPT(monthly) : 0;
+    const pf = document.getElementById('pfApplicable').checked ? Math.min(Math.round(basic * pfRate / 100), pfCap) : 0;
+    const pt = document.getElementById('ptApplicable').checked ? getPT(monthly) : 0;
     document.getElementById('ctcMonthly').value = Math.round(monthly);
     document.getElementById('basic').value = basic;
     document.getElementById('hraAllowance').value = hra;
@@ -924,8 +610,7 @@
     const basic = parseFloat(document.getElementById('basic').value) || 0;
     const pfRate = calcRules.pfRate || 12;
     const pfCap = calcRules.pfCap || 1800;
-    document.getElementById('pf').value = document.getElementById('pfApplicable').checked ?
-      Math.min(Math.round(basic * pfRate / 100), pfCap) : 0;
+    document.getElementById('pf').value = document.getElementById('pfApplicable').checked ? Math.min(Math.round(basic * pfRate / 100), pfCap) : 0;
   }
 
   function getPT(salary) {
@@ -950,10 +635,7 @@
     const sec = document.getElementById('section').value;
     const pro = document.getElementById('profile').value;
     document.getElementById('generateEINBtn').disabled = !(loc && sec && pro && !editMode);
-    if (!editMode) {
-      document.getElementById('einBox').style.display = 'none';
-      document.getElementById('ein').value = '';
-    }
+    if (!editMode) { document.getElementById('einBox').style.display = 'none'; document.getElementById('ein').value = ''; }
   }
 
   async function generateEIN() {
@@ -961,40 +643,24 @@
     const section = document.getElementById('section').value;
     const profile = document.getElementById('profile').value;
     try {
-      const res = await fetch('/api/employees/generate-ein', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ location, section, profile })
-      });
+      const res = await fetch('/api/employees/generate-ein', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location, section, profile }) });
       const data = await res.json();
-      if (data.success) {
-        document.getElementById('einValue').textContent = data.ein;
-        document.getElementById('ein').value = data.ein;
-        document.getElementById('einBox').style.display = 'flex';
-      } else {
-        showAlert('alertError', data.message);
-      }
+      if (data.success) { document.getElementById('einValue').textContent = data.ein; document.getElementById('ein').value = data.ein; document.getElementById('einBox').style.display = 'flex'; }
+      else { showAlert('alertError', data.message); }
     } catch(err) { showAlert('alertError', 'Error: ' + err.message); }
   }
 
-  function onDesignationChange() {
-    document.getElementById('designation').value =
-      document.getElementById('designationSelect').value;
-  }
+  function onDesignationChange() { document.getElementById('designation').value = document.getElementById('designationSelect').value; }
 
   function toggleCustomDesignation() {
     customDesignationMode = !customDesignationMode;
     const custom = document.getElementById('designationCustom');
     const sel = document.getElementById('designationSelect');
     if (customDesignationMode) {
-      custom.style.display = 'block';
-      sel.style.display = 'none';
-      custom.oninput = () => {
-        document.getElementById('designation').value = custom.value;
-      };
+      custom.style.display = 'block'; sel.style.display = 'none';
+      custom.oninput = () => { document.getElementById('designation').value = custom.value; };
     } else {
-      custom.style.display = 'none';
-      sel.style.display = 'block';
+      custom.style.display = 'none'; sel.style.display = 'block';
       document.getElementById('designation').value = sel.value;
     }
   }
@@ -1003,17 +669,13 @@
     const file = document.getElementById('photo').files[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = e => {
-        const p = document.getElementById('photoPreview');
-        p.src = e.target.result;
-        p.style.display = 'block';
-      };
+      reader.onload = e => { const p = document.getElementById('photoPreview'); p.src = e.target.result; p.style.display = 'block'; };
       reader.readAsDataURL(file);
     }
   }
 
   function resetForm() {
-    const ids = ['empId','location','section','profile','department','gender',
+    const ids = ['empId','location','section','profile','department','title','gender',
       'designationSelect','designationCustom','designation','employeeName',
       'dateOfBirth','dateOfJoining','panNumber','aadhaarNumber',
       'phoneNumber','email','address','uanNumber',
@@ -1049,22 +711,20 @@
       document.getElementById('section').value = emp.section || '';
       document.getElementById('profile').value = emp.profile || '';
       document.getElementById('department').value = emp.department || '';
+      document.getElementById('title').value = emp.title || '';
       document.getElementById('gender').value = emp.gender || '';
       document.getElementById('designation').value = emp.designation || '';
       document.getElementById('designationSelect').value = emp.designation || '';
       document.getElementById('employeeName').value = emp.employeeName || '';
-      document.getElementById('dateOfBirth').value =
-        emp.dateOfBirth ? emp.dateOfBirth.split('T')[0] : '';
-      document.getElementById('dateOfJoining').value =
-        emp.dateOfJoining ? emp.dateOfJoining.split('T')[0] : '';
+      document.getElementById('dateOfBirth').value = emp.dateOfBirth ? emp.dateOfBirth.split('T')[0] : '';
+      document.getElementById('dateOfJoining').value = emp.dateOfJoining ? emp.dateOfJoining.split('T')[0] : '';
       document.getElementById('panNumber').value = emp.panNumber || '';
       document.getElementById('aadhaarNumber').value = emp.aadhaarNumber || '';
       document.getElementById('phoneNumber').value = emp.phoneNumber || '';
       document.getElementById('email').value = emp.email || '';
       document.getElementById('address').value = emp.address || '';
       document.getElementById('uanNumber').value = emp.uanNumber || '';
-      document.getElementById('monthlySalary').value =
-        emp.monthlySalary || Math.round(emp.ctcAnnual / 12) || '';
+      document.getElementById('monthlySalary').value = emp.monthlySalary || Math.round(emp.ctcAnnual / 12) || '';
       document.getElementById('ctcAnnual').value = emp.ctcAnnual || '';
       document.getElementById('pfApplicable').checked = emp.pfApplicable || false;
       document.getElementById('esicApplicable').checked = emp.esicApplicable || false;
@@ -1085,45 +745,27 @@
 
   async function saveEmployee() {
     const id = document.getElementById('empId').value;
-    const designationVal = customDesignationMode ?
-      document.getElementById('designationCustom').value.trim() :
-      document.getElementById('designationSelect').value;
+    const designationVal = customDesignationMode ? document.getElementById('designationCustom').value.trim() : document.getElementById('designationSelect').value;
     document.getElementById('designation').value = designationVal;
-
     const required = [
-      { id: 'location', label: 'Location' },
-      { id: 'section', label: 'Section' },
-      { id: 'profile', label: 'Profile' },
-      { id: 'department', label: 'Department' },
-      { id: 'gender', label: 'Gender' },
+      { id: 'location', label: 'Location' }, { id: 'section', label: 'Section' },
+      { id: 'profile', label: 'Profile' }, { id: 'department', label: 'Department' },
+      { id: 'title', label: 'Title' }, { id: 'gender', label: 'Gender' },
       { id: 'employeeName', label: 'Employee Name' },
-      { id: 'dateOfBirth', label: 'Date of Birth' },
-      { id: 'dateOfJoining', label: 'Date of Joining' },
-      { id: 'phoneNumber', label: 'Phone Number' },
-      { id: 'monthlySalary', label: 'Monthly Salary' }
+      { id: 'dateOfBirth', label: 'Date of Birth' }, { id: 'dateOfJoining', label: 'Date of Joining' },
+      { id: 'phoneNumber', label: 'Phone Number' }, { id: 'monthlySalary', label: 'Monthly Salary' }
     ];
     for (const f of required) {
       const el = document.getElementById(f.id);
-      if (!el || !el.value.trim()) {
-        showAlert('alertError', f.label + ' is required');
-        return;
-      }
+      if (!el || !el.value.trim()) { showAlert('alertError', f.label + ' is required'); return; }
     }
-    if (!designationVal) {
-      showAlert('alertError', 'Designation is required');
-      return;
-    }
-
+    if (!designationVal) { showAlert('alertError', 'Designation is required'); return; }
     const formData = new FormData();
-    const fields = ['location','section','profile','department','gender',
-      'designation','employeeName','dateOfBirth','dateOfJoining',
-      'panNumber','aadhaarNumber','phoneNumber','email','address',
-      'uanNumber','monthlySalary','ctcAnnual','ctcMonthly',
-      'basic','hraAllowance','pf','pt','ein'];
-    fields.forEach(f => {
-      const el = document.getElementById(f);
-      if (el) formData.append(f, el.value);
-    });
+    const fields = ['location','section','profile','department','title','gender','designation',
+      'employeeName','dateOfBirth','dateOfJoining','panNumber','aadhaarNumber',
+      'phoneNumber','email','address','uanNumber','monthlySalary','ctcAnnual',
+      'ctcMonthly','basic','hraAllowance','pf','pt','ein'];
+    fields.forEach(f => { const el = document.getElementById(f); if (el) formData.append(f, el.value); });
     formData.append('pfApplicable', document.getElementById('pfApplicable').checked);
     formData.append('esicApplicable', document.getElementById('esicApplicable').checked);
     formData.append('ptApplicable', document.getElementById('ptApplicable').checked);
@@ -1131,109 +773,53 @@
     formData.append('qualifications', JSON.stringify(getQualifications()));
     const photoFile = document.getElementById('photo').files[0];
     if (photoFile) formData.append('photo', photoFile);
-
     try {
       const url = id ? '/api/employees/' + id : '/api/employees';
       const method = id ? 'PUT' : 'POST';
       const res = await fetch(url, { method, body: formData });
       const data = await res.json();
-      if (data.success) {
-        showAlert('alertSuccess', data.message);
-        await loadEmployees();
-        setTimeout(() => { showListView(); }, 1500);
-      } else {
-        showAlert('alertError', data.message);
-      }
+      if (data.success) { showAlert('alertSuccess', data.message); await loadEmployees(); setTimeout(showListView, 1500); }
+      else { showAlert('alertError', data.message); }
     } catch(err) { showAlert('alertError', 'Error: ' + err.message); }
   }
 
-  async function deactivateEmployee(id) {
-    window.location.href = '/exits';
-  }
-
-  // EXPORT
   async function exportEmployees() {
     try {
       const res = await fetch('/api/employees');
       const data = await res.json();
       if (!data.success) return;
       const employees = data.employees;
-      const rows = [['EIN','Name','Gender','Designation','Department',
-        'Location','Section','Profile','Date of Birth','Age',
-        'Date of Joining','Exit Date','PAN','Aadhaar','Phone',
-        'Email','Address','UAN','Monthly Salary','CTC Annual',
-        'Basic','HRA','PF','PT','PF Applicable','ESIC Applicable',
-        'PT Applicable','Restricted','Status',
-        'Qualifications (Degree|Institution|Year|Grade)',
-        'Exit Reason','Last Working Day','Notice Period',
-        'FnF Settlement','Relieving Letter','Eligible for Rehire']];
-
+      const rows = [['EIN','Title','Name','Gender','Designation','Department','Location','Section','Profile','Date of Birth','Age','Date of Joining','Exit Date','PAN','Aadhaar','Phone','Email','Address','UAN','Monthly Salary','CTC Annual','Basic','HRA','PF','PT','PF Applicable','ESIC Applicable','PT Applicable','Restricted','Status','Qualifications','Exit Reason','Last Working Day','Notice Period','FnF','Relieving Letter','Rehire']];
       for (const emp of employees) {
         const dob = emp.dateOfBirth ? new Date(emp.dateOfBirth) : null;
-        let age = '';
-        if (dob) {
-          age = new Date().getFullYear() - dob.getFullYear();
-        }
-        const quals = (emp.qualifications || [])
-          .map(q => q.degree + '|' + q.institution + '|' + q.yearOfPassing + '|' + q.grade)
-          .join('; ');
-        let exitReason = '', exitLWD = '', noticePeriod = '',
-          exitFnF = '', exitRelieving = '', exitRehire = '';
+        const age = dob ? new Date().getFullYear() - dob.getFullYear() : '';
+        const quals = (emp.qualifications || []).map(q => q.degree + '|' + q.institution + '|' + q.yearOfPassing + '|' + q.grade).join('; ');
+        let exitReason='', exitLWD='', noticePeriod='', exitFnF='', exitRelieving='', exitRehire='';
         try {
           const exitRes = await fetch('/api/exits?employeeId=' + emp._id);
           const exitData = await exitRes.json();
           if (exitData.success && exitData.exits.length > 0) {
             const ex = exitData.exits[0];
-            exitReason = ex.reasonForLeaving || '';
-            exitLWD = ex.lastWorkingDate ?
-              new Date(ex.lastWorkingDate).toLocaleDateString('en-IN') : '';
-            noticePeriod = ex.noticePeriod || '';
-            exitFnF = ex.fnfSettlement || '';
-            exitRelieving = ex.relievingLetter || '';
-            exitRehire = ex.eligibleForRehire || '';
+            exitReason = ex.reasonForLeaving || ''; exitLWD = ex.lastWorkingDate ? new Date(ex.lastWorkingDate).toLocaleDateString('en-IN') : '';
+            noticePeriod = ex.noticePeriod || ''; exitFnF = ex.fnfSettlement || ''; exitRelieving = ex.relievingLetter || ''; exitRehire = ex.eligibleForRehire || '';
           }
         } catch(e) {}
-
-        rows.push([
-          emp.ein || '', emp.employeeName || '', emp.gender || '',
-          emp.designation || '', emp.department || '',
-          emp.location || '', emp.section || '', emp.profile || '',
-          dob ? dob.toLocaleDateString('en-IN') : '', age,
-          emp.dateOfJoining ? new Date(emp.dateOfJoining).toLocaleDateString('en-IN') : '',
-          emp.dateOfExit ? new Date(emp.dateOfExit).toLocaleDateString('en-IN') : '',
-          emp.panNumber || '', emp.aadhaarNumber || '',
-          emp.phoneNumber || '', emp.email || '', emp.address || '',
-          emp.uanNumber || '', emp.monthlySalary || '', emp.ctcAnnual || '',
-          emp.basic || '', emp.hraAllowance || '', emp.pf || '', emp.pt || '',
-          emp.pfApplicable ? 'Yes' : 'No',
-          emp.esicApplicable ? 'Yes' : 'No',
-          emp.ptApplicable ? 'Yes' : 'No',
-          emp.isRestricted ? 'Yes' : 'No',
-          emp.isActive ? 'Active' : 'Inactive',
-          quals, exitReason, exitLWD, noticePeriod,
-          exitFnF, exitRelieving, exitRehire
-        ]);
+        rows.push([emp.ein||'', emp.title||'', emp.employeeName||'', emp.gender||'', emp.designation||'', emp.department||'', emp.location||'', emp.section||'', emp.profile||'', dob?dob.toLocaleDateString('en-IN'):'', age, emp.dateOfJoining?new Date(emp.dateOfJoining).toLocaleDateString('en-IN'):'', emp.dateOfExit?new Date(emp.dateOfExit).toLocaleDateString('en-IN'):'', emp.panNumber||'', emp.aadhaarNumber||'', emp.phoneNumber||'', emp.email||'', emp.address||'', emp.uanNumber||'', emp.monthlySalary||'', emp.ctcAnnual||'', emp.basic||'', emp.hraAllowance||'', emp.pf||'', emp.pt||'', emp.pfApplicable?'Yes':'No', emp.esicApplicable?'Yes':'No', emp.ptApplicable?'Yes':'No', emp.isRestricted?'Yes':'No', emp.isActive?'Active':'Inactive', quals, exitReason, exitLWD, noticePeriod, exitFnF, exitRelieving, exitRehire]);
       }
-
       const ws = XLSX.utils.aoa_to_sheet(rows);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Employees');
-      XLSX.writeFile(wb, 'Employees_' +
-        new Date().toLocaleDateString('en-IN').replace(/\//g,'-') + '.xlsx');
+      XLSX.writeFile(wb, 'Employees_' + new Date().toLocaleDateString('en-IN').replace(/\//g,'-') + '.xlsx');
     } catch(e) { alert('Export error: ' + e.message); }
   }
 
   function showAlert(id, msg) {
     const el = document.getElementById(id);
-    el.textContent = msg;
-    el.style.display = 'block';
+    el.textContent = msg; el.style.display = 'block';
     setTimeout(() => el.style.display = 'none', 4000);
   }
 
-  function openImportModal() {
-    document.getElementById('importModal').style.display = 'block';
-  }
-
+  function openImportModal() { document.getElementById('importModal').style.display = 'block'; }
   function closeImportModal() {
     document.getElementById('importModal').style.display = 'none';
     document.getElementById('importFile').value = '';
@@ -1252,8 +838,7 @@
         const ws = wb.Sheets[wb.SheetNames[0]];
         const json = XLSX.utils.sheet_to_json(ws, { defval: '' });
         if (!json.length) { showImportMsg('importError', 'No data found'); return; }
-        importData = json;
-        showPreview(json);
+        importData = json; showPreview(json);
       } catch(err) { showImportMsg('importError', 'Error: ' + err.message); }
     };
     reader.readAsBinaryString(file);
@@ -1261,16 +846,8 @@
 
   function showPreview(data) {
     const cols = Object.keys(data[0]);
-    document.getElementById('previewHead').innerHTML =
-      '<tr>' + cols.map(c =>
-        '<th style="padding:6px;background:#f0f2f5;border:1px solid #ddd;">' + c + '</th>'
-      ).join('') + '</tr>';
-    document.getElementById('previewBody').innerHTML =
-      data.slice(0,5).map(row =>
-        '<tr>' + cols.map(c =>
-          '<td style="padding:6px;border:1px solid #eee;">' + row[c] + '</td>'
-        ).join('') + '</tr>'
-      ).join('');
+    document.getElementById('previewHead').innerHTML = '<tr>' + cols.map(c => '<th style="padding:6px;background:#f0f2f5;border:1px solid #ddd;">' + c + '</th>').join('') + '</tr>';
+    document.getElementById('previewBody').innerHTML = data.slice(0,5).map(row => '<tr>' + cols.map(c => '<td style="padding:6px;border:1px solid #eee;">' + row[c] + '</td>').join('') + '</tr>').join('');
     document.getElementById('importCount').textContent = 'Total: ' + data.length + ' rows';
     document.getElementById('importPreview').style.display = 'block';
     document.getElementById('importBtn').style.display = 'inline-block';
@@ -1279,21 +856,13 @@
   async function importEmployees() {
     if (!importData.length) return;
     const mapped = importData.map(row => ({
-      ein: String(row['EIN'] || '').trim(),
-      location: row['Location'] || '',
-      section: row['Section'] || '',
-      profile: row['Profile'] || '',
-      department: row['Department'] || '',
-      gender: row['Gender'] || 'Male',
-      employeeName: row['Employee Name'] || '',
-      designation: row['Designation'] || '',
-      dateOfBirth: row['Date of Birth'] || '',
-      dateOfJoining: row['Date of Joining'] || '',
-      panNumber: row['PAN Number'] || '',
-      aadhaarNumber: String(row['Aadhaar Number'] || ''),
-      phoneNumber: String(row['Phone Number'] || ''),
-      email: row['Email'] || '',
-      address: row['Address'] || '',
+      ein: String(row['EIN'] || '').trim(), location: row['Location'] || '', section: row['Section'] || '',
+      profile: row['Profile'] || '', department: row['Department'] || '', title: row['Title'] || '',
+      gender: row['Gender'] || 'Male', employeeName: row['Employee Name'] || '',
+      designation: row['Designation'] || '', dateOfBirth: row['Date of Birth'] || '',
+      dateOfJoining: row['Date of Joining'] || '', panNumber: row['PAN Number'] || '',
+      aadhaarNumber: String(row['Aadhaar Number'] || ''), phoneNumber: String(row['Phone Number'] || ''),
+      email: row['Email'] || '', address: row['Address'] || '',
       monthlySalary: parseFloat(row['Monthly Salary']) || 0,
       ctcAnnual: (parseFloat(row['Monthly Salary']) || 0) * 12,
       ctcMonthly: parseFloat(row['Monthly Salary']) || 0,
@@ -1304,36 +873,18 @@
       uanNumber: String(row['UAN Number'] || '')
     }));
     try {
-      const res = await fetch('/api/employees/bulk-import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ employees: mapped })
-      });
+      const res = await fetch('/api/employees/bulk-import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ employees: mapped }) });
       const data = await res.json();
-      if (data.success) {
-        showImportMsg('importSuccess', data.message);
-        await loadEmployees();
-        setTimeout(closeImportModal, 2000);
-      } else { showImportMsg('importError', data.message); }
+      if (data.success) { showImportMsg('importSuccess', data.message); await loadEmployees(); setTimeout(closeImportModal, 2000); }
+      else { showImportMsg('importError', data.message); }
     } catch(e) { showImportMsg('importError', 'Error: ' + e.message); }
   }
 
-  function showImportMsg(id, msg) {
-    const el = document.getElementById(id);
-    el.textContent = msg;
-    el.style.display = 'block';
-  }
+  function showImportMsg(id, msg) { const el = document.getElementById(id); el.textContent = msg; el.style.display = 'block'; }
 
   function downloadTemplate() {
-    const headers = ['EIN','Location','Section','Profile','Department','Gender',
-      'Employee Name','Designation','Date of Birth','Date of Joining',
-      'PAN Number','Aadhaar Number','Phone Number','Email','Address',
-      'Monthly Salary','PF Applicable','ESIC Applicable',
-      'PT Applicable','Restricted','UAN Number'];
-    const sample = ['GTT-1001','Thane','Global','Teaching','Primary','Male',
-      'John Doe','Senior Teacher','15/08/1985','01/06/2020',
-      'ABCDE1234F','123456789012','9876543210','john@example.com',
-      'Thane Maharashtra','35000','Yes','No','Yes','No','UAN123456'];
+    const headers = ['EIN','Location','Section','Profile','Department','Title','Gender','Employee Name','Designation','Date of Birth','Date of Joining','PAN Number','Aadhaar Number','Phone Number','Email','Address','Monthly Salary','PF Applicable','ESIC Applicable','PT Applicable','Restricted','UAN Number'];
+    const sample = ['GTT-1001','Thane','Global','Teaching','Primary','Mr','Male','John Doe','Senior Teacher','15/08/1985','01/06/2020','ABCDE1234F','123456789012','9876543210','john@example.com','Thane Maharashtra','35000','Yes','No','Yes','No','UAN123456'];
     const ws = XLSX.utils.aoa_to_sheet([headers, sample]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Employees');

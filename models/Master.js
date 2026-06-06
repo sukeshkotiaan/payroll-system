@@ -3,7 +3,6 @@ const mongoose = require('mongoose');
 const masterSchema = new mongoose.Schema({
   type: {
     type: String,
-    enum: ['location', 'section', 'profile', 'department', 'designation', 'role', 'export-permission'],
     required: true
   },
   value: {

@@ -33,11 +33,11 @@
       flex-wrap: wrap;
     }
     .tab {
-      padding: 10px 20px;
+      padding: 10px 18px;
       border: none;
       border-radius: 6px;
       cursor: pointer;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 600;
       background: white;
       color: #666;
@@ -51,28 +51,28 @@
       overflow: hidden;
     }
     .card-header {
+      padding: 15px 20px;
+      border-bottom: 1px solid #eee;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 20px 25px;
-      border-bottom: 1px solid #eee;
     }
     .card-header h3 { color: #333; font-size: 16px; }
     .add-form {
       display: flex;
       gap: 10px;
-      padding: 20px 25px;
+      padding: 15px 20px;
       border-bottom: 1px solid #eee;
       background: #f8f9fa;
     }
     .add-form input {
       flex: 1;
+      max-width: 300px;
       padding: 10px 12px;
       border: 1px solid #ddd;
       border-radius: 6px;
       font-size: 14px;
       outline: none;
-      max-width: 400px;
     }
     .add-form input:focus { border-color: #1a73e8; }
     .btn-primary {
@@ -85,7 +85,6 @@
       font-weight: 600;
       font-size: 14px;
     }
-    .btn-primary:hover { background: #1557b0; }
     .alert {
       padding: 10px 20px;
       font-size: 13px;
@@ -93,110 +92,115 @@
     }
     .alert-success { background: #e6f4ea; color: #34a853; }
     .alert-error { background: #fce8e6; color: #ea4335; }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 14px;
-    }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
     th {
       background: #f8f9fa;
-      padding: 12px 25px;
+      padding: 12px 20px;
       text-align: left;
       font-weight: 600;
       color: #555;
       border-bottom: 1px solid #eee;
     }
-    td {
-      padding: 12px 25px;
-      border-bottom: 1px solid #f5f5f5;
-      color: #333;
-    }
+    td { padding: 12px 20px; border-bottom: 1px solid #f5f5f5; color: #333; }
     tr:hover { background: #f8f9ff; }
-    tr.inactive td { color: #999; }
-    .badge {
-      padding: 3px 10px;
-      border-radius: 12px;
-      font-size: 11px;
-      font-weight: 600;
-    }
+    tr.inactive td { color: #bbb; }
+    .badge { padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
     .badge-active { background: #e6f4ea; color: #34a853; }
     .badge-inactive { background: #fce8e6; color: #ea4335; }
     .btn-edit {
-      background: #fbbc04;
-      color: #333;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 12px;
-      font-weight: 600;
+      background: #fbbc04; color: #333; border: none;
+      padding: 5px 12px; border-radius: 4px; cursor: pointer;
+      font-size: 12px; font-weight: 600;
     }
     .btn-deactivate {
-      background: #ea4335;
-      color: white;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 12px;
-      font-weight: 600;
-      margin-left: 6px;
+      background: #ea4335; color: white; border: none;
+      padding: 5px 12px; border-radius: 4px; cursor: pointer;
+      font-size: 12px; font-weight: 600; margin-left: 6px;
     }
     .btn-activate {
-      background: #34a853;
-      color: white;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 12px;
-      font-weight: 600;
-      margin-left: 6px;
+      background: #34a853; color: white; border: none;
+      padding: 5px 12px; border-radius: 4px; cursor: pointer;
+      font-size: 12px; font-weight: 600; margin-left: 6px;
     }
     .btn-save {
-      background: #34a853;
-      color: white;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 12px;
-      font-weight: 600;
+      background: #34a853; color: white; border: none;
+      padding: 5px 12px; border-radius: 4px; cursor: pointer;
+      font-size: 12px; font-weight: 600;
     }
     .btn-cancel {
-      background: #999;
-      color: white;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 12px;
-      font-weight: 600;
-      margin-left: 6px;
+      background: #999; color: white; border: none;
+      padding: 5px 12px; border-radius: 4px; cursor: pointer;
+      font-size: 12px; font-weight: 600; margin-left: 6px;
     }
     .edit-input {
-      padding: 6px 10px;
-      border: 1px solid #1a73e8;
-      border-radius: 4px;
-      font-size: 13px;
-      width: 200px;
-      outline: none;
+      padding: 6px 10px; border: 1px solid #1a73e8;
+      border-radius: 4px; font-size: 13px; width: 180px; outline: none;
     }
-    .empty {
-      text-align: center;
-      padding: 40px;
-      color: #999;
-      font-size: 14px;
-    }
+    .empty { text-align: center; padding: 30px; color: #999; }
     .count-badge {
-      background: #e8f0fe;
-      color: #1a73e8;
-      padding: 3px 10px;
-      border-radius: 12px;
-      font-size: 12px;
-      font-weight: 600;
-      margin-left: 10px;
+      background: #e8f0fe; color: #1a73e8;
+      padding: 3px 10px; border-radius: 12px;
+      font-size: 12px; font-weight: 600; margin-left: 8px;
     }
+    .normal-view { display: none; }
+    .normal-view.active { display: block; }
+    .roles-view { display: none; }
+    .roles-view.active { display: block; }
+    .role-card {
+      background: white; border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      margin-bottom: 20px; overflow: hidden;
+    }
+    .role-card-header {
+      padding: 15px 20px; background: #f8f9fa;
+      border-bottom: 1px solid #eee;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .role-name { font-size: 16px; font-weight: 700; color: #333; text-transform: capitalize; }
+    .role-card-body { padding: 20px; }
+    .permissions-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px; margin-bottom: 15px;
+    }
+    .perm-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 12px; border: 1px solid #ddd;
+      border-radius: 8px; cursor: pointer; transition: all 0.2s;
+    }
+    .perm-item:hover { border-color: #1a73e8; background: #f0f7ff; }
+    .perm-item.checked { border-color: #1a73e8; background: #e8f0fe; }
+    .perm-item input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; }
+    .perm-item label { font-size: 12px; font-weight: 600; cursor: pointer; margin: 0; color: #333; }
+    .btn-save-perms {
+      background: #34a853; color: white; border: none;
+      padding: 10px 25px; border-radius: 6px;
+      cursor: pointer; font-weight: 600; font-size: 14px;
+    }
+    .btn-save-perms:hover { background: #2d9144; }
+    .add-role-form {
+      background: white; border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      padding: 20px; margin-bottom: 20px;
+    }
+    .add-role-form h3 { font-size: 15px; color: #333; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #eee; }
+    .add-role-row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+    .add-role-row input {
+      padding: 10px 12px; border: 1px solid #ddd;
+      border-radius: 6px; font-size: 14px; outline: none; width: 250px;
+    }
+    .add-role-row input:focus { border-color: #1a73e8; }
+    .admin-notice {
+      background: #e8f0fe; border: 1px solid #1a73e8;
+      border-radius: 8px; padding: 12px 16px;
+      margin-bottom: 20px; font-size: 13px; color: #1a73e8;
+    }
+    .role-alert {
+      padding: 10px 15px; border-radius: 6px;
+      font-size: 13px; display: none; margin-bottom: 10px;
+    }
+    .role-alert-success { background: #e6f4ea; color: #34a853; }
+    .role-alert-error { background: #fce8e6; color: #ea4335; }
   </style>
 </head>
 <body>
@@ -213,54 +217,74 @@
     <button class="tab" onclick="switchTab('profile', this)">👤 Profiles</button>
     <button class="tab" onclick="switchTab('department', this)">🏢 Departments</button>
     <button class="tab" onclick="switchTab('designation', this)">🎓 Designations</button>
+    <button class="tab" onclick="switchTab('title', this)">🪪 Titles</button>
+    <button class="tab" onclick="switchTab('gender', this)">⚧ Gender</button>
+    <button class="tab" onclick="switchTab('role', this)">🔐 Roles & Permissions</button>
   </div>
 
-  <div class="card">
-    <div class="card-header">
-      <h3 id="cardTitle">
-        Locations
-        <span class="count-badge" id="countBadge">0</span>
-      </h3>
+  <!-- NORMAL VIEW -->
+  <div class="normal-view active" id="normalView">
+    <div class="card">
+      <div class="card-header">
+        <h3 id="cardTitle">Locations <span class="count-badge" id="countBadge">0</span></h3>
+      </div>
+      <div class="add-form">
+        <input type="text" id="newValue" placeholder="Type new value and press Add or Enter">
+        <button class="btn-primary" onclick="addMaster()">+ Add</button>
+      </div>
+      <div class="alert alert-success" id="alertSuccess"></div>
+      <div class="alert alert-error" id="alertError"></div>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Value</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="mastersList">
+          <tr><td colspan="4"><div class="empty">Loading...</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ROLES VIEW -->
+  <div class="roles-view" id="rolesView">
+    <div class="role-alert role-alert-success" id="roleAlertSuccess"></div>
+    <div class="role-alert role-alert-error" id="roleAlertError"></div>
+
+    <div class="admin-notice">
+      ℹ️ <strong>Admin</strong> always has access to all menus regardless of permissions.
     </div>
 
-    <div class="add-form">
-      <input type="text" id="newValue" placeholder="Type new value and press Add or Enter">
-      <button class="btn-primary" onclick="addMaster()">+ Add</button>
+    <div class="add-role-form">
+      <h3>➕ Add New Role</h3>
+      <div class="add-role-row">
+        <input type="text" id="newRoleName" placeholder="e.g. HR Manager, Finance, Principal">
+        <button class="btn-primary" onclick="addRole()">+ Add Role</button>
+      </div>
+      <div style="font-size:12px;color:#666;">After adding, set permissions below.</div>
     </div>
 
-    <div class="alert alert-success" id="alertSuccess"></div>
-    <div class="alert alert-error" id="alertError"></div>
-
-    <table>
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Value</th>
-          <th>Status</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody id="mastersList">
-        <tr><td colspan="4"><div class="empty">Loading...</div></td></tr>
-      </tbody>
-    </table>
+    <div id="rolesList"></div>
   </div>
 </div>
 
 <script>
   let currentType = 'location';
-  let allMasters = [];
+  let allMenus = [];
 
   const titles = {
-    location: 'Locations',
-    section: 'Sections',
-    profile: 'Profiles',
-    department: 'Departments',
-    designation: 'Designations'
+    location: 'Locations', section: 'Sections', profile: 'Profiles',
+    department: 'Departments', designation: 'Designations',
+    title: 'Titles', gender: 'Gender'
   };
 
   window.onload = async () => {
     await checkAuth();
+    await loadMenus();
     await loadMasters('location');
   };
 
@@ -268,51 +292,60 @@
     const res = await fetch('/api/auth/me');
     const data = await res.json();
     if (!data.success) { window.location.href = '/'; return; }
-    if (data.user.role === 'accountant') {
+    if (data.user.role !== 'admin' && data.user.role !== 'management') {
       window.location.href = '/dashboard';
     }
   }
 
+  async function loadMenus() {
+    try {
+      const res = await fetch('/api/masters/menus');
+      const data = await res.json();
+      if (data.success) allMenus = data.menus;
+    } catch(e) {}
+  }
+
   function switchTab(type, btn) {
-    currentType = type;
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     btn.classList.add('active');
-    document.getElementById('cardTitle').childNodes[0].textContent = titles[type] + ' ';
-    document.getElementById('newValue').placeholder =
-      'Type new ' + type + ' and press Add or Enter';
-    document.getElementById('alertSuccess').style.display = 'none';
-    document.getElementById('alertError').style.display = 'none';
-    document.getElementById('newValue').value = '';
-    loadMasters(type);
+    if (type === 'role') {
+      document.getElementById('normalView').classList.remove('active');
+      document.getElementById('rolesView').classList.add('active');
+      loadRoles();
+    } else {
+      document.getElementById('rolesView').classList.remove('active');
+      document.getElementById('normalView').classList.add('active');
+      currentType = type;
+      document.getElementById('cardTitle').innerHTML =
+        (titles[type] || type) + ' <span class="count-badge" id="countBadge">0</span>';
+      document.getElementById('newValue').placeholder =
+        'Type new ' + type + ' and press Add or Enter';
+      document.getElementById('alertSuccess').style.display = 'none';
+      document.getElementById('alertError').style.display = 'none';
+      document.getElementById('newValue').value = '';
+      loadMasters(type);
+    }
   }
 
   async function loadMasters(type) {
     try {
-      const res = await fetch('/api/masters/' + type);
+      const res = await fetch('/api/masters/' + type + '?all=true');
       const data = await res.json();
-      if (data.success) {
-        allMasters = data.masters;
-        renderMasters(data.masters);
-      }
-    } catch(e) {
-      showAlert('alertError', 'Error loading data');
-    }
+      if (data.success) renderMasters(data.masters);
+    } catch(e) { showAlert('alertError', 'Error loading'); }
   }
 
   function renderMasters(masters) {
     const tbody = document.getElementById('mastersList');
-    document.getElementById('countBadge').textContent = masters.length;
-
+    const badge = document.getElementById('countBadge');
+    if (badge) badge.textContent = masters.length;
     if (masters.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="4">
-        <div class="empty">No items yet. Add one above.</div>
-      </td></tr>`;
+      tbody.innerHTML = '<tr><td colspan="4"><div class="empty">No items yet. Add one above.</div></td></tr>';
       return;
     }
-
-    tbody.innerHTML = masters.map((m, index) => `
+    tbody.innerHTML = masters.map((m, i) => `
       <tr class="${m.isActive ? '' : 'inactive'}" id="row-${m._id}">
-        <td style="color:#999;width:50px;">${index + 1}</td>
+        <td style="color:#999;width:50px;">${i + 1}</td>
         <td id="name-${m._id}"><strong>${m.value}</strong></td>
         <td>
           <span class="badge ${m.isActive ? 'badge-active' : 'badge-inactive'}">
@@ -320,8 +353,7 @@
           </span>
         </td>
         <td id="actions-${m._id}">
-          <button class="btn-edit"
-            onclick="editMaster('${m._id}', '${m.value}')">Edit</button>
+          <button class="btn-edit" onclick="editMaster('${m._id}','${m.value}')">Edit</button>
           <button class="${m.isActive ? 'btn-deactivate' : 'btn-activate'}"
             onclick="toggleMaster('${m._id}')">
             ${m.isActive ? 'Deactivate' : 'Activate'}
@@ -333,10 +365,7 @@
 
   async function addMaster() {
     const value = document.getElementById('newValue').value.trim();
-    if (!value) {
-      showAlert('alertError', 'Please enter a value');
-      return;
-    }
+    if (!value) { showAlert('alertError', 'Please enter a value'); return; }
     try {
       const res = await fetch('/api/masters', {
         method: 'POST',
@@ -346,22 +375,16 @@
       const data = await res.json();
       if (data.success) {
         document.getElementById('newValue').value = '';
-        showAlert('alertSuccess', data.message);
+        showAlert('alertSuccess', '✅ ' + value + ' added successfully');
         await loadMasters(currentType);
-      } else {
-        showAlert('alertError', data.message);
-      }
-    } catch(e) {
-      showAlert('alertError', 'Error adding');
-    }
+      } else { showAlert('alertError', data.message); }
+    } catch(e) { showAlert('alertError', 'Error adding'); }
   }
 
   function editMaster(id, currentValue) {
-    const nameEl = document.getElementById('name-' + id);
-    const actionsEl = document.getElementById('actions-' + id);
-    nameEl.innerHTML =
-      `<input class="edit-input" id="edit-${id}" value="${currentValue}">`;
-    actionsEl.innerHTML = `
+    document.getElementById('name-' + id).innerHTML =
+      '<input class="edit-input" id="edit-' + id + '" value="' + currentValue + '">';
+    document.getElementById('actions-' + id).innerHTML = `
       <button class="btn-save" onclick="saveMaster('${id}')">✅ Save</button>
       <button class="btn-cancel" onclick="loadMasters('${currentType}')">Cancel</button>
     `;
@@ -379,29 +402,140 @@
       });
       const data = await res.json();
       if (data.success) {
-        showAlert('alertSuccess', 'Updated successfully');
+        showAlert('alertSuccess', '✅ Updated successfully');
         await loadMasters(currentType);
-      } else {
-        showAlert('alertError', data.message);
-      }
-    } catch(e) {
-      showAlert('alertError', 'Error updating');
-    }
+      } else { showAlert('alertError', data.message); }
+    } catch(e) { showAlert('alertError', 'Error updating'); }
   }
 
   async function toggleMaster(id) {
     try {
-      const res = await fetch('/api/masters/' + id + '/toggle', {
-        method: 'PATCH'
+      const res = await fetch('/api/masters/' + id + '/toggle', { method: 'PATCH' });
+      const data = await res.json();
+      if (data.success) {
+        showAlert('alertSuccess', '✅ ' + data.message);
+        await loadMasters(currentType);
+      }
+    } catch(e) { showAlert('alertError', 'Error'); }
+  }
+
+  // ROLES
+  async function loadRoles() {
+    try {
+      const res = await fetch('/api/masters/role?all=true');
+      const data = await res.json();
+      if (data.success) renderRoles(data.masters);
+    } catch(e) {}
+  }
+
+  function renderRoles(roles) {
+    const container = document.getElementById('rolesList');
+    if (roles.length === 0) {
+      container.innerHTML = '<div class="empty" style="background:white;border-radius:12px;padding:30px;">No roles found.</div>';
+      return;
+    }
+    container.innerHTML = roles.map(role => `
+      <div class="role-card" id="roleCard-${role._id}">
+        <div class="role-card-header">
+          <div>
+            <span class="role-name">${role.value}</span>
+            <span class="badge ${role.isActive ? 'badge-active' : 'badge-inactive'}" style="margin-left:10px;">
+              ${role.isActive ? 'Active' : 'Inactive'}
+            </span>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button class="btn-save-perms" onclick="savePermissions('${role._id}', '${role.value}')">
+              💾 Save Permissions
+            </button>
+            <button class="${role.isActive ? 'btn-deactivate' : 'btn-activate'}"
+              onclick="toggleRole('${role._id}')">
+              ${role.isActive ? 'Deactivate' : 'Activate'}
+            </button>
+          </div>
+        </div>
+        <div class="role-card-body">
+          <div style="font-size:12px;color:#666;margin-bottom:12px;">
+            Select which menus this role can access:
+          </div>
+          <div class="permissions-grid">
+            ${allMenus.map(menu => `
+              <div class="perm-item ${(role.permissions || []).includes(menu.key) ? 'checked' : ''}"
+                id="permItem-${role._id}-${menu.key}"
+                onclick="togglePerm('${role._id}', '${menu.key}')">
+                <input type="checkbox"
+                  id="perm-${role._id}-${menu.key}"
+                  ${(role.permissions || []).includes(menu.key) ? 'checked' : ''}
+                  onclick="event.stopPropagation()">
+                <label for="perm-${role._id}-${menu.key}">${menu.label}</label>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function togglePerm(roleId, menuKey) {
+    const checkbox = document.getElementById('perm-' + roleId + '-' + menuKey);
+    checkbox.checked = !checkbox.checked;
+    const item = document.getElementById('permItem-' + roleId + '-' + menuKey);
+    checkbox.checked ? item.classList.add('checked') : item.classList.remove('checked');
+  }
+
+  function getSelectedPerms(roleId) {
+    return allMenus
+      .filter(menu => {
+        const cb = document.getElementById('perm-' + roleId + '-' + menu.key);
+        return cb && cb.checked;
+      })
+      .map(menu => menu.key);
+  }
+
+  async function savePermissions(roleId, roleName) {
+    const permissions = getSelectedPerms(roleId);
+    try {
+      const res = await fetch('/api/masters/' + roleId, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ permissions })
       });
       const data = await res.json();
       if (data.success) {
-        showAlert('alertSuccess', data.message);
-        await loadMasters(currentType);
+        showRoleAlert('roleAlertSuccess',
+          '✅ Permissions saved for ' + roleName + ' (' + permissions.length + ' menus)');
+      } else {
+        showRoleAlert('roleAlertError', data.message);
       }
-    } catch(e) {
-      showAlert('alertError', 'Error updating status');
-    }
+    } catch(e) { showRoleAlert('roleAlertError', 'Error saving'); }
+  }
+
+  async function addRole() {
+    const value = document.getElementById('newRoleName').value.trim().toLowerCase();
+    if (!value) { showRoleAlert('roleAlertError', 'Please enter a role name'); return; }
+    try {
+      const res = await fetch('/api/masters', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'role', value, permissions: [] })
+      });
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById('newRoleName').value = '';
+        showRoleAlert('roleAlertSuccess', '✅ Role added. Now set permissions below.');
+        await loadRoles();
+      } else { showRoleAlert('roleAlertError', data.message); }
+    } catch(e) { showRoleAlert('roleAlertError', 'Error'); }
+  }
+
+  async function toggleRole(id) {
+    try {
+      const res = await fetch('/api/masters/' + id + '/toggle', { method: 'PATCH' });
+      const data = await res.json();
+      if (data.success) {
+        showRoleAlert('roleAlertSuccess', '✅ ' + data.message);
+        await loadRoles();
+      }
+    } catch(e) {}
   }
 
   function showAlert(id, msg) {
@@ -411,7 +545,15 @@
     setTimeout(() => el.style.display = 'none', 3000);
   }
 
-  document.getElementById('newValue').addEventListener('keypress', function(e) {
+  function showRoleAlert(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.style.display = 'block';
+    window.scrollTo(0, 0);
+    setTimeout(() => el.style.display = 'none', 4000);
+  }
+
+  document.getElementById('newValue').addEventListener('keypress', e => {
     if (e.key === 'Enter') addMaster();
   });
 </script>

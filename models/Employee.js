@@ -10,6 +10,7 @@ const qualificationSchema = new mongoose.Schema({
 const employeeSchema = new mongoose.Schema({
   ein: { type: String, unique: true, sparse: true },
   location: { type: String, required: true },
+  title: { type: String, default: '' },
   section: { type: String, required: true },
   profile: { type: String, required: true },
   department: { type: String, default: '' },

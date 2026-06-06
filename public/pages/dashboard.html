@@ -16,7 +16,6 @@
       align-items: center;
     }
     .header h1 { font-size: 20px; }
-    .header .user-info { font-size: 14px; }
     .btn-logout {
       background: white;
       color: #1a73e8;
@@ -39,7 +38,7 @@
     .welcome p { color: #666; font-size: 14px; }
     .cards {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
       gap: 20px;
     }
     .card {
@@ -49,19 +48,22 @@
       box-shadow: 0 2px 8px rgba(0,0,0,0.08);
       text-align: center;
       cursor: pointer;
-      transition: transform 0.2s;
+      transition: transform 0.2s, box-shadow 0.2s;
     }
-    .card:hover { transform: translateY(-3px); }
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.12);
+    }
     .card .icon { font-size: 36px; margin-bottom: 12px; }
-    .card h3 { color: #333; font-size: 16px; margin-bottom: 5px; }
-    .card p { color: #666; font-size: 13px; }
+    .card h3 { color: #333; font-size: 15px; margin-bottom: 5px; }
+    .card p { color: #666; font-size: 12px; }
   </style>
 </head>
 <body>
   <div class="header">
     <h1>🏢 Payroll System</h1>
     <div style="display:flex;align-items:center;">
-      <span class="user-info" id="userName">Loading...</span>
+      <span id="userName" style="font-size:14px;"></span>
       <button class="btn-logout" onclick="logout()">Logout</button>
     </div>
   </div>
@@ -69,77 +71,70 @@
   <div class="container">
     <div class="welcome">
       <h2 id="welcomeMsg">Welcome!</h2>
-      <p id="roleMsg">Loading user info...</p>
+      <p id="roleMsg">Loading...</p>
     </div>
-
-    <div class="cards">
-      <div class="card" onclick="window.location.href='/employees'">
-        <div class="icon">👥</div>
-        <h3>Employees</h3>
-        <p>Manage employee master data</p>
-      </div>
-      <div class="card">
-        <div class="icon">📋</div>
-        <h3>Attendance</h3>
-        <p>Upload monthly attendance</p>
-      </div>
-      <div class="card">
-        <div class="icon">💰</div>
-        <h3>Payroll</h3>
-        <p>Process monthly payroll</p>
-      </div>
-      <div class="card">
-        <div class="icon">🧾</div>
-        <h3>Payslip</h3>
-        <p>Generate employee payslips</p>
-      </div>
-      <div class="card">
-        <div class="icon">📁</div>
-        <h3>Archive</h3>
-        <p>View past payroll records</p>
-      </div>
-      <div class="card">
-        <div class="icon">📊</div>
-        <h3>Reports</h3>
-        <p>View payroll reports</p>
-      </div>
-      <div class="card" onclick="window.location.href='/exits'">
-  <div class="icon">🚪</div>
-  <h3>Exit Management</h3>
-  <p>Process employee exits & approvals</p>
-</div>
-      <div class="card" onclick="window.location.href='/masters'">
-  <div class="icon">📋</div>
-  <h3>Masters</h3>
-  <p>Manage locations, departments, designations</p>
-</div>
-      <div class="card" id="settingsCard" onclick="window.location.href='/settings'">
-        <div class="icon">⚙️</div>
-        <h3>Settings</h3>
-        <p>Configure payroll rules</p>
-      </div>
-    </div>
+    <div class="cards" id="menuCards"></div>
   </div>
 
   <script>
-    // Check login
-    fetch('/api/auth/me')
-      .then(res => res.json())
-      .then(data => {
-        if (!data.success) {
-          window.location.href = '/';
-          return;
-        }
-        const user = data.user;
-        document.getElementById('userName').textContent = user.fullName;
-        document.getElementById('welcomeMsg').textContent = `Welcome, ${user.fullName}!`;
-        document.getElementById('roleMsg').textContent = `Role: ${user.role.toUpperCase()} | Branch: ${user.branch.toUpperCase()}`;
+    const ALL_MENUS = [
+      { key: 'dashboard', icon: '📊', title: 'Dashboard', desc: 'System overview', url: '/dashboard' },
+      { key: 'employees', icon: '👥', title: 'Employees', desc: 'Manage employee master data', url: '/employees' },
+      { key: 'exits', icon: '🚪', title: 'Exit Management', desc: 'Process employee exits', url: '/exits' },
+      { key: 'attendance', icon: '📋', title: 'Attendance', desc: 'Upload monthly attendance', url: '/attendance' },
+      { key: 'payroll', icon: '💰', title: 'Payroll', desc: 'Process monthly payroll', url: '/payroll' },
+      { key: 'payroll-approval', icon: '✅', title: 'Payroll Approval', desc: 'Approve payroll', url: '/payroll-approval' },
+      { key: 'payslip', icon: '🧾', title: 'Payslip', desc: 'Generate employee payslips', url: '/payslip' },
+      { key: 'archive', icon: '📁', title: 'Archive', desc: 'View past payroll records', url: '/archive' },
+      { key: 'reports', icon: '📈', title: 'Reports', desc: 'View payroll reports', url: '/reports' },
+      { key: 'masters', icon: '📋', title: 'Masters', desc: 'Manage locations, departments', url: '/masters' },
+      { key: 'settings', icon: '⚙️', title: 'Settings', desc: 'Configure payroll rules', url: '/settings' },
+      { key: 'users', icon: '👤', title: 'User Management', desc: 'Manage system users', url: '/users' }
+    ];
 
-        // Hide settings for accountant
-        if (user.role === 'accountant') {
-          document.getElementById('settingsCard').style.display = 'none';
+    window.onload = async () => {
+      const res = await fetch('/api/auth/me');
+      const data = await res.json();
+      if (!data.success) { window.location.href = '/'; return; }
+      const user = data.user;
+      document.getElementById('userName').textContent = user.fullName;
+      document.getElementById('welcomeMsg').textContent = 'Welcome, ' + user.fullName + '!';
+      document.getElementById('roleMsg').textContent =
+        'Role: ' + user.role.toUpperCase() +
+        ' | Branch: ' + (user.branches ? user.branches.join(', ').toUpperCase() : 'ALL');
+      await renderMenus(user);
+    };
+
+    async function renderMenus(user) {
+      const container = document.getElementById('menuCards');
+      let allowedKeys = [];
+
+      if (user.role === 'admin') {
+        allowedKeys = ALL_MENUS.map(m => m.key);
+      } else {
+        try {
+          const res = await fetch('/api/masters/role');
+          const data = await res.json();
+          if (data.success) {
+            const roleData = data.masters.find(
+              r => r.value.toLowerCase() === user.role.toLowerCase()
+            );
+            if (roleData) allowedKeys = roleData.permissions || [];
+          }
+        } catch(e) {
+          allowedKeys = ['dashboard'];
         }
-      });
+      }
+
+      const visibleMenus = ALL_MENUS.filter(m => allowedKeys.includes(m.key));
+      container.innerHTML = visibleMenus.map(menu => `
+        <div class="card" onclick="window.location.href='${menu.url}'">
+          <div class="icon">${menu.icon}</div>
+          <h3>${menu.title}</h3>
+          <p>${menu.desc}</p>
+        </div>
+      `).join('');
+    }
 
     async function logout() {
       await fetch('/api/auth/logout', { method: 'POST' });
