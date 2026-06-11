@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Attendance — Payroll System</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; }
+    .header {
+      background: #1a73e8; color: white;
+      padding: 15px 30px;
+      display: flex; justify-content: space-between; align-items: center;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .header h1 { font-size: 20px; }
+    .btn-back {
+      background: white; color: #1a73e8; border: none;
+      padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600;
+    }
+    .view { display: none; }
+    .view.active { display: block; }
+    .container { padding: 20px; }
+    .btn-primary {
+      background: #1a73e8; color: white; border: none;
+      padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px;
+    }
+    .btn-primary:hover { background: #1557b0; }
+    .btn-success {
+      background: #34a853; color: white; border: none;
+      padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px;
+    }
+    .btn-secondary {
+      background: #f0f2f5; color: #333; border: none;
+      padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px;
+    }
+    .btn-warning {
+      background: #fbbc04; color: #333; border: none;
+      padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 600;
+    }
+    .btn-danger {
+      background: #ea4335; color: white; border: none;
+      padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 600;
+    }
+    .card {
+      background: white; border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; margin-bottom: 20px;
+    }
+    .card-header {
+      padding: 15px 20px; border-bottom: 1px solid #eee;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .card-header h3 { font-size: 15px; color: #333; }
+    .card-body { padding: 20px; }
+    .form-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group label { font-size: 13px; font-weight: 600; color: #555; }
+    .form-group select {
+      padding: 9px 11px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; outline: none;
+    }
+    .form-group select:focus { border-color: #1a73e8; }
+    .badge { padding: 3px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+    .badge-draft { background: #fef3c7; color: #d97706; }
+    .badge-submitted { background: #e8f0fe; color: #1a73e8; }
+    .badge-locked { background: #e6f4ea; color: #34a853; }
+    .alert { padding: 10px 14px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; display: none; }
+    .alert-success { background: #e6f4ea; color: #34a853; }
+    .alert-error { background: #fce8e6; color: #ea4335; }
+    .alert-warning { background: #fef3c7; color: #d97706; }
+    .empty-state { text-align: center; padding: 40px; color: #999; }
+    .form-view-header {
+      display: flex; align-items: center; gap: 15px;
+      margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #e8f0fe;
+    }
+    .btn-back-list {
+      background: #e8f0fe; color: #1a73e8; border: none;
+      padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px;
+    }
+    .group-info {
+      background: #e8f0fe; border-radius: 8px; padding: 12px 20px;
+      display: flex; gap: 30px; margin-bottom: 20px; flex-wrap: wrap;
+    }
+    .group-info-item label { font-size: 11px; color: #666; font-weight: 600; display: block; }
+    .group-info-item span { font-size: 14px; font-weight: 700; color: #1a73e8; }
+    .action-bar {
+      display: flex; gap: 10px; justify-content: flex-end;
+      padding: 15px 20px; border-top: 1px solid #eee; background: white;
+      position: sticky; bottom: 0; z-index: 10;
+    }
+    .summary-bar {
+      display: grid; grid-template-columns: repeat(8, 1fr);
+      gap: 8px; margin: 15px 20px;
+    }
+    .summary-item {
+      background: #f8f9fa; border-radius: 8px; padding: 10px 12px; text-align: center;
+    }
+    .summary-item label { font-size: 10px; color: #666; display: block; margin-bottom: 3px; font-weight: 600; }
+    .summary-item span { font-size: 16px; font-weight: 700; color: #1a73e8; }
+
+    /* DAY-WISE GRID */
+    .attendance-grid-wrapper {
+      overflow-x: auto;
+      max-height: 65vh;
+      overflow-y: auto;
+    }
+    .attendance-grid {
+      border-collapse: collapse;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+    .attendance-grid th, .attendance-grid td {
+      border: 1px solid #e0e0e0;
+      padding: 0;
+      text-align: center;
+    }
+    .attendance-grid thead th {
+      background: #1a73e8;
+      color: white;
+      padding: 8px 6px;
+      font-weight: 700;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      min-width: 38px;
+    }
+    .attendance-grid thead th.emp-col {
+      min-width: 160px;
+      text-align: left;
+      padding-left: 10px;
+      position: sticky;
+      left: 0;
+      z-index: 30;
+      background: #1a73e8;
+    }
+    .attendance-grid thead th.desig-col {
+      min-width: 120px;
+      position: sticky;
+      left: 160px;
+      z-index: 30;
+      background: #1a73e8;
+    }
+    .attendance-grid tbody td.emp-col {
+      position: sticky;
+      left: 0;
+      background: white;
+      z-index: 10;
+      text-align: left;
+      padding: 6px 10px;
+      font-weight: 600;
+      min-width: 160px;
+      border-right: 2px solid #ddd;
+    }
+    .attendance-grid tbody td.desig-col {
+      position: sticky;
+      left: 160px;
+      background: white;
+      z-index: 10;
+      padding: 6px 8px;
+      font-size: 10px;
+      color: #666;
+      min-width: 120px;
+      border-right: 2px solid #ddd;
+    }
+    .attendance-grid tbody tr:hover td { background: #f0f7ff; }
+    .attendance-grid tbody tr:hover td.emp-col,
+    .attendance-grid tbody tr:hover td.desig-col { background: #e8f0fe; }
+    .day-cell {
+      width: 38px;
+      height: 32px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 700;
+      transition: all 0.1s;
+      user-select: none;
+    }
+    .day-cell:hover { opacity: 0.8; transform: scale(1.1); z-index: 5; position: relative; }
+    .day-cell.locked { cursor: default; }
+    .day-cell.locked:hover { opacity: 1; transform: none; }
+    .status-P  { background: #e6f4ea; color: #34a853; }
+    .status-A  { background: #fce8e6; color: #ea4335; }
+    .status-CL { background: #fff3e0; color: #e65100; }
+    .status-SL { background: #fce4ec; color: #c2185b; }
+    .status-PL { background: #e8eaf6; color: #3949ab; }
+    .status-SpL { background: #f3e5f5; color: #7b1fa2; font-size: 9px; }
+    .status-H  { background: #e0f2f1; color: #00695c; }
+    .status-WO { background: #f5f5f5; color: #757575; }
+    .status-HD { background: #fff9c4; color: #f57f17; }
+    .status-OT { background: #e3f2fd; color: #1565c0; }
+    .total-col { background: #f8f9fa; font-weight: 700; padding: 4px 6px; font-size: 10px; }
+    .total-header { background: #0d47a1 !important; min-width: 40px; font-size: 10px; }
+
+    /* STATUS PICKER */
+    .status-picker {
+      position: fixed;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      z-index: 1000;
+      padding: 8px;
+      display: none;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 4px;
+      width: 220px;
+    }
+    .status-option {
+      padding: 6px 4px;
+      border-radius: 4px;
+      cursor: pointer;
+      text-align: center;
+      font-size: 11px;
+      font-weight: 700;
+      border: 1px solid transparent;
+    }
+    .status-option:hover { border-color: #1a73e8; transform: scale(1.05); }
+    .ot-input-row {
+      grid-column: 1 / -1;
+      display: none;
+      gap: 5px;
+      align-items: center;
+    }
+    .ot-input-row input {
+      flex: 1; padding: 5px; border: 1px solid #ddd;
+      border-radius: 4px; font-size: 12px; outline: none;
+    }
+    .ot-input-row button {
+      padding: 5px 10px; background: #1a73e8; color: white;
+      border: none; border-radius: 4px; cursor: pointer; font-size: 11px;
+    }
+
+    /* LIST TABLE */
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th {
+      background: #f8f9fa; padding: 10px 15px; text-align: left;
+      font-weight: 600; color: #555; border-bottom: 1px solid #eee;
+    }
+    td { padding: 10px 15px; border-bottom: 1px solid #f5f5f5; color: #333; }
+    tr:hover { background: #f8f9ff; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📋 Attendance</h1>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span id="headerUser" style="font-size:13px;"></span>
+    <button class="btn-back" onclick="window.location.href='/dashboard'">← Dashboard</button>
+  </div>
+</div>
+
+<!-- STATUS PICKER POPUP -->
+<div class="status-picker" id="statusPicker">
+  <div class="status-option status-P" onclick="setStatus('P')">P<br><span style="font-size:9px;">Present</span></div>
+  <div class="status-option status-A" onclick="setStatus('A')">A<br><span style="font-size:9px;">Absent</span></div>
+  <div class="status-option status-HD" onclick="setStatus('HD')">HD<br><span style="font-size:9px;">Half Day</span></div>
+  <div class="status-option status-WO" onclick="setStatus('WO')">WO<br><span style="font-size:9px;">Week Off</span></div>
+  <div class="status-option status-H" onclick="setStatus('H')">H<br><span style="font-size:9px;">Holiday</span></div>
+  <div class="status-option status-CL" onclick="setStatus('CL')">CL<br><span style="font-size:9px;">Casual</span></div>
+  <div class="status-option status-SL" onclick="setStatus('SL')">SL<br><span style="font-size:9px;">Sick</span></div>
+  <div class="status-option status-PL" onclick="setStatus('PL')">PL<br><span style="font-size:9px;">Paid</span></div>
+  <div class="status-option status-SpL" onclick="setStatus('SpL')">SpL<br><span style="font-size:9px;">Special</span></div>
+  <div class="status-option status-OT" onclick="showOTInput()">OT<br><span style="font-size:9px;">Overtime</span></div>
+  <div class="ot-input-row" id="otInputRow">
+    <input type="number" id="otHoursInput" placeholder="OT Hours" min="0" step="0.5">
+    <button onclick="setStatus('OT')">✓</button>
+  </div>
+</div>
+
+<!-- LIST VIEW -->
+<div id="listView" class="view active">
+  <div class="container">
+    <div class="alert alert-success" id="listAlertSuccess"></div>
+    <div class="alert alert-error" id="listAlertError"></div>
+    <div class="card">
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Month</label>
+            <select id="filterMonth">
+              <option value="">All Months</option>
+              <option>January</option><option>February</option><option>March</option>
+              <option>April</option><option>May</option><option>June</option>
+              <option>July</option><option>August</option><option>September</option>
+              <option>October</option><option>November</option><option>December</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Year</label>
+            <select id="filterYear"><option value="">All Years</option></select>
+          </div>
+          <div class="form-group">
+            <label>Location</label>
+            <select id="filterLocation"><option value="">All Locations</option></select>
+          </div>
+          <div class="form-group">
+            <label>Status</label>
+            <select id="filterStatus">
+              <option value="">All Status</option>
+              <option value="Draft">Draft</option>
+              <option value="Submitted">Submitted</option>
+              <option value="Locked">Locked</option>
+            </select>
+          </div>
+          <div class="form-group" style="align-self:end;">
+            <button class="btn-primary" onclick="loadAttendanceList()">🔍 Search</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <h3>Attendance Records <span id="listCount" style="color:#666;font-weight:400;font-size:13px;"></span></h3>
+        <button class="btn-primary" onclick="showUploadView()">+ New Attendance</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Group</th><th>Month / Year</th><th>Location</th>
+            <th>Employees</th><th>Uploaded By</th><th>Last Updated</th>
+            <th>Status</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="attendanceList">
+          <tr><td colspan="8"><div class="empty-state">Loading...</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- UPLOAD / SELECT VIEW -->
+<div id="uploadView" class="view">
+  <div class="container">
+    <div class="form-view-header">
+      <button class="btn-back-list" onclick="showListView()">← Back to List</button>
+      <h2>New Attendance Sheet</h2>
+    </div>
+    <div class="alert alert-success" id="uploadAlertSuccess"></div>
+    <div class="alert alert-error" id="uploadAlertError"></div>
+    <div class="card">
+      <div class="card-header"><h3>Select Period & Group</h3></div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Month *</label>
+            <select id="uploadMonth">
+              <option value="">Select Month</option>
+              <option>January</option><option>February</option><option>March</option>
+              <option>April</option><option>May</option><option>June</option>
+              <option>July</option><option>August</option><option>September</option>
+              <option>October</option><option>November</option><option>December</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Year *</label>
+            <select id="uploadYear"></select>
+          </div>
+          <div class="form-group">
+            <label>Location *</label>
+            <select id="uploadLocation"><option value="">Select Location</option></select>
+          </div>
+          <div class="form-group">
+            <label>Section *</label>
+            <select id="uploadSection"><option value="">Select Section</option></select>
+          </div>
+          <div class="form-group">
+            <label>Profile *</label>
+            <select id="uploadProfile"><option value="">Select Profile</option></select>
+          </div>
+        </div>
+        <div style="margin-top:15px;">
+          <button class="btn-primary" onclick="loadEmployeesForGrid()">📋 Load Attendance Grid</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- GRID VIEW -->
+<div id="gridView" class="view">
+  <div class="container">
+    <div class="form-view-header">
+      <button class="btn-back-list" onclick="showUploadView()">← Back</button>
+      <h2 id="gridTitle">Attendance Grid</h2>
+    </div>
+    <div class="alert alert-success" id="gridAlertSuccess"></div>
+    <div class="alert alert-error" id="gridAlertError"></div>
+
+    <div class="group-info" id="gridGroupInfo"></div>
+
+    <!-- LEGEND -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:15px;font-size:11px;">
+      <span style="padding:3px 8px;border-radius:4px;" class="status-P">P=Present</span>
+      <span style="padding:3px 8px;border-radius:4px;" class="status-A">A=Absent</span>
+      <span style="padding:3px 8px;border-radius:4px;" class="status-HD">HD=Half Day</span>
+      <span style="padding:3px 8px;border-radius:4px;" class="status-WO">WO=Week Off</span>
+      <span style="padding:3px 8px;border-radius:4px;" class="status-H">H=Holiday</span>
+      <span style="padding:3px 8px;border-radius:4px;" class="status-CL">CL=Casual Leave</span>
+      <span style="padding:3px 8px;border-radius:4px;" class="status-SL">SL=Sick Leave</span>
+      <span style="padding:3px 8px;border-radius:4px;" class="status-PL">PL=Paid Leave</span>
+      <span style="padding:3px 8px;border-radius:4px;" class="status-SpL">SpL=Special Leave</span>
+      <span style="padding:3px 8px;border-radius:4px;" class="status-OT">OT=Overtime</span>
+    </div>
+
+    <!-- BULK ACTIONS -->
+    <div style="display:flex;gap:10px;margin-bottom:15px;flex-wrap:wrap;align-items:center;">
+      <span style="font-size:12px;color:#666;font-weight:600;">Bulk Mark:</span>
+      <button onclick="bulkMarkAll('P')" style="padding:5px 10px;background:#e6f4ea;color:#34a853;border:1px solid #34a853;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700;">All Present</button>
+      <button onclick="bulkMarkAll('WO')" style="padding:5px 10px;background:#f5f5f5;color:#757575;border:1px solid #aaa;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700;">All Week Off</button>
+      <button onclick="bulkMarkColumn()" style="padding:5px 10px;background:#e8f0fe;color:#1a73e8;border:1px solid #1a73e8;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700;">Mark Column...</button>
+      <span style="font-size:12px;color:#999;">Click any cell to change status</span>
+    </div>
+
+    <div class="card" style="overflow:visible;">
+      <!-- SUMMARY -->
+      <div class="summary-bar">
+        <div class="summary-item"><label>Employees</label><span id="sumTotal">0</span></div>
+        <div class="summary-item"><label>Avg Present</label><span id="sumPresent">0</span></div>
+        <div class="summary-item"><label>Total CL</label><span id="sumCL">0</span></div>
+        <div class="summary-item"><label>Total SL</label><span id="sumSL">0</span></div>
+        <div class="summary-item"><label>Total PL</label><span id="sumPL">0</span></div>
+        <div class="summary-item"><label>Total Absent</label><span id="sumAbsent" style="color:#ea4335;">0</span></div>
+        <div class="summary-item"><label>Total OT Hrs</label><span id="sumOT">0</span></div>
+        <div class="summary-item"><label>Days in Month</label><span id="sumDays">0</span></div>
+      </div>
+
+      <div class="attendance-grid-wrapper">
+        <table class="attendance-grid" id="attendanceGrid">
+          <thead id="gridHead"></thead>
+          <tbody id="gridBody"></tbody>
+        </table>
+      </div>
+
+      <div class="action-bar">
+        <button class="btn-secondary" onclick="showListView()">Cancel</button>
+        <button class="btn-primary" onclick="saveGrid('Draft')">💾 Save Draft</button>
+        <button class="btn-success" onclick="saveGrid('Submit')">📤 Submit for Payroll</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let currentUser = {};
+  let attendanceRecords = [];
+  let currentDaysInMonth = 30;
+  let currentAttendanceId = null;
+  let currentMonth = '';
+  let currentYear = '';
+  let currentLocation = '';
+  let currentSection = '';
+  let currentProfile = '';
+  let pickerEin = '';
+  let pickerDay = 0;
+  let isGridLocked = false;
+
+  const MONTHS = ['January','February','March','April','May','June',
+    'July','August','September','October','November','December'];
+
+  const STATUS_COLORS = {
+    P: 'status-P', A: 'status-A', CL: 'status-CL', SL: 'status-SL',
+    PL: 'status-PL', SpL: 'status-SpL', H: 'status-H',
+    WO: 'status-WO', HD: 'status-HD', OT: 'status-OT'
+  };
+
+  window.onload = async () => {
+    await checkAuth();
+    await loadMasterData();
+    populateYears();
+    setDefaultMonthYear();
+    await loadAttendanceList();
+  };
+
+  async function checkAuth() {
+    const res = await fetch('/api/auth/me');
+    const data = await res.json();
+    if (!data.success) { window.location.href = '/'; return; }
+    currentUser = data.user;
+    document.getElementById('headerUser').textContent = data.user.fullName;
+  }
+
+  async function loadMasterData() {
+    try {
+      const [locRes, secRes, proRes] = await Promise.all([
+        fetch('/api/masters/location'),
+        fetch('/api/masters/section'),
+        fetch('/api/masters/profile')
+      ]);
+      const [locData, secData, proData] = await Promise.all([
+        locRes.json(), secRes.json(), proRes.json()
+      ]);
+      if (locData.success) {
+        populateSelect('filterLocation', locData.masters.map(m => m.value), 'All Locations');
+        populateSelect('uploadLocation', locData.masters.map(m => m.value), 'Select Location');
+      }
+      if (secData.success) populateSelect('uploadSection', secData.masters.map(m => m.value), 'Select Section');
+      if (proData.success) populateSelect('uploadProfile', proData.masters.map(m => m.value), 'Select Profile');
+    } catch(e) {}
+  }
+
+  function populateSelect(id, values, placeholder) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = '<option value="">' + placeholder + '</option>';
+    values.forEach(v => { el.innerHTML += '<option value="' + v + '">' + v + '</option>'; });
+  }
+
+  function populateYears() {
+    const currentYear = new Date().getFullYear();
+    ['filterYear','uploadYear'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.innerHTML = id === 'filterYear' ? '<option value="">All Years</option>' : '';
+      for (let y = currentYear + 1; y >= currentYear - 3; y--) {
+        el.innerHTML += '<option value="' + y + '">' + y + '</option>';
+      }
+    });
+  }
+
+  function setDefaultMonthYear() {
+    const now = new Date();
+    const monthEl = document.getElementById('uploadMonth');
+    const yearEl = document.getElementById('uploadYear');
+    if (monthEl) monthEl.value = MONTHS[now.getMonth()];
+    if (yearEl) yearEl.value = now.getFullYear();
+  }
+
+  async function loadAttendanceList() {
+    try {
+      const month = document.getElementById('filterMonth').value;
+      const year = document.getElementById('filterYear').value;
+      const location = document.getElementById('filterLocation').value;
+      const status = document.getElementById('filterStatus').value;
+      let url = '/api/attendance?';
+      if (month) url += 'month=' + month + '&';
+      if (year) url += 'year=' + year + '&';
+      if (location) url += 'location=' + location + '&';
+      if (status) url += 'status=' + status + '&';
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.success) renderAttendanceList(data.records);
+    } catch(e) {}
+  }
+
+  function renderAttendanceList(records) {
+    const tbody = document.getElementById('attendanceList');
+    document.getElementById('listCount').textContent = '(' + records.length + ' records)';
+    if (records.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state">No attendance records found</div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = records.map(r => `
+      <tr>
+        <td><strong>${r.groupName || r.section + ' ' + r.location}</strong></td>
+        <td>${r.month} ${r.year}</td>
+        <td>${r.location}</td>
+        <td>${r.records ? r.records.length : '—'}</td>
+        <td>${r.uploadedBy || '—'}</td>
+        <td>${r.updatedAt ? new Date(r.updatedAt).toLocaleDateString('en-IN') : '—'}</td>
+        <td><span class="badge badge-${r.status.toLowerCase()}">${r.status}</span></td>
+        <td>
+          <button class="btn-warning" onclick="editAttendance('${r._id}')">
+            ${r.status === 'Locked' ? '👁 View' : '✏️ Edit'}
+          </button>
+          ${r.status === 'Draft' ? '<button class="btn-danger" onclick="deleteAttendance(\'' + r._id + '\')" style="margin-left:4px;">Delete</button>' : ''}
+          ${r.status === 'Submitted' && (currentUser.role === 'admin' || currentUser.role === 'accountant') ?
+            '<button class="btn-success" onclick="lockAttendance(\'' + r._id + '\')" style="margin-left:4px;padding:5px 10px;font-size:11px;">🔒 Lock</button>' : ''}
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  async function loadEmployeesForGrid() {
+    const month = document.getElementById('uploadMonth').value;
+    const year = document.getElementById('uploadYear').value;
+    const location = document.getElementById('uploadLocation').value;
+    const section = document.getElementById('uploadSection').value;
+    const profile = document.getElementById('uploadProfile').value;
+    if (!month || !year || !location || !section || !profile) {
+      showAlert('uploadAlertError', 'Please select all fields');
+      return;
+    }
+    try {
+      const res = await fetch('/api/attendance/template/employees?location=' + encodeURIComponent(location) +
+        '&section=' + encodeURIComponent(section) + '&profile=' + encodeURIComponent(profile) +
+        '&month=' + encodeURIComponent(month) + '&year=' + year);
+      const data = await res.json();
+      if (!data.success) { showAlert('uploadAlertError', data.message); return; }
+      if (data.employees.length === 0) {
+        showAlert('uploadAlertError', 'No active employees found for this group');
+        return;
+      }
+      currentMonth = month;
+      currentYear = year;
+      currentLocation = location;
+      currentSection = section;
+      currentProfile = profile;
+      currentDaysInMonth = data.daysInMonth;
+      currentAttendanceId = null;
+      isGridLocked = false;
+      attendanceRecords = data.employees.map(emp => ({
+        ein: emp.ein,
+        employeeId: emp._id,
+        employeeName: emp.employeeName,
+        designation: emp.designation || '',
+        daysInMonth: data.daysInMonth,
+        days: Array.from({ length: data.daysInMonth }, (_, i) => ({
+          day: i + 1, status: 'P', otHours: 0
+        })),
+        presentDays: data.daysInMonth,
+        cl: 0, sl: 0, pl: 0, spL: 0, absent: 0,
+        halfDays: 0, weekOff: 0, holidays: 0,
+        otHours: 0, lopDays: 0, payableDays: data.daysInMonth
+      }));
+      renderGrid();
+      switchView('gridView');
+    } catch(e) { showAlert('uploadAlertError', 'Error: ' + e.message); }
+  }
+
+  function renderGrid() {
+    const sectionName = currentSection === 'State' ? 'Xaviers' : 'Global';
+    document.getElementById('gridTitle').textContent =
+      'Attendance — ' + sectionName + ' ' + currentLocation + ' ' + currentProfile +
+      ' | ' + currentMonth + ' ' + currentYear;
+    document.getElementById('gridGroupInfo').innerHTML = `
+      <div class="group-info-item"><label>Group</label><span>${sectionName} ${currentLocation} ${currentProfile}</span></div>
+      <div class="group-info-item"><label>Period</label><span>${currentMonth} ${currentYear}</span></div>
+      <div class="group-info-item"><label>Days in Month</label><span>${currentDaysInMonth}</span></div>
+      <div class="group-info-item"><label>Employees</label><span>${attendanceRecords.length}</span></div>
+      <div class="group-info-item"><label>Status</label><span>${isGridLocked ? '🔒 Locked' : currentAttendanceId ? 'Draft' : 'New'}</span></div>
+    `;
+
+    // Build header
+    const thead = document.getElementById('gridHead');
+    let headerRow = '<tr>';
+    headerRow += '<th class="emp-col">Employee</th>';
+    headerRow += '<th class="desig-col">Designation</th>';
+    for (let d = 1; d <= currentDaysInMonth; d++) {
+      const date = new Date(parseInt(currentYear), MONTHS.indexOf(currentMonth), d);
+      const dayName = ['Su','Mo','Tu','We','Th','Fr','Sa'][date.getDay()];
+      const isSun = date.getDay() === 0;
+      headerRow += '<th style="' + (isSun ? 'background:#ea4335;' : '') + '">' + d + '<br><span style="font-size:9px;opacity:0.8;">' + dayName + '</span></th>';
+    }
+    headerRow += '<th class="total-header">P</th>';
+    headerRow += '<th class="total-header">A</th>';
+    headerRow += '<th class="total-header">CL</th>';
+    headerRow += '<th class="total-header">SL</th>';
+    headerRow += '<th class="total-header">PL</th>';
+    headerRow += '<th class="total-header">SpL</th>';
+    headerRow += '<th class="total-header">WO</th>';
+    headerRow += '<th class="total-header">H</th>';
+    headerRow += '<th class="total-header">HD</th>';
+    headerRow += '<th class="total-header">OT</th>';
+    headerRow += '<th class="total-header">LOP</th>';
+    headerRow += '<th class="total-header">Pay</th>';
+    headerRow += '</tr>';
+    thead.innerHTML = headerRow;
+
+    // Build body
+    const tbody = document.getElementById('gridBody');
+    tbody.innerHTML = attendanceRecords.map((emp, ei) => {
+      let row = '<tr id="emprow-' + ei + '">';
+      row += '<td class="emp-col">' + (emp.ein || '') + '<br><span style="font-size:10px;color:#555;">' + emp.employeeName + '</span></td>';
+      row += '<td class="desig-col" style="font-size:10px;">' + (emp.designation || '') + '</td>';
+      for (let d = 1; d <= currentDaysInMonth; d++) {
+        const dayData = emp.days.find(x => x.day === d) || { status: 'P', otHours: 0 };
+        const cls = STATUS_COLORS[dayData.status] || 'status-P';
+        const locked = isGridLocked ? ' locked' : '';
+        const click = isGridLocked ? '' : 'onclick="openPicker(\'' + emp.ein + '\',' + d + ',event)"';
+        const title = dayData.status === 'OT' ? dayData.status + '(' + dayData.otHours + 'h)' : dayData.status;
+        row += '<td class="day-cell ' + cls + locked + '" id="cell-' + emp.ein + '-' + d + '" ' + click + '>' + title + '</td>';
+      }
+      row += '<td class="total-col" id="tot-P-' + ei + '">' + (emp.presentDays || 0) + '</td>';
+      row += '<td class="total-col" id="tot-A-' + ei + '" style="color:#ea4335;">' + (emp.absent || 0) + '</td>';
+      row += '<td class="total-col" id="tot-CL-' + ei + '">' + (emp.cl || 0) + '</td>';
+      row += '<td class="total-col" id="tot-SL-' + ei + '">' + (emp.sl || 0) + '</td>';
+      row += '<td class="total-col" id="tot-PL-' + ei + '">' + (emp.pl || 0) + '</td>';
+      row += '<td class="total-col" id="tot-SpL-' + ei + '">' + (emp.spL || 0) + '</td>';
+      row += '<td class="total-col" id="tot-WO-' + ei + '">' + (emp.weekOff || 0) + '</td>';
+      row += '<td class="total-col" id="tot-H-' + ei + '">' + (emp.holidays || 0) + '</td>';
+      row += '<td class="total-col" id="tot-HD-' + ei + '">' + (emp.halfDays || 0) + '</td>';
+      row += '<td class="total-col" id="tot-OT-' + ei + '">' + (emp.otHours || 0) + '</td>';
+      row += '<td class="total-col" id="tot-LOP-' + ei + '" style="color:#ea4335;">' + (emp.lopDays || 0) + '</td>';
+      row += '<td class="total-col" id="tot-Pay-' + ei + '" style="color:#34a853;">' + (emp.payableDays || 0) + '</td>';
+      row += '</tr>';
+      return row;
+    }).join('');
+    updateSummary();
+  }
+
+  function openPicker(ein, day, event) {
+    if (isGridLocked) return;
+    event.stopPropagation();
+    pickerEin = ein;
+    pickerDay = day;
+    document.getElementById('otInputRow').style.display = 'none';
+    document.getElementById('otHoursInput').value = '';
+    const picker = document.getElementById('statusPicker');
+    picker.style.display = 'grid';
+    const rect = event.target.getBoundingClientRect();
+    let top = rect.bottom + window.scrollY + 5;
+    let left = rect.left + window.scrollX;
+    if (left + 230 > window.innerWidth) left = window.innerWidth - 235;
+    picker.style.top = top + 'px';
+    picker.style.left = left + 'px';
+  }
+
+  function showOTInput() {
+    document.getElementById('otInputRow').style.display = 'flex';
+  }
+
+  function setStatus(status) {
+    if (!pickerEin || !pickerDay) return;
+    const otHours = status === 'OT' ? (parseFloat(document.getElementById('otHoursInput').value) || 0) : 0;
+    const empIndex = attendanceRecords.findIndex(r => r.ein === pickerEin);
+    if (empIndex < 0) return;
+    const emp = attendanceRecords[empIndex];
+    const dayIndex = emp.days.findIndex(d => d.day === pickerDay);
+    if (dayIndex >= 0) {
+      emp.days[dayIndex].status = status;
+      emp.days[dayIndex].otHours = otHours;
+    } else {
+      emp.days.push({ day: pickerDay, status, otHours });
+    }
+    recalcTotals(empIndex);
+    const cell = document.getElementById('cell-' + pickerEin + '-' + pickerDay);
+    if (cell) {
+      cell.className = 'day-cell ' + (STATUS_COLORS[status] || 'status-P');
+      cell.textContent = status === 'OT' ? 'OT(' + otHours + ')' : status;
+    }
+    updateSummary();
+    document.getElementById('statusPicker').style.display = 'none';
+  }
+
+  function recalcTotals(empIndex) {
+    const emp = attendanceRecords[empIndex];
+    let presentDays = 0, cl = 0, sl = 0, pl = 0, spL = 0;
+    let absent = 0, halfDays = 0, weekOff = 0, holidays = 0, otHours = 0;
+    emp.days.forEach(d => {
+      switch(d.status) {
+        case 'P':   presentDays += 1; break;
+        case 'A':   absent += 1; break;
+        case 'CL':  cl += 1; presentDays += 1; break;
+        case 'SL':  sl += 1; presentDays += 1; break;
+        case 'PL':  pl += 1; presentDays += 1; break;
+        case 'SpL': spL += 1; presentDays += 1; break;
+        case 'H':   holidays += 1; break;
+        case 'WO':  weekOff += 1; break;
+        case 'HD':  halfDays += 1; presentDays += 0.5; break;
+        case 'OT':  presentDays += 1; otHours += d.otHours || 0; break;
+      }
+    });
+    emp.presentDays = presentDays;
+    emp.cl = cl; emp.sl = sl; emp.pl = pl; emp.spL = spL;
+    emp.absent = absent; emp.halfDays = halfDays;
+    emp.weekOff = weekOff; emp.holidays = holidays;
+    emp.otHours = otHours;
+    emp.lopDays = absent;
+    emp.payableDays = parseFloat((presentDays).toFixed(1));
+    const t = (id) => { const el = document.getElementById(id); if (el) el.textContent = emp[id.split('-')[1] === 'Pay' ? 'payableDays' : id.split('-')[1] === 'LOP' ? 'lopDays' : id.split('-')[1] === 'SpL' ? 'spL' : id.split('-')[1].toLowerCase()]; };
+    document.getElementById('tot-P-' + empIndex).textContent = emp.presentDays;
+    document.getElementById('tot-A-' + empIndex).textContent = emp.absent;
+    document.getElementById('tot-CL-' + empIndex).textContent = emp.cl;
+    document.getElementById('tot-SL-' + empIndex).textContent = emp.sl;
+    document.getElementById('tot-PL-' + empIndex).textContent = emp.pl;
+    document.getElementById('tot-SpL-' + empIndex).textContent = emp.spL;
+    document.getElementById('tot-WO-' + empIndex).textContent = emp.weekOff;
+    document.getElementById('tot-H-' + empIndex).textContent = emp.holidays;
+    document.getElementById('tot-HD-' + empIndex).textContent = emp.halfDays;
+    document.getElementById('tot-OT-' + empIndex).textContent = emp.otHours;
+    document.getElementById('tot-LOP-' + empIndex).textContent = emp.lopDays;
+    document.getElementById('tot-Pay-' + empIndex).textContent = emp.payableDays;
+  }
+
+  function updateSummary() {
+    const total = attendanceRecords.length;
+    const avgP = total > 0 ? (attendanceRecords.reduce((s, e) => s + (e.presentDays || 0), 0) / total).toFixed(1) : 0;
+    document.getElementById('sumTotal').textContent = total;
+    document.getElementById('sumPresent').textContent = avgP;
+    document.getElementById('sumCL').textContent = attendanceRecords.reduce((s, e) => s + (e.cl || 0), 0);
+    document.getElementById('sumSL').textContent = attendanceRecords.reduce((s, e) => s + (e.sl || 0), 0);
+    document.getElementById('sumPL').textContent = attendanceRecords.reduce((s, e) => s + (e.pl || 0), 0);
+    document.getElementById('sumAbsent').textContent = attendanceRecords.reduce((s, e) => s + (e.absent || 0), 0);
+    document.getElementById('sumOT').textContent = attendanceRecords.reduce((s, e) => s + (e.otHours || 0), 0);
+    document.getElementById('sumDays').textContent = currentDaysInMonth;
+  }
+
+  function bulkMarkAll(status) {
+    attendanceRecords.forEach((emp, ei) => {
+      emp.days.forEach(d => { d.status = status; d.otHours = 0; });
+      recalcTotals(ei);
+      for (let d = 1; d <= currentDaysInMonth; d++) {
+        const cell = document.getElementById('cell-' + emp.ein + '-' + d);
+        if (cell) { cell.className = 'day-cell ' + (STATUS_COLORS[status] || 'status-P'); cell.textContent = status; }
+      }
+    });
+    updateSummary();
+  }
+
+  function bulkMarkColumn() {
+    const day = parseInt(prompt('Enter day number (1-' + currentDaysInMonth + '):'));
+    if (!day || day < 1 || day > currentDaysInMonth) return;
+    const status = prompt('Enter status (P/A/WO/H/CL/SL/PL/SpL/HD/OT):');
+    if (!status) return;
+    const validStatuses = ['P','A','WO','H','CL','SL','PL','SpL','HD','OT'];
+    if (!validStatuses.includes(status)) { alert('Invalid status'); return; }
+    attendanceRecords.forEach((emp, ei) => {
+      const dayData = emp.days.find(d => d.day === day);
+      if (dayData) { dayData.status = status; dayData.otHours = 0; }
+      recalcTotals(ei);
+      const cell = document.getElementById('cell-' + emp.ein + '-' + day);
+      if (cell) { cell.className = 'day-cell ' + (STATUS_COLORS[status] || 'status-P'); cell.textContent = status; }
+    });
+    updateSummary();
+  }
+
+  async function saveGrid(action) {
+    if (!attendanceRecords.length) { showAlert('gridAlertError', 'No data to save'); return; }
+    try {
+      const res = await fetch('/api/attendance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          month: currentMonth, year: parseInt(currentYear),
+          location: currentLocation, section: currentSection,
+          profile: currentProfile, records: attendanceRecords
+        })
+      });
+      const data = await res.json();
+      if (!data.success) { showAlert('gridAlertError', data.message); return; }
+      currentAttendanceId = data.record._id;
+      if (action === 'Submit') {
+        await fetch('/api/attendance/' + currentAttendanceId + '/submit', { method: 'PATCH' });
+        showAlert('gridAlertSuccess', '✅ Attendance submitted for payroll processing');
+        setTimeout(() => { showListView(); }, 1500);
+      } else {
+        showAlert('gridAlertSuccess', '✅ Attendance saved as draft');
+      }
+    } catch(e) { showAlert('gridAlertError', 'Error: ' + e.message); }
+  }
+
+  async function editAttendance(id) {
+    try {
+      const res = await fetch('/api/attendance/' + id);
+      const data = await res.json();
+      if (!data.success) return;
+      const record = data.record;
+      currentAttendanceId = id;
+      currentMonth = record.month;
+      currentYear = String(record.year);
+      currentLocation = record.location;
+      currentSection = record.section;
+      currentProfile = record.profile;
+      currentDaysInMonth = record.records.length > 0 ? record.records[0].daysInMonth : 30;
+      isGridLocked = record.status === 'Locked';
+      attendanceRecords = record.records;
+      renderGrid();
+      switchView('gridView');
+    } catch(e) { console.error(e); }
+  }
+
+  async function lockAttendance(id) {
+    if (!confirm('Lock this attendance? It cannot be edited after locking.')) return;
+    try {
+      const res = await fetch('/api/attendance/' + id + '/lock', { method: 'PATCH' });
+      const data = await res.json();
+      if (data.success) { showListAlert('listAlertSuccess', data.message); await loadAttendanceList(); }
+    } catch(e) {}
+  }
+
+  async function deleteAttendance(id) {
+    if (!confirm('Delete this attendance record?')) return;
+    try {
+      const res = await fetch('/api/attendance/' + id, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) { showListAlert('listAlertSuccess', data.message); await loadAttendanceList(); }
+      else { showListAlert('listAlertError', data.message); }
+    } catch(e) {}
+  }
+
+  function showUploadView() { switchView('uploadView'); }
+  function showListView() { switchView('listView'); loadAttendanceList(); }
+  function switchView(viewId) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById(viewId).classList.add('active');
+    window.scrollTo(0, 0);
+  }
+
+  function showAlert(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg; el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 4000);
+  }
+
+  function showListAlert(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg; el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 4000);
+  }
+
+  // Close picker when clicking outside
+  document.addEventListener('click', function(e) {
+    const picker = document.getElementById('statusPicker');
+    if (picker && !picker.contains(e.target) && !e.target.classList.contains('day-cell')) {
+      picker.style.display = 'none';
+    }
+  });
+</script>
+</body>
+</html>

@@ -9,14 +9,16 @@ const qualificationSchema = new mongoose.Schema({
 
 const employeeSchema = new mongoose.Schema({
   ein: { type: String, unique: true, sparse: true },
-  location: { type: String, required: true },
   title: { type: String, default: '' },
+  location: { type: String, required: true },
   section: { type: String, required: true },
   profile: { type: String, required: true },
   department: { type: String, default: '' },
   employeeName: { type: String, required: true, trim: true },
-  gender: { type: String, enum: ['Male', 'Female', 'Other'], default: 'Male' },
+  gender: { type: String, default: '' },
   designation: { type: String, required: true, trim: true },
+  supervisorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  supervisorName: { type: String, default: '' },
   dateOfBirth: { type: Date, required: true },
   dateOfJoining: { type: Date, required: true },
   dateOfExit: { type: Date, default: null },
