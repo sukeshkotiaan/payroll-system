@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Loan Management — Payroll System</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; }
+    .header { background: #1a73e8; color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+    .header h1 { font-size: 20px; }
+    .btn-back { background: white; color: #1a73e8; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+    .view { display: none; }
+    .view.active { display: block; }
+    .container { padding: 20px; max-width: 1200px; margin: 0 auto; }
+    .btn-primary { background: #1a73e8; color: white; border: none; padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
+    .btn-success { background: #34a853; color: white; border: none; padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
+    .btn-secondary { background: #f0f2f5; color: #333; border: none; padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
+    .btn-warning { background: #fbbc04; color: #333; border: none; padding: 5px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 600; }
+    .btn-danger { background: #ea4335; color: white; border: none; padding: 5px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 600; }
+    .card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; margin-bottom: 20px; }
+    .card-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+    .card-header h3 { font-size: 15px; color: #333; }
+    .card-body { padding: 20px; }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group label { font-size: 13px; font-weight: 600; color: #555; }
+    .form-group select, .form-group input { padding: 9px 11px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; outline: none; }
+    .form-group select:focus, .form-group input:focus { border-color: #1a73e8; }
+    .alert { padding: 10px 14px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; display: none; }
+    .alert-success { background: #e6f4ea; color: #34a853; }
+    .alert-error { background: #fce8e6; color: #ea4335; }
+    .empty-state { text-align: center; padding: 40px; color: #999; }
+    .form-view-header { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #e8f0fe; }
+    .btn-back-list { background: #e8f0fe; color: #1a73e8; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: #f8f9fa; padding: 12px 15px; text-align: left; font-weight: 600; color: #555; border-bottom: 1px solid #eee; }
+    td { padding: 12px 15px; border-bottom: 1px solid #f5f5f5; color: #333; }
+    tr:hover { background: #f8f9ff; }
+    .badge { padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+    .badge-active { background: #e6f4ea; color: #34a853; }
+    .badge-closed { background: #f5f5f5; color: #666; }
+    .badge-pre-closed { background: #fef3c7; color: #d97706; }
+    .badge-pending { background: #fef3c7; color: #d97706; }
+    .badge-paid { background: #e6f4ea; color: #34a853; }
+    .emp-info-bar { background: #e8f0fe; border-radius: 8px; padding: 12px 15px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 15px; }
+    .emp-info-item label { font-size: 11px; color: #666; font-weight: 600; display: block; }
+    .emp-info-item span { font-size: 14px; font-weight: 700; color: #1a73e8; }
+    .emi-preview { background: #e8f4ea; border-radius: 8px; padding: 15px; display: none; grid-template-columns: repeat(4, 1fr); gap: 15px; margin: 15px 0; }
+    .emi-item label { font-size: 11px; color: #555; font-weight: 600; display: block; margin-bottom: 4px; }
+    .emi-item span { font-size: 18px; font-weight: 700; color: #34a853; }
+    .loan-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
+    .loan-summary-card { background: white; border-radius: 10px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center; }
+    .loan-summary-card label { font-size: 11px; color: #666; display: block; margin-bottom: 5px; font-weight: 600; }
+    .loan-summary-card span { font-size: 20px; font-weight: 700; color: #1a73e8; }
+    .tab { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; background: white; color: #666; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .tab.active { background: #1a73e8; color: white; }
+    .tab-section { display: none; }
+    .tab-section.active { display: block; }
+    .search-bar { display: flex; gap: 10px; margin-bottom: 15px; }
+    .search-bar input { flex: 1; max-width: 350px; padding: 10px; border: 2px solid #1a73e8; border-radius: 6px; font-size: 14px; outline: none; }
+    .hint { font-size: 11px; color: #999; margin-top: 3px; }
+    .paid-row td { background: #f0fff4 !important; }
+    .schedule-table th { font-size: 11px; padding: 8px 10px; }
+    .schedule-table td { padding: 8px 10px; font-size: 12px; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>💳 Loan Management</h1>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span id="headerUser" style="font-size:13px;"></span>
+    <button class="btn-back" onclick="window.location.href='/dashboard'">← Dashboard</button>
+  </div>
+</div>
+
+<!-- LIST VIEW -->
+<div id="listView" class="view active">
+  <div class="container">
+    <div class="alert alert-success" id="listAlertSuccess"></div>
+    <div class="alert alert-error" id="listAlertError"></div>
+
+    <!-- SUMMARY -->
+    <div class="loan-summary">
+      <div class="loan-summary-card"><label>Total Active Loans</label><span id="sumActive">0</span></div>
+      <div class="loan-summary-card"><label>Total Loan Amount</label><span id="sumAmount">₹0</span></div>
+      <div class="loan-summary-card"><label>Total Outstanding</label><span id="sumOutstanding" style="color:#ea4335;">₹0</span></div>
+      <div class="loan-summary-card"><label>Total Paid</label><span id="sumPaid" style="color:#34a853;">₹0</span></div>
+    </div>
+
+    <!-- TABS -->
+    <div style="display:flex;gap:8px;margin-bottom:20px;">
+      <button class="tab active" id="tabActive" onclick="switchTab('Active')">💳 Active Loans</button>
+      <button class="tab" id="tabMonthly" onclick="switchTab('Monthly')">📅 Monthly EMI View</button>
+    </div>
+
+    <!-- TAB 1: ACTIVE LOANS -->
+    <div class="tab-section active" id="sectionActive">
+      <div class="card">
+        <div class="card-body">
+          <div style="display:flex;gap:15px;flex-wrap:wrap;align-items:end;">
+            <div class="form-group">
+              <label>Location</label>
+              <select id="filterLocation" onchange="loadLoans()">
+                <option value="">All Locations</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Search EIN / Name</label>
+              <input type="text" id="filterSearch" placeholder="EIN or Name" oninput="filterTable()">
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <h3>Active Loans <span id="listCount" style="color:#666;font-weight:400;font-size:13px;"></span></h3>
+          <button class="btn-primary" onclick="showAddView()">+ New Loan</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>EIN</th><th>Name</th><th>Loan Type</th>
+              <th>Amount</th><th>EMI/Month</th><th>Tenure</th>
+              <th>Start</th><th>End</th>
+              <th>Outstanding</th><th>Paid</th>
+              <th>Status</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="loanList">
+            <tr><td colspan="12"><div class="empty-state">Loading...</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 2: MONTHLY EMI -->
+    <div class="tab-section" id="sectionMonthly">
+      <div class="card">
+        <div class="card-body">
+          <div style="display:flex;gap:15px;flex-wrap:wrap;align-items:end;">
+            <div class="form-group">
+              <label>Month *</label>
+              <select id="monthlyMonth">
+                <option value="">Select Month</option>
+                <option>January</option><option>February</option><option>March</option>
+                <option>April</option><option>May</option><option>June</option>
+                <option>July</option><option>August</option><option>September</option>
+                <option>October</option><option>November</option><option>December</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Year *</label>
+              <select id="monthlyYear"></select>
+            </div>
+            <div class="form-group" style="align-self:end;">
+              <button class="btn-primary" onclick="loadMonthlyEMI()">📋 Load EMI List</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <h3>EMI Due <span id="monthlyCount" style="color:#666;font-weight:400;font-size:13px;"></span></h3>
+          <span id="monthlyTotal" style="font-size:14px;font-weight:700;color:#ea4335;"></span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>EIN</th><th>Name</th><th>Loan Type</th>
+              <th>EMI Amount</th><th>Outstanding After</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="monthlyTable">
+            <tr><td colspan="6"><div class="empty-state">Select month and year to view EMIs</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD LOAN VIEW -->
+<div id="formView" class="view">
+  <div class="container">
+    <div class="form-view-header">
+      <button class="btn-back-list" onclick="showListView()">← Back to List</button>
+      <h2>New Loan</h2>
+    </div>
+    <div class="alert alert-success" id="formAlertSuccess"></div>
+    <div class="alert alert-error" id="formAlertError"></div>
+
+    <div class="card">
+      <div class="card-header"><h3>🔍 Search Employee</h3></div>
+      <div class="card-body">
+        <div class="search-bar">
+          <input type="text" id="empSearch" placeholder="Enter EIN or Employee Name"
+            onkeypress="if(event.key==='Enter') searchEmployee()">
+          <button class="btn-primary" onclick="searchEmployee()">🔍 Search</button>
+        </div>
+        <div id="empInfoBar" style="display:none;">
+          <div class="emp-info-bar">
+            <div class="emp-info-item"><label>EIN</label><span id="infoEIN">—</span></div>
+            <div class="emp-info-item"><label>Name</label><span id="infoName">—</span></div>
+            <div class="emp-info-item"><label>Designation</label><span id="infoDesig">—</span></div>
+            <div class="emp-info-item"><label>Monthly Salary</label><span id="infoSalary">—</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="loanFormCard" style="display:none;">
+      <div class="card-header"><h3>Loan Details</h3></div>
+      <div class="card-body">
+        <input type="hidden" id="loanEIN">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:15px;">
+          <div class="form-group">
+            <label>Loan Type *</label>
+            <select id="loanType">
+              <option value="">Select Type</option>
+              <option>Salary Advance</option>
+              <option>Personal Loan</option>
+              <option>Festival Advance</option>
+              <option>Emergency Loan</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Loan Amount (₹) *</label>
+            <input type="number" id="loanAmount" placeholder="e.g. 50000" min="0" oninput="calcEMI()">
+          </div>
+          <div class="form-group">
+            <label>Interest Rate (% per year)</label>
+            <input type="number" id="interestRate" placeholder="0 for interest-free" min="0" step="0.1" value="0" oninput="calcEMI()">
+            <div class="hint">Enter 0 for interest-free loan</div>
+          </div>
+          <div class="form-group">
+            <label>Tenure (months) *</label>
+            <input type="number" id="tenure" placeholder="e.g. 10" min="1" oninput="calcEMI()">
+          </div>
+          <div class="form-group">
+            <label>Start Month *</label>
+            <select id="startMonth" onchange="calcEMI()">
+              <option value="">Select Month</option>
+              <option>January</option><option>February</option><option>March</option>
+              <option>April</option><option>May</option><option>June</option>
+              <option>July</option><option>August</option><option>September</option>
+              <option>October</option><option>November</option><option>December</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Start Year *</label>
+            <select id="startYear" onchange="calcEMI()"></select>
+          </div>
+          <div class="form-group" style="grid-column:1/-1;">
+            <label>Remarks</label>
+            <input type="text" id="loanRemarks" placeholder="Purpose of loan">
+          </div>
+        </div>
+
+        <!-- EMI PREVIEW -->
+        <div class="emi-preview" id="emiPreview">
+          <div class="emi-item"><label>Monthly EMI</label><span id="previewEMI">₹0</span></div>
+          <div class="emi-item"><label>Total Payable</label><span id="previewTotal">₹0</span></div>
+          <div class="emi-item"><label>Total Interest</label><span id="previewInterest" style="color:#ea4335;">₹0</span></div>
+          <div class="emi-item"><label>End Month</label><span id="previewEnd" style="color:#1a73e8;font-size:14px;">—</span></div>
+        </div>
+
+        <div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end;">
+          <button class="btn-secondary" onclick="showListView()">Cancel</button>
+          <button class="btn-primary" onclick="createLoan()">💾 Create Loan</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL VIEW -->
+<div id="detailView" class="view">
+  <div class="container">
+    <div class="form-view-header">
+      <button class="btn-back-list" onclick="showListView()">← Back to List</button>
+      <h2 id="detailTitle">Loan Details</h2>
+    </div>
+    <div class="emp-info-bar" id="detailInfo" style="margin-bottom:20px;"></div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:15px;margin-bottom:20px;" id="loanStats"></div>
+    <div class="card">
+      <div class="card-header">
+        <h3>Repayment Schedule</h3>
+        <button class="btn-danger" id="preCloseBtn" onclick="preCloseLoan()">Pre-Close Loan</button>
+      </div>
+      <table class="schedule-table">
+        <thead>
+          <tr><th>#</th><th>Month</th><th>EMI</th><th>Principal</th><th>Interest</th><th>Balance</th><th>Status</th></tr>
+        </thead>
+        <tbody id="scheduleTable"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  let currentUser = {};
+  let allLoans = [];
+  let currentLoanId = null;
+
+  const MONTHS = ['January','February','March','April','May','June',
+    'July','August','September','October','November','December'];
+
+  window.onload = async () => {
+    await checkAuth();
+    await loadLocations();
+    populateYears();
+    setDefaults();
+    await loadLoans();
+  };
+
+  async function checkAuth() {
+    const res = await fetch('/api/auth/me');
+    const data = await res.json();
+    if (!data.success) { window.location.href = '/'; return; }
+    currentUser = data.user;
+    document.getElementById('headerUser').textContent = data.user.fullName;
+  }
+
+  async function loadLocations() {
+    try {
+      const res = await fetch('/api/masters/location');
+      const data = await res.json();
+      if (data.success) {
+        const el = document.getElementById('filterLocation');
+        el.innerHTML = '<option value="">All Locations</option>';
+        data.masters.forEach(m => { el.innerHTML += '<option value="' + m.value + '">' + m.value + '</option>'; });
+      }
+    } catch(e) {}
+  }
+
+  function populateYears() {
+    const now = new Date().getFullYear();
+    ['startYear','monthlyYear'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.innerHTML = '<option value="">Select Year</option>';
+      for (let y = now - 1; y <= now + 3; y++) {
+        el.innerHTML += '<option value="' + y + '"' + (y === now ? ' selected' : '') + '>' + y + '</option>';
+      }
+    });
+  }
+
+  function setDefaults() {
+    const now = new Date();
+    const sm = document.getElementById('startMonth');
+    const mm = document.getElementById('monthlyMonth');
+    const my = document.getElementById('monthlyYear');
+    if (sm) sm.value = MONTHS[now.getMonth()];
+    if (mm) mm.value = MONTHS[now.getMonth()];
+    if (my) my.value = now.getFullYear();
+  }
+
+  function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
+    document.getElementById('tab' + tab).classList.add('active');
+    document.getElementById('section' + tab).classList.add('active');
+  }
+
+  async function loadLoans() {
+    try {
+      const location = document.getElementById('filterLocation').value;
+      let url = '/api/loans?status=Active&';
+      if (location) url += 'location=' + encodeURIComponent(location) + '&';
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.success) {
+        allLoans = data.loans;
+        updateSummary(data.loans);
+        filterTable();
+      }
+    } catch(e) {}
+  }
+
+  function updateSummary(loans) {
+    const active = loans.filter(l => l.status === 'Active');
+    document.getElementById('sumActive').textContent = active.length;
+    document.getElementById('sumAmount').textContent = '₹' + active.reduce((s,l) => s+l.loanAmount, 0).toLocaleString('en-IN');
+    document.getElementById('sumOutstanding').textContent = '₹' + active.reduce((s,l) => s+l.outstandingBalance, 0).toLocaleString('en-IN');
+    document.getElementById('sumPaid').textContent = '₹' + loans.reduce((s,l) => s+l.totalPaid, 0).toLocaleString('en-IN');
+  }
+
+  function filterTable() {
+    const search = document.getElementById('filterSearch').value.toLowerCase();
+    const filtered = search ? allLoans.filter(l =>
+      (l.ein && l.ein.toLowerCase().includes(search)) ||
+      (l.employeeName && l.employeeName.toLowerCase().includes(search))
+    ) : allLoans;
+    renderLoanList(filtered);
+  }
+
+  function renderLoanList(loans) {
+    const tbody = document.getElementById('loanList');
+    document.getElementById('listCount').textContent = '(' + loans.length + ' loans)';
+    if (!loans.length) {
+      tbody.innerHTML = '<tr><td colspan="12"><div class="empty-state">No active loans found</div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = loans.map(function(l) {
+      return '<tr>' +
+        '<td><strong>' + l.ein + '</strong></td>' +
+        '<td>' + l.employeeName + '</td>' +
+        '<td>' + l.loanType + '</td>' +
+        '<td>₹' + l.loanAmount.toLocaleString('en-IN') + '</td>' +
+        '<td><strong style="color:#1a73e8;">₹' + l.emiAmount.toLocaleString('en-IN') + '</strong></td>' +
+        '<td>' + l.tenure + ' months</td>' +
+        '<td>' + l.startMonth + ' ' + l.startYear + '</td>' +
+        '<td>' + (l.endMonth || '—') + ' ' + (l.endYear || '') + '</td>' +
+        '<td><strong style="color:#ea4335;">₹' + l.outstandingBalance.toLocaleString('en-IN') + '</strong></td>' +
+        '<td style="color:#34a853;">₹' + (l.totalPaid||0).toLocaleString('en-IN') + '</td>' +
+        '<td><span class="badge badge-' + l.status.toLowerCase() + '">' + l.status + '</span></td>' +
+        '<td>' +
+          '<button class="btn-warning" onclick="viewLoan(\'' + l._id + '\')">View</button> ' +
+          '<button class="btn-danger" onclick="deleteLoan(\'' + l._id + '\')">Delete</button>' +
+        '</td></tr>';
+    }).join('');
+  }
+
+  async function loadMonthlyEMI() {
+    const month = document.getElementById('monthlyMonth').value;
+    const year = document.getElementById('monthlyYear').value;
+    if (!month || !year) { alert('Please select month and year'); return; }
+    try {
+      // Fetch all active loans
+      const res = await fetch('/api/loans?status=Active');
+      const data = await res.json();
+      if (!data.success) return;
+      // Fetch full details for each loan to get schedule
+      const emiDue = [];
+      for (const loan of data.loans) {
+        const detailRes = await fetch('/api/loans/' + loan._id);
+        const detailData = await detailRes.json();
+        if (!detailData.success) continue;
+        const fullLoan = detailData.loan;
+        if (!fullLoan.schedule) continue;
+        const item = fullLoan.schedule.find(function(s) {
+          return s.month === month && s.year === parseInt(year) && s.status === 'Pending';
+        });
+        if (item) {
+          emiDue.push({
+            loanId: fullLoan._id, ein: fullLoan.ein, employeeName: fullLoan.employeeName,
+            loanType: fullLoan.loanType, emiAmount: item.emiAmount, balance: item.balance
+          });
+        }
+      }
+      const total = emiDue.reduce(function(s,e) { return s + e.emiAmount; }, 0);
+      document.getElementById('monthlyCount').textContent = '(' + emiDue.length + ' employees)';
+      document.getElementById('monthlyTotal').textContent = emiDue.length ? 'Total EMI: ₹' + total.toLocaleString('en-IN') : '';
+      const tbody = document.getElementById('monthlyTable');
+      if (!emiDue.length) {
+        tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state">No EMIs due for ' + month + ' ' + year + '</div></td></tr>';
+        return;
+      }
+      tbody.innerHTML = emiDue.map(function(e) {
+        return '<tr>' +
+          '<td><strong>' + e.ein + '</strong></td>' +
+          '<td>' + e.employeeName + '</td>' +
+          '<td>' + e.loanType + '</td>' +
+          '<td><strong style="color:#ea4335;">₹' + e.emiAmount.toLocaleString('en-IN') + '</strong></td>' +
+          '<td>₹' + e.balance.toLocaleString('en-IN') + '</td>' +
+          '<td><button class="btn-warning" onclick="viewLoan(\'' + e.loanId + '\')">View</button></td>' +
+          '</tr>';
+      }).join('');
+    } catch(e) { console.error(e); }
+  }
+
+  async function searchEmployee() {
+    const search = document.getElementById('empSearch').value.trim();
+    if (!search) { showFormAlert('formAlertError', 'Please enter EIN or Name'); return; }
+    try {
+      const res = await fetch('/api/loans/find-employee/' + encodeURIComponent(search));
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById('loanEIN').value = data.employee.ein;
+        document.getElementById('infoEIN').textContent = data.employee.ein;
+        document.getElementById('infoName').textContent = data.employee.employeeName;
+        document.getElementById('infoDesig').textContent = data.employee.designation || '—';
+        document.getElementById('infoSalary').textContent = '₹' + (data.employee.monthlySalary||0).toLocaleString('en-IN');
+        document.getElementById('empInfoBar').style.display = 'block';
+        document.getElementById('loanFormCard').style.display = 'block';
+      } else {
+        showFormAlert('formAlertError', data.message);
+        document.getElementById('empInfoBar').style.display = 'none';
+        document.getElementById('loanFormCard').style.display = 'none';
+      }
+    } catch(e) { showFormAlert('formAlertError', 'Error: ' + e.message); }
+  }
+
+  async function calcEMI() {
+    const amount = parseFloat(document.getElementById('loanAmount').value) || 0;
+    const rate = parseFloat(document.getElementById('interestRate').value) || 0;
+    const tenure = parseInt(document.getElementById('tenure').value) || 0;
+    const startMonth = document.getElementById('startMonth').value;
+    const startYear = parseInt(document.getElementById('startYear').value) || 0;
+    if (!amount || !tenure) { document.getElementById('emiPreview').style.display = 'none'; return; }
+    try {
+      const res = await fetch('/api/loans/calculate-emi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ loanAmount: amount, interestRate: rate, tenure })
+      });
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById('previewEMI').textContent = '₹' + data.emi.toLocaleString('en-IN');
+        document.getElementById('previewTotal').textContent = '₹' + data.totalPayable.toLocaleString('en-IN');
+        document.getElementById('previewInterest').textContent = '₹' + data.totalInterest.toLocaleString('en-IN');
+        if (startMonth && startYear) {
+          let mIdx = MONTHS.indexOf(startMonth) + tenure - 1;
+          let yr = startYear + Math.floor(mIdx / 12);
+          mIdx = mIdx % 12;
+          document.getElementById('previewEnd').textContent = MONTHS[mIdx] + ' ' + yr;
+        }
+        document.getElementById('emiPreview').style.display = 'grid';
+      }
+    } catch(e) {}
+  }
+
+  async function createLoan() {
+    const ein = document.getElementById('loanEIN').value;
+    const loanType = document.getElementById('loanType').value;
+    const loanAmount = document.getElementById('loanAmount').value;
+    const interestRate = document.getElementById('interestRate').value || 0;
+    const tenure = document.getElementById('tenure').value;
+    const startMonth = document.getElementById('startMonth').value;
+    const startYear = document.getElementById('startYear').value;
+    const remarks = document.getElementById('loanRemarks').value;
+    if (!ein || !loanType || !loanAmount || !tenure || !startMonth || !startYear) {
+      showFormAlert('formAlertError', 'Please fill all required fields'); return;
+    }
+    try {
+      const res = await fetch('/api/loans', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ ein, loanType, loanAmount: parseFloat(loanAmount),
+          interestRate: parseFloat(interestRate), tenure: parseInt(tenure),
+          startMonth, startYear: parseInt(startYear), remarks })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showFormAlert('formAlertSuccess', '✅ ' + data.message);
+        await loadLoans();
+        setTimeout(showListView, 1500);
+      } else { showFormAlert('formAlertError', data.message); }
+    } catch(e) { showFormAlert('formAlertError', 'Error: ' + e.message); }
+  }
+
+  async function viewLoan(id) {
+    try {
+      const res = await fetch('/api/loans/' + id);
+      const data = await res.json();
+      if (!data.success) return;
+      const loan = data.loan;
+      currentLoanId = id;
+      document.getElementById('detailTitle').textContent = loan.employeeName + ' — ' + loan.loanType;
+      document.getElementById('detailInfo').innerHTML =
+        '<div class="emp-info-item"><label>EIN</label><span>' + loan.ein + '</span></div>' +
+        '<div class="emp-info-item"><label>Name</label><span>' + loan.employeeName + '</span></div>' +
+        '<div class="emp-info-item"><label>Loan Type</label><span>' + loan.loanType + '</span></div>' +
+        '<div class="emp-info-item"><label>Status</label><span>' + loan.status + '</span></div>';
+      document.getElementById('loanStats').innerHTML =
+        '<div class="loan-summary-card"><label>Loan Amount</label><span>₹' + loan.loanAmount.toLocaleString('en-IN') + '</span></div>' +
+        '<div class="loan-summary-card"><label>Monthly EMI</label><span>₹' + loan.emiAmount.toLocaleString('en-IN') + '</span></div>' +
+        '<div class="loan-summary-card"><label>Tenure</label><span>' + loan.tenure + ' months</span></div>' +
+        '<div class="loan-summary-card"><label>Outstanding</label><span style="color:#ea4335;">₹' + loan.outstandingBalance.toLocaleString('en-IN') + '</span></div>' +
+        '<div class="loan-summary-card"><label>Total Paid</label><span style="color:#34a853;">₹' + loan.totalPaid.toLocaleString('en-IN') + '</span></div>';
+      document.getElementById('preCloseBtn').style.display = loan.status === 'Active' ? 'inline-block' : 'none';
+      const tbody = document.getElementById('scheduleTable');
+      tbody.innerHTML = loan.schedule.map(function(s, i) {
+        return '<tr class="' + (s.status === 'Paid' ? 'paid-row' : '') + '">' +
+          '<td>' + (i+1) + '</td><td>' + s.month + ' ' + s.year + '</td>' +
+          '<td>₹' + s.emiAmount.toLocaleString('en-IN') + '</td>' +
+          '<td>₹' + s.principal.toLocaleString('en-IN') + '</td>' +
+          '<td>₹' + s.interest.toLocaleString('en-IN') + '</td>' +
+          '<td>₹' + s.balance.toLocaleString('en-IN') + '</td>' +
+          '<td><span class="badge badge-' + s.status.toLowerCase() + '">' + s.status + '</span></td>' +
+          '</tr>';
+      }).join('');
+      switchView('detailView');
+    } catch(e) { console.error(e); }
+  }
+
+  async function preCloseLoan() {
+    if (!confirm('Pre-close this loan? Outstanding balance will be cleared.')) return;
+    try {
+      const res = await fetch('/api/loans/' + currentLoanId + '/pre-close', { method: 'PATCH', credentials: 'include' });
+      const data = await res.json();
+      if (data.success) { alert('✅ Loan pre-closed'); showListView(); }
+      else alert('Error: ' + data.message);
+    } catch(e) {}
+  }
+
+  async function deleteLoan(id) {
+    if (!confirm('Delete this loan?')) return;
+    try {
+      const res = await fetch('/api/loans/' + id, { method: 'DELETE', credentials: 'include' });
+      const data = await res.json();
+      if (data.success) { showListAlert('listAlertSuccess', data.message); await loadLoans(); }
+      else showListAlert('listAlertError', data.message);
+    } catch(e) {}
+  }
+
+  function showAddView() {
+    document.getElementById('empSearch').value = '';
+    document.getElementById('loanEIN').value = '';
+    document.getElementById('empInfoBar').style.display = 'none';
+    document.getElementById('loanFormCard').style.display = 'none';
+    document.getElementById('emiPreview').style.display = 'none';
+    document.getElementById('loanType').value = '';
+    document.getElementById('loanAmount').value = '';
+    document.getElementById('interestRate').value = '0';
+    document.getElementById('tenure').value = '';
+    document.getElementById('loanRemarks').value = '';
+    setDefaults();
+    switchView('formView');
+  }
+
+  function showListView() { switchView('listView'); loadLoans(); }
+  function switchView(id) {
+    document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
+    document.getElementById(id).classList.add('active');
+    window.scrollTo(0, 0);
+  }
+  function showFormAlert(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg; el.style.display = 'block';
+    setTimeout(function() { el.style.display = 'none'; }, 4000);
+  }
+  function showListAlert(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg; el.style.display = 'block';
+    setTimeout(function() { el.style.display = 'none'; }, 4000);
+  }
+</script>
+</body>
+</html>

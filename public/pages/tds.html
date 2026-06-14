@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TDS Management — Payroll System</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; }
+    .header { background: #1a73e8; color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+    .header h1 { font-size: 20px; }
+    .btn-back { background: white; color: #1a73e8; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+    .container { padding: 20px; max-width: 1400px; margin: 0 auto; }
+    .btn-primary { background: #1a73e8; color: white; border: none; padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
+    .btn-secondary { background: #f0f2f5; color: #333; border: none; padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
+    .btn-warning { background: #fbbc04; color: #333; border: none; padding: 5px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 600; }
+    .btn-danger { background: #ea4335; color: white; border: none; padding: 5px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 600; }
+    .card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; margin-bottom: 20px; }
+    .card-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+    .card-header h3 { font-size: 15px; color: #333; }
+    .card-body { padding: 20px; }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group label { font-size: 13px; font-weight: 600; color: #555; }
+    .form-group select, .form-group input { padding: 9px 11px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; outline: none; }
+    .form-group select:focus, .form-group input:focus { border-color: #1a73e8; }
+    .alert { padding: 10px 14px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; display: none; }
+    .alert-success { background: #e6f4ea; color: #34a853; }
+    .alert-error { background: #fce8e6; color: #ea4335; }
+    .empty-state { text-align: center; padding: 40px; color: #999; }
+    .tab { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; background: white; color: #666; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .tab.active { background: #1a73e8; color: white; }
+    .tab-section { display: none; }
+    .tab-section.active { display: block; }
+    .tds-grid-wrapper { overflow-x: auto; }
+    .tds-grid { border-collapse: collapse; font-size: 12px; white-space: nowrap; width: 100%; }
+    .tds-grid th { background: #1a73e8; color: white; padding: 10px 12px; text-align: center; font-weight: 600; position: sticky; top: 0; z-index: 10; }
+    .tds-grid th.left { text-align: left; }
+    .tds-grid th.emp-col { min-width: 80px; position: sticky; left: 0; z-index: 20; background: #1a73e8; text-align: left; }
+    .tds-grid th.name-col { min-width: 160px; position: sticky; left: 80px; z-index: 20; background: #1a73e8; text-align: left; }
+    .tds-grid th.loc-col { min-width: 80px; position: sticky; left: 240px; z-index: 20; background: #1a73e8; }
+    .tds-grid td { padding: 8px 10px; border-bottom: 1px solid #f0f0f0; border-right: 1px solid #f0f0f0; text-align: center; }
+    .tds-grid td.emp-col { position: sticky; left: 0; background: white; z-index: 5; text-align: left; font-weight: 700; font-size: 11px; border-right: 2px solid #ddd; }
+    .tds-grid td.name-col { position: sticky; left: 80px; background: white; z-index: 5; text-align: left; font-size: 11px; border-right: 1px solid #ddd; }
+    .tds-grid td.loc-col { position: sticky; left: 240px; background: white; z-index: 5; font-size: 11px; color: #666; border-right: 2px solid #ddd; }
+    .tds-grid td.total-col { background: #e8f0fe; font-weight: 700; color: #1a73e8; }
+    .tds-grid tr:hover td { background: #f8f9ff; }
+    .tds-grid tr:hover td.emp-col, .tds-grid tr:hover td.name-col, .tds-grid tr:hover td.loc-col { background: #e8f0fe; }
+    .month-cell { cursor: pointer; border-radius: 4px; padding: 4px 6px; font-size: 11px; display: inline-block; min-width: 55px; }
+    .month-cell.has-tds { background: #e8f0fe; color: #1a73e8; font-weight: 700; }
+    .month-cell.has-tds:hover { background: #1a73e8; color: white; }
+    .month-cell.empty { color: #ccc; }
+    .month-cell.empty:hover { background: #f0f2f5; color: #666; }
+    .popup-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 1000; }
+    .popup { background: white; border-radius: 12px; padding: 25px; width: 400px; position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); z-index: 1001; box-shadow: 0 8px 30px rgba(0,0,0,0.2); }
+    .popup h3 { font-size: 16px; color: #333; margin-bottom: 4px; }
+    .popup .sub { font-size: 12px; color: #666; margin-bottom: 20px; }
+    .popup-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+    .btn-close { background: none; border: none; font-size: 22px; cursor: pointer; color: #666; }
+    .emp-info-bar { background: #e8f0fe; border-radius: 8px; padding: 12px 15px; display: grid; grid-template-columns: repeat(4,1fr); gap: 15px; margin-bottom: 15px; }
+    .emp-info-item label { font-size: 11px; color: #666; font-weight: 600; display: block; }
+    .emp-info-item span { font-size: 13px; font-weight: 700; color: #1a73e8; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: #f8f9fa; padding: 12px 15px; text-align: left; font-weight: 600; color: #555; border-bottom: 1px solid #eee; }
+    td { padding: 12px 15px; border-bottom: 1px solid #f5f5f5; color: #333; }
+    tr:hover { background: #f8f9ff; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🧾 TDS Management</h1>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span id="headerUser" style="font-size:13px;"></span>
+    <button class="btn-back" onclick="window.location.href='/dashboard'">← Dashboard</button>
+  </div>
+</div>
+
+<!-- POPUP -->
+<div class="popup-overlay" id="popupOverlay" onclick="closePopup()"></div>
+<div class="popup" id="editPopup" style="display:none;">
+  <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:5px;">
+    <h3 id="popupTitle">Edit TDS</h3>
+    <button class="btn-close" onclick="closePopup()">×</button>
+  </div>
+  <div class="sub" id="popupSub"></div>
+  <input type="hidden" id="popupEIN">
+  <input type="hidden" id="popupMonth">
+  <input type="hidden" id="popupYear">
+  <input type="hidden" id="popupTdsId">
+  <div class="form-group" style="margin-bottom:15px;">
+    <label>TDS Amount (₹)</label>
+    <input type="number" id="popupAmount" placeholder="Enter amount" min="0"
+      style="font-size:18px;padding:12px;border:2px solid #1a73e8;border-radius:6px;outline:none;"
+      onkeypress="if(event.key==='Enter') savePopup()">
+    <div style="font-size:11px;color:#999;margin-top:4px;">As advised by CA for this month</div>
+  </div>
+  <div class="form-group">
+    <label>Remarks (optional)</label>
+    <input type="text" id="popupRemarks" placeholder="e.g. Based on Form 16"
+      style="padding:9px;border:1px solid #ddd;border-radius:6px;outline:none;font-size:13px;">
+  </div>
+  <div class="popup-actions">
+    <button class="btn-secondary" onclick="closePopup()">Cancel</button>
+    <button class="btn-danger" id="popupDeleteBtn" onclick="deleteTDSFromPopup()" style="display:none;">Delete</button>
+    <button class="btn-primary" onclick="savePopup()">💾 Save</button>
+  </div>
+</div>
+
+<div class="container">
+  <div class="alert alert-success" id="alertSuccess"></div>
+  <div class="alert alert-error" id="alertError"></div>
+
+  <!-- TABS -->
+  <div style="display:flex;gap:8px;margin-bottom:20px;">
+    <button class="tab active" id="tabGrid" onclick="switchTab('Grid')">📊 Year-wise Grid</button>
+    <button class="tab" id="tabMonthly" onclick="switchTab('Monthly')">📅 Monthly Entry</button>
+  </div>
+
+  <!-- TAB 1: YEAR-WISE GRID -->
+  <div class="tab-section active" id="sectionGrid">
+    <div class="card">
+      <div class="card-body">
+        <div style="display:flex;gap:15px;flex-wrap:wrap;align-items:end;">
+          <div class="form-group">
+            <label>Year *</label>
+            <select id="filterYear">
+              <option value="">Select Year</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Location</label>
+            <select id="filterLocation">
+              <option value="">All Locations</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Search EIN / Name</label>
+            <input type="text" id="filterSearch" placeholder="Type to filter..." oninput="filterGrid()">
+          </div>
+          <div class="form-group" style="align-self:end;">
+            <button class="btn-primary" onclick="loadTDSGrid()">📋 Load Grid</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <h3 id="gridTitle">TDS Grid</h3>
+        <span id="gridInfo" style="font-size:13px;color:#666;"></span>
+      </div>
+      <div class="tds-grid-wrapper">
+        <table class="tds-grid">
+          <thead id="gridHead"></thead>
+          <tbody id="gridBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2: MONTHLY ENTRY -->
+  <div class="tab-section" id="sectionMonthly">
+    <!-- FILTER -->
+    <div class="card">
+      <div class="card-body">
+        <div style="display:flex;gap:15px;flex-wrap:wrap;align-items:end;">
+          <div class="form-group">
+            <label>Month *</label>
+            <select id="monthlyMonth">
+              <option value="">Select Month</option>
+              <option>January</option><option>February</option><option>March</option>
+              <option>April</option><option>May</option><option>June</option>
+              <option>July</option><option>August</option><option>September</option>
+              <option>October</option><option>November</option><option>December</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Year *</label>
+            <select id="monthlyYear"></select>
+          </div>
+          <div class="form-group" style="align-self:end;">
+            <button class="btn-primary" onclick="loadMonthlyTDS()">📋 Load</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADD FORM -->
+    <div class="card" id="monthlyAddCard" style="display:none;">
+      <div class="card-header">
+        <h3>+ Add TDS Entry</h3>
+        <button class="btn-secondary" onclick="hideMonthlyAddForm()">✕ Close</button>
+      </div>
+      <div class="card-body">
+        <div style="display:flex;gap:10px;margin-bottom:15px;">
+          <input type="text" id="monthlyEmpSearch" placeholder="Search EIN or Name"
+            style="flex:1;max-width:300px;padding:10px;border:2px solid #1a73e8;border-radius:6px;font-size:13px;outline:none;"
+            onkeypress="if(event.key==='Enter') searchMonthlyEmployee()">
+          <button class="btn-primary" onclick="searchMonthlyEmployee()">🔍 Search</button>
+        </div>
+        <div id="monthlyEmpInfo" style="display:none;margin-bottom:15px;">
+          <div class="emp-info-bar">
+            <div class="emp-info-item"><label>EIN</label><span id="mInfoEIN">—</span></div>
+            <div class="emp-info-item"><label>Name</label><span id="mInfoName">—</span></div>
+            <div class="emp-info-item"><label>Location</label><span id="mInfoLoc">—</span></div>
+            <div class="emp-info-item"><label>Monthly Salary</label><span id="mInfoSalary">—</span></div>
+          </div>
+        </div>
+        <div id="monthlyAmtFields" style="display:none;">
+          <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:15px;align-items:end;">
+            <div class="form-group">
+              <label>TDS Amount (₹) *</label>
+              <input type="number" id="monthlyAddAmount" placeholder="e.g. 2500" min="0"
+                onkeypress="if(event.key==='Enter') saveMonthlyTDS()">
+            </div>
+            <div class="form-group">
+              <label>Remarks</label>
+              <input type="text" id="monthlyAddRemarks" placeholder="As per CA advice">
+            </div>
+            <button class="btn-primary" onclick="saveMonthlyTDS()">💾 Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MONTHLY LIST -->
+    <div class="card">
+      <div class="card-header">
+        <h3 id="monthlyListTitle">Monthly TDS Entries</h3>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span id="monthlyListInfo" style="font-size:13px;color:#666;"></span>
+          <button class="btn-primary" id="monthlyAddBtn" onclick="showMonthlyAddForm()" style="display:none;">+ Add TDS Entry</button>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>EIN</th><th>Employee Name</th><th>Location</th>
+            <th>TDS Amount</th><th>Remarks</th><th>Added By</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="monthlyList">
+          <tr><td colspan="7"><div class="empty-state">Select month and year then click Load</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  let currentUser = {};
+  let allTDS = [];
+  let allEmployees = [];
+  let currentYear = new Date().getFullYear();
+  let currentMonthlyEIN = '';
+  let currentMonthlyMonth = '';
+  let currentMonthlyYear = '';
+
+  const MONTHS = ['January','February','March','April','May','June',
+    'July','August','September','October','November','December'];
+  const SHORT_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  window.onload = async () => {
+    await checkAuth();
+    await loadLocations();
+    populateYears();
+    await loadTDSGrid();
+  };
+
+  async function checkAuth() {
+    const res = await fetch('/api/auth/me');
+    const data = await res.json();
+    if (!data.success) { window.location.href = '/'; return; }
+    currentUser = data.user;
+    document.getElementById('headerUser').textContent = data.user.fullName;
+  }
+
+  async function loadLocations() {
+    try {
+      const res = await fetch('/api/masters/location');
+      const data = await res.json();
+      if (data.success) {
+        const el = document.getElementById('filterLocation');
+        el.innerHTML = '<option value="">All Locations</option>';
+        data.masters.forEach(m => { el.innerHTML += '<option value="' + m.value + '">' + m.value + '</option>'; });
+      }
+    } catch(e) {}
+  }
+
+  function populateYears() {
+    const now = new Date().getFullYear();
+    ['filterYear','monthlyYear'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.innerHTML = '<option value="">Select Year</option>';
+      for (let y = now + 1; y >= now - 4; y--) {
+        el.innerHTML += '<option value="' + y + '"' + (y === now ? ' selected' : '') + '>' + y + '</option>';
+      }
+    });
+    const mm = document.getElementById('monthlyMonth');
+    if (mm) mm.value = MONTHS[new Date().getMonth()];
+    const fy = document.getElementById('filterYear');
+    if (fy) fy.value = now;
+  }
+
+  function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
+    document.getElementById('tab' + tab).classList.add('active');
+    document.getElementById('section' + tab).classList.add('active');
+    if (tab === 'Monthly') loadMonthlyTDS();
+  }
+
+  async function loadTDSGrid() {
+    const year = document.getElementById('filterYear').value;
+    const location = document.getElementById('filterLocation').value;
+    if (!year) { showAlert('alertError', 'Please select a year'); return; }
+    currentYear = parseInt(year);
+    try {
+      let url = '/api/tds?year=' + year;
+      if (location) url += '&location=' + encodeURIComponent(location);
+      const tdsRes = await fetch(url);
+      const tdsData = await tdsRes.json();
+      if (!tdsData.success) return;
+      allTDS = tdsData.records;
+
+      let empUrl = '/api/employees?';
+      if (location) empUrl += 'location=' + encodeURIComponent(location) + '&';
+      const empRes = await fetch(empUrl);
+      const empData = await empRes.json();
+      allEmployees = empData.success ? empData.employees.filter(e => e.isActive) : [];
+      renderGrid();
+    } catch(e) { showAlert('alertError', 'Error: ' + e.message); }
+  }
+
+  function filterGrid() { renderGrid(); }
+
+  function renderGrid() {
+    const location = document.getElementById('filterLocation').value;
+    let employees = location ? allEmployees.filter(e => e.location === location) : allEmployees;
+    const tdsMap = {};
+    allTDS.forEach(t => { tdsMap[t.ein + '-' + t.month] = t; });
+    document.getElementById('gridTitle').textContent = 'TDS Grid — ' + currentYear;
+    document.getElementById('gridInfo').textContent = employees.length + ' employees';
+
+    let head = '<tr><th class="emp-col">EIN</th><th class="name-col">Name</th><th class="loc-col">Loc</th>';
+    SHORT_MONTHS.forEach(m => { head += '<th style="min-width:65px;">' + m + '</th>'; });
+    head += '<th style="min-width:80px;background:#0d47a1;">Total</th></tr>';
+    document.getElementById('gridHead').innerHTML = head;
+
+    const search = document.getElementById('filterSearch').value.toLowerCase();
+    let filtered = search ? employees.filter(e =>
+      (e.ein && e.ein.toLowerCase().includes(search)) ||
+      (e.employeeName && e.employeeName.toLowerCase().includes(search))
+    ) : employees;
+
+    if (!filtered.length) {
+      document.getElementById('gridBody').innerHTML =
+        '<tr><td colspan="16"><div class="empty-state">No employees found</div></td></tr>';
+      return;
+    }
+
+    let body = '';
+    let grandTotal = 0;
+    const monthTotals = Array(12).fill(0);
+
+    filtered.forEach(emp => {
+      let total = 0;
+      let row = '<tr>';
+      row += '<td class="emp-col">' + (emp.ein||'—') + '</td>';
+      row += '<td class="name-col">' + emp.employeeName + '</td>';
+      row += '<td class="loc-col">' + emp.location + '</td>';
+      MONTHS.forEach((month, mi) => {
+        const key = emp.ein + '-' + month;
+        const rec = tdsMap[key];
+        if (rec) {
+          total += rec.amount;
+          monthTotals[mi] += rec.amount;
+          row += '<td><div class="month-cell has-tds" onclick="openPopup(\'' +
+            emp.ein + '\',\'' + month + '\',' + currentYear + ',\'' +
+            emp.employeeName.replace(/'/g,'') + '\',' + rec.amount + ',\'' +
+            (rec.remarks||'').replace(/'/g,'') + '\',\'' + rec._id + '\')">₹' +
+            rec.amount.toLocaleString('en-IN') + '</div></td>';
+        } else {
+          row += '<td><div class="month-cell empty" onclick="openPopup(\'' +
+            emp.ein + '\',\'' + month + '\',' + currentYear + ',\'' +
+            emp.employeeName.replace(/'/g,'') + '\',0,\'\',\'\')">+</div></td>';
+        }
+      });
+      grandTotal += total;
+      row += '<td class="total-col">₹' + total.toLocaleString('en-IN') + '</td></tr>';
+      body += row;
+    });
+
+    body += '<tr style="background:#e8f0fe;font-weight:700;"><td class="emp-col" colspan="3" style="color:#1a73e8;">TOTAL</td>';
+    monthTotals.forEach(t => { body += '<td style="color:#1a73e8;font-weight:700;">' + (t > 0 ? '₹' + t.toLocaleString('en-IN') : '—') + '</td>'; });
+    body += '<td class="total-col">₹' + grandTotal.toLocaleString('en-IN') + '</td></tr>';
+    document.getElementById('gridBody').innerHTML = body;
+  }
+
+  function openPopup(ein, month, year, name, amount, remarks, tdsId) {
+    document.getElementById('popupTitle').textContent = amount > 0 ? 'Edit TDS' : 'Add TDS';
+    document.getElementById('popupSub').textContent = name + ' | ' + month + ' ' + year;
+    document.getElementById('popupEIN').value = ein;
+    document.getElementById('popupMonth').value = month;
+    document.getElementById('popupYear').value = year;
+    document.getElementById('popupTdsId').value = tdsId || '';
+    document.getElementById('popupAmount').value = amount > 0 ? amount : '';
+    document.getElementById('popupRemarks').value = remarks || '';
+    document.getElementById('popupDeleteBtn').style.display = tdsId ? 'inline-block' : 'none';
+    document.getElementById('popupOverlay').style.display = 'block';
+    document.getElementById('editPopup').style.display = 'block';
+    setTimeout(() => document.getElementById('popupAmount').focus(), 100);
+  }
+
+  function closePopup() {
+    document.getElementById('popupOverlay').style.display = 'none';
+    document.getElementById('editPopup').style.display = 'none';
+  }
+
+  async function savePopup() {
+    const ein = document.getElementById('popupEIN').value;
+    const month = document.getElementById('popupMonth').value;
+    const year = document.getElementById('popupYear').value;
+    const amount = document.getElementById('popupAmount').value;
+    const remarks = document.getElementById('popupRemarks').value;
+    if (!amount) { alert('Please enter TDS amount'); return; }
+    try {
+      const res = await fetch('/api/tds', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ ein, month, year: parseInt(year), amount: parseFloat(amount), remarks })
+      });
+      const data = await res.json();
+      if (data.success) {
+        closePopup();
+        showAlert('alertSuccess', '✅ TDS saved');
+        await loadTDSGrid();
+        if (currentMonthlyMonth) await loadMonthlyTDS();
+      } else { alert('Error: ' + data.message); }
+    } catch(e) { alert('Error: ' + e.message); }
+  }
+
+  async function deleteTDSFromPopup() {
+    const id = document.getElementById('popupTdsId').value;
+    if (!id || !confirm('Delete this TDS entry?')) return;
+    try {
+      const res = await fetch('/api/tds/' + id, { method: 'DELETE', credentials: 'include' });
+      const data = await res.json();
+      if (data.success) {
+        closePopup();
+        showAlert('alertSuccess', data.message);
+        await loadTDSGrid();
+        if (currentMonthlyMonth) await loadMonthlyTDS();
+      }
+    } catch(e) {}
+  }
+
+  async function loadMonthlyTDS() {
+    const month = document.getElementById('monthlyMonth').value;
+    const year = document.getElementById('monthlyYear').value;
+    if (!month || !year) { alert('Please select month and year'); return; }
+    currentMonthlyMonth = month;
+    currentMonthlyYear = year;
+    try {
+      const res = await fetch('/api/tds?month=' + encodeURIComponent(month) + '&year=' + year);
+      const data = await res.json();
+      if (!data.success) return;
+      const records = data.records;
+      const total = records.reduce((s,r) => s + (r.amount||0), 0);
+      document.getElementById('monthlyListTitle').textContent = 'TDS Entries — ' + month + ' ' + year;
+      document.getElementById('monthlyListInfo').textContent = records.length + ' entries | Total: ₹' + total.toLocaleString('en-IN');
+      document.getElementById('monthlyAddBtn').style.display = 'inline-block';
+      renderMonthlyList(records);
+    } catch(e) { console.error(e); }
+  }
+
+  function renderMonthlyList(records) {
+    const tbody = document.getElementById('monthlyList');
+    if (!records.length) {
+      tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state">No TDS entries for this month. Click + Add TDS Entry.</div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = records.map(r => '<tr>' +
+      '<td><strong>' + r.ein + '</strong></td>' +
+      '<td>' + r.employeeName + '</td>' +
+      '<td>' + r.location + '</td>' +
+      '<td><strong style="color:#1a73e8;">₹' + (r.amount||0).toLocaleString('en-IN') + '</strong></td>' +
+      '<td>' + (r.remarks||'—') + '</td>' +
+      '<td>' + (r.addedBy||'—') + '</td>' +
+      '<td>' +
+        '<button class="btn-warning" onclick="editMonthlyEntry(\'' + r._id + '\',\'' + r.ein + '\',\'' +
+        r.employeeName.replace(/'/g,'') + '\',' + r.amount + ',\'' + (r.remarks||'').replace(/'/g,'') + '\')">Edit</button> ' +
+        '<button class="btn-danger" onclick="deleteMonthlyEntry(\'' + r._id + '\')">Delete</button>' +
+      '</td></tr>'
+    ).join('');
+  }
+
+  function showMonthlyAddForm() {
+    document.getElementById('monthlyAddCard').style.display = 'block';
+    document.getElementById('monthlyEmpSearch').value = '';
+    document.getElementById('monthlyEmpInfo').style.display = 'none';
+    document.getElementById('monthlyAmtFields').style.display = 'none';
+    document.getElementById('monthlyAddAmount').value = '';
+    document.getElementById('monthlyAddRemarks').value = '';
+    currentMonthlyEIN = '';
+    document.getElementById('monthlyEmpSearch').focus();
+  }
+
+  function hideMonthlyAddForm() {
+    document.getElementById('monthlyAddCard').style.display = 'none';
+    currentMonthlyEIN = '';
+  }
+
+  async function searchMonthlyEmployee() {
+    const search = document.getElementById('monthlyEmpSearch').value.trim();
+    if (!search) return;
+    try {
+      const res = await fetch('/api/tds/find-employee/' + encodeURIComponent(search));
+      const data = await res.json();
+      if (data.success) {
+        currentMonthlyEIN = data.employee.ein;
+        document.getElementById('mInfoEIN').textContent = data.employee.ein;
+        document.getElementById('mInfoName').textContent = data.employee.employeeName;
+        document.getElementById('mInfoLoc').textContent = data.employee.location;
+        document.getElementById('mInfoSalary').textContent = '₹' + (data.employee.monthlySalary||0).toLocaleString('en-IN');
+        document.getElementById('monthlyEmpInfo').style.display = 'block';
+        document.getElementById('monthlyAmtFields').style.display = 'block';
+        document.getElementById('monthlyAddAmount').focus();
+      } else { alert(data.message); }
+    } catch(e) {}
+  }
+
+  async function saveMonthlyTDS() {
+    if (!currentMonthlyEIN) { alert('Please search employee first'); return; }
+    if (!currentMonthlyMonth || !currentMonthlyYear) { alert('Please load month first'); return; }
+    const amount = document.getElementById('monthlyAddAmount').value;
+    const remarks = document.getElementById('monthlyAddRemarks').value;
+    if (!amount) { alert('Please enter TDS amount'); return; }
+    try {
+      const res = await fetch('/api/tds', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ ein: currentMonthlyEIN, month: currentMonthlyMonth,
+          year: parseInt(currentMonthlyYear), amount: parseFloat(amount), remarks })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showAlert('alertSuccess', '✅ TDS saved');
+        hideMonthlyAddForm();
+        await loadMonthlyTDS();
+      } else { alert('Error: ' + data.message); }
+    } catch(e) { alert('Error: ' + e.message); }
+  }
+
+  function editMonthlyEntry(id, ein, name, amount, remarks) {
+    openPopup(ein, currentMonthlyMonth, parseInt(currentMonthlyYear), name, amount, remarks, id);
+  }
+
+  async function deleteMonthlyEntry(id) {
+    if (!confirm('Delete this TDS entry?')) return;
+    try {
+      const res = await fetch('/api/tds/' + id, { method: 'DELETE', credentials: 'include' });
+      const data = await res.json();
+      if (data.success) { showAlert('alertSuccess', data.message); await loadMonthlyTDS(); }
+    } catch(e) {}
+  }
+
+  function showAlert(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg; el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 4000);
+  }
+</script>
+</body>
+</html>

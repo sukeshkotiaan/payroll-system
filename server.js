@@ -43,6 +43,8 @@ app.use('/api/attendance', require('./routes/attendance'));
 app.use('/api/attendance-template', require('./routes/attendance-template'));
 app.use('/api/payroll', require('./routes/payroll'));
 app.use('/api/arrears', require('./routes/arrears'));
+app.use('/api/tds', require('./routes/tds'));
+app.use('/api/loans', require('./routes/loans'));
 
 // Page Routes
 app.get('/', (req, res) => {
@@ -76,6 +78,14 @@ app.get('/payroll', (req, res) => {
 
 app.get('/arrears', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'pages', 'arrears.html'));
+});
+
+app.get('/tds', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'pages', 'tds.html'));
+});
+
+app.get('/loans', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'pages', 'loans.html'));
 });
 
 app.get('/supervisor-mapping', (req, res) => {

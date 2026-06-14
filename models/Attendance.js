@@ -4,8 +4,8 @@ const dayRecordSchema = new mongoose.Schema({
   day: { type: Number, required: true },
   status: {
     type: String,
-    enum: ['P', 'A', 'CL', 'SL', 'PL', 'SpL', 'H', 'WO', 'HD', 'OT'],
-    default: 'P'
+    enum: ['P', 'A', 'CL', 'SL', 'PL', 'SpL', 'H', 'WO', 'HD', 'OT', ''],
+    default: ''
   },
   otHours: { type: Number, default: 0 }
 }, { _id: false });
@@ -42,7 +42,7 @@ const attendanceSchema = new mongoose.Schema({
   supervisorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   status: {
     type: String,
-    enum: ['Draft', 'Submitted', 'Locked'],
+    enum: ['Draft', 'Pending', 'Approved', 'Rejected'],
     default: 'Draft'
   },
   records: { type: [attendanceRecordSchema], default: [] },

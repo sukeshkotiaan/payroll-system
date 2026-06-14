@@ -128,8 +128,8 @@ router.post('/', isLoggedIn, async (req, res) => {
       month, year: parseInt(year), location, section, profile
     });
     if (existing) {
-      if (existing.status === 'Locked') {
-        return res.status(400).json({ success: false, message: 'Attendance is locked' });
+      if (existing.status === 'Approved') {
+        return res.status(400).json({ success: false, message: 'Attendance is approved and cannot be edited' });
       }
       existing.records = processedRecords;
       existing.uploadedBy = req.session.user.username;
@@ -147,6 +147,8 @@ router.post('/', isLoggedIn, async (req, res) => {
     });
     return res.json({ success: true, message: 'Attendance saved successfully', record: attendance });
   } catch (err) {
+    console.error('Attendance POST error:', err.message);
+    console.error('Stack:', err.stack);
     return res.status(500).json({ success: false, message: err.message });
   }
 });
@@ -186,7 +188,7 @@ router.patch('/:id/submit', isLoggedIn, async (req, res) => {
   try {
     const attendance = await Attendance.findById(req.params.id);
     if (!attendance) return res.status(404).json({ success: false, message: 'Not found' });
-    attendance.status = 'Submitted';
+    attendance.status = 'Pending';
     attendance.updatedAt = new Date();
     await attendance.save();
     return res.json({ success: true, message: 'Attendance submitted for payroll' });
@@ -218,6 +220,64 @@ router.delete('/:id', isLoggedIn, async (req, res) => {
     }
     await Attendance.findByIdAndDelete(req.params.id);
     return res.json({ success: true, message: 'Deleted successfully' });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+
+// APPROVE attendance
+router.patch('/:id/approve', isLoggedIn, async (req, res) => {
+  try {
+    const attendance = await Attendance.findById(req.params.id);
+    if (!attendance) return res.status(404).json({ success: false, message: 'Not found' });
+    attendance.status = 'Approved';
+    attendance.updatedAt = new Date();
+    await attendance.save();
+    return res.json({ success: true, message: 'Attendance approved successfully' });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// REJECT attendance
+router.patch('/:id/reject', isLoggedIn, async (req, res) => {
+  try {
+    const attendance = await Attendance.findById(req.params.id);
+    if (!attendance) return res.status(404).json({ success: false, message: 'Not found' });
+    attendance.status = 'Draft';
+    attendance.updatedAt = new Date();
+    await attendance.save();
+    return res.json({ success: true, message: 'Attendance rejected and returned to Draft' });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+
+// APPROVE attendance
+router.patch('/:id/approve', isLoggedIn, async (req, res) => {
+  try {
+    const attendance = await Attendance.findById(req.params.id);
+    if (!attendance) return res.status(404).json({ success: false, message: 'Not found' });
+    attendance.status = 'Approved';
+    attendance.updatedAt = new Date();
+    await attendance.save();
+    return res.json({ success: true, message: 'Attendance approved successfully' });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// REJECT attendance - returns to Draft
+router.patch('/:id/reject', isLoggedIn, async (req, res) => {
+  try {
+    const attendance = await Attendance.findById(req.params.id);
+    if (!attendance) return res.status(404).json({ success: false, message: 'Not found' });
+    attendance.status = 'Draft';
+    attendance.updatedAt = new Date();
+    await attendance.save();
+    return res.json({ success: true, message: 'Attendance rejected and returned to Draft' });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
