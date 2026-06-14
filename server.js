@@ -40,6 +40,7 @@ app.use('/api/masters', require('./routes/masters'));
 app.use('/api/exits', require('./routes/exits'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/attendance', require('./routes/attendance'));
+app.use('/api/attendance-template', require('./routes/attendance-template'));
 app.use('/api/payroll', require('./routes/payroll'));
 app.use('/api/arrears', require('./routes/arrears'));
 
@@ -75,6 +76,10 @@ app.get('/payroll', (req, res) => {
 
 app.get('/arrears', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'pages', 'arrears.html'));
+});
+
+app.get('/supervisor-mapping', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'pages', 'supervisor-mapping.html'));
 });
 app.get('/masters', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'pages', 'masters.html'));

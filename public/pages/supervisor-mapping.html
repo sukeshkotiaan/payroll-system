@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Supervisor Mapping — Payroll System</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; }
+    .header {
+      background: #1a73e8; color: white;
+      padding: 15px 30px;
+      display: flex; justify-content: space-between; align-items: center;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .header h1 { font-size: 20px; }
+    .btn-back { background: white; color: #1a73e8; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+    .container { padding: 20px; max-width: 1200px; margin: 0 auto; }
+    .tabs { display: flex; gap: 5px; margin-bottom: 20px; }
+    .tab { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; background: white; color: #666; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .tab.active { background: #1a73e8; color: white; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; margin-bottom: 20px; }
+    .card-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+    .card-header h3 { font-size: 15px; color: #333; }
+    .card-body { padding: 20px; }
+    .btn-primary { background: #1a73e8; color: white; border: none; padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
+    .btn-success { background: #34a853; color: white; border: none; padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
+    .btn-secondary { background: #f0f2f5; color: #333; border: none; padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
+    .btn-warning { background: #fbbc04; color: #333; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 600; }
+    .btn-danger { background: #ea4335; color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 600; }
+    .btn-sm { padding: 5px 10px; font-size: 12px; border-radius: 4px; border: none; cursor: pointer; font-weight: 600; }
+    .form-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group label { font-size: 13px; font-weight: 600; color: #555; }
+    .form-group select, .form-group input { padding: 9px 11px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; outline: none; }
+    .form-group select:focus { border-color: #1a73e8; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: #f8f9fa; padding: 12px 15px; text-align: left; font-weight: 600; color: #555; border-bottom: 1px solid #eee; }
+    td { padding: 12px 15px; border-bottom: 1px solid #f5f5f5; color: #333; }
+    tr:hover { background: #f8f9ff; }
+    .badge { padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+    .badge-active { background: #e6f4ea; color: #34a853; }
+    .badge-inactive { background: #fce8e6; color: #ea4335; }
+    .badge-mapped { background: #e8f0fe; color: #1a73e8; }
+    .badge-unmapped { background: #fef3c7; color: #d97706; }
+    .alert { padding: 10px 14px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; display: none; }
+    .alert-success { background: #e6f4ea; color: #34a853; }
+    .alert-error { background: #fce8e6; color: #ea4335; }
+    .empty-state { text-align: center; padding: 40px; color: #999; }
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
+    .stat-card { background: white; border-radius: 10px; padding: 15px 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center; }
+    .stat-card label { font-size: 12px; color: #666; display: block; margin-bottom: 5px; font-weight: 600; }
+    .stat-card span { font-size: 24px; font-weight: 700; color: #1a73e8; }
+    .checkbox-col { width: 40px; }
+    input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+    .bulk-bar { display: flex; gap: 10px; align-items: center; padding: 10px 15px; background: #e8f0fe; border-radius: 8px; margin-bottom: 15px; }
+    .bulk-bar span { font-size: 13px; font-weight: 600; color: #1a73e8; }
+    .supervisor-card { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: #f8f9fa; border-radius: 8px; margin-bottom: 10px; border: 1px solid #eee; }
+    .supervisor-card:hover { border-color: #1a73e8; }
+    .sup-info h4 { font-size: 15px; color: #333; margin-bottom: 4px; }
+    .sup-info p { font-size: 12px; color: #666; }
+    .sup-stats { display: flex; gap: 15px; align-items: center; }
+    .sup-stat { text-align: center; }
+    .sup-stat label { font-size: 10px; color: #666; display: block; }
+    .sup-stat span { font-size: 18px; font-weight: 700; color: #1a73e8; }
+    .search-box { padding: 9px 11px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; outline: none; width: 250px; }
+    .search-box:focus { border-color: #1a73e8; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🗂️ Supervisor Mapping</h1>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span id="headerUser" style="font-size:13px;"></span>
+    <button class="btn-back" onclick="window.location.href='/dashboard'">← Dashboard</button>
+  </div>
+</div>
+
+<div class="container">
+  <div class="alert alert-success" id="alertSuccess"></div>
+  <div class="alert alert-error" id="alertError"></div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('supervisors', this)">👥 Supervisor List</button>
+    <button class="tab" onclick="switchTab('mapping', this)">🔗 Map Employees</button>
+    <button class="tab" onclick="switchTab('unmapped', this)">⚠️ Unmapped Employees</button>
+  </div>
+
+  <!-- TAB 1: SUPERVISOR LIST -->
+  <div class="tab-content active" id="tab-supervisors">
+    <div class="stats-grid" id="supervisorStats">
+      <div class="stat-card"><label>Total Supervisors</label><span id="statTotal">0</span></div>
+      <div class="stat-card"><label>Active</label><span id="statActive" style="color:#34a853;">0</span></div>
+      <div class="stat-card"><label>Total Mapped</label><span id="statMapped">0</span></div>
+      <div class="stat-card"><label>Unmapped Employees</label><span id="statUnmapped" style="color:#ea4335;">0</span></div>
+    </div>
+    <div id="supervisorList">
+      <div class="empty-state">Loading supervisors...</div>
+    </div>
+  </div>
+
+  <!-- TAB 2: MAP EMPLOYEES -->
+  <div class="tab-content" id="tab-mapping">
+    <div class="card">
+      <div class="card-header"><h3>Select Supervisor & Group</h3></div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Supervisor *</label>
+            <select id="mapSupervisor" onchange="onSupervisorChange()">
+              <option value="">Select Supervisor</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Location</label>
+            <select id="mapLocation" onchange="loadMappingEmployees()">
+              <option value="">All Locations</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Section</label>
+            <select id="mapSection" onchange="loadMappingEmployees()">
+              <option value="">All Sections</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Profile</label>
+            <select id="mapProfile" onchange="loadMappingEmployees()">
+              <option value="">All Profiles</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-top:15px;display:flex;gap:10px;align-items:center;">
+          <input type="text" class="search-box" id="mapSearch" placeholder="🔍 Search by name or EIN" oninput="filterMappingTable()">
+        </div>
+      </div>
+    </div>
+
+    <div id="mappingTableSection" style="display:none;">
+      <div class="bulk-bar">
+        <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+        <span id="selectedCount">0 selected</span>
+        <button class="btn-primary" onclick="assignSelected()">✅ Assign to Supervisor</button>
+        <button class="btn-warning" onclick="unassignSelected()">❌ Remove from Supervisor</button>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <h3>Employees <span id="mappingCount" style="color:#666;font-weight:400;font-size:13px;"></span></h3>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th class="checkbox-col"><input type="checkbox" id="selectAllHeader" onchange="toggleSelectAll()"></th>
+              <th>EIN</th>
+              <th>Name</th>
+              <th>Designation</th>
+              <th>Location</th>
+              <th>Group</th>
+              <th>Current Supervisor</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="mappingTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 3: UNMAPPED EMPLOYEES -->
+  <div class="tab-content" id="tab-unmapped">
+    <div class="card">
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Location</label>
+            <select id="unmapLocation" onchange="loadUnmapped()">
+              <option value="">All Locations</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Section</label>
+            <select id="unmapSection" onchange="loadUnmapped()">
+              <option value="">All Sections</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Profile</label>
+            <select id="unmapProfile" onchange="loadUnmapped()">
+              <option value="">All Profiles</option>
+            </select>
+          </div>
+          <div class="form-group" style="align-self:end;">
+            <button class="btn-primary" onclick="loadUnmapped()">🔍 Search</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3>Unmapped Employees <span id="unmappedCount" style="color:#ea4335;font-weight:700;font-size:14px;"></span></h3>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <select id="quickAssignSupervisor" style="padding:8px 12px;border:1px solid #ddd;border-radius:6px;font-size:13px;">
+            <option value="">Select Supervisor to bulk assign</option>
+          </select>
+          <button class="btn-primary" onclick="bulkAssignUnmapped()">Assign All Filtered</button>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>EIN</th>
+            <th>Name</th>
+            <th>Designation</th>
+            <th>Location</th>
+            <th>Section</th>
+            <th>Profile</th>
+            <th>Quick Assign</th>
+          </tr>
+        </thead>
+        <tbody id="unmappedTable"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  let currentUser = {};
+  let supervisors = [];
+  let allMappingEmployees = [];
+  let filteredMappingEmployees = [];
+
+  window.onload = async () => {
+    await checkAuth();
+    await loadMasterData();
+    await loadSupervisors();
+    await loadUnmapped();
+  };
+
+  async function checkAuth() {
+    const res = await fetch('/api/auth/me');
+    const data = await res.json();
+    if (!data.success) { window.location.href = '/'; return; }
+    currentUser = data.user;
+    document.getElementById('headerUser').textContent = data.user.fullName;
+    if (currentUser.role !== 'admin' && currentUser.role !== 'management') {
+      window.location.href = '/dashboard';
+    }
+  }
+
+  async function loadMasterData() {
+    try {
+      const [locRes, secRes, proRes] = await Promise.all([
+        fetch('/api/masters/location'), fetch('/api/masters/section'), fetch('/api/masters/profile')
+      ]);
+      const [locData, secData, proData] = await Promise.all([
+        locRes.json(), secRes.json(), proRes.json()
+      ]);
+      const locs = locData.success ? locData.masters.map(m => m.value) : [];
+      const secs = secData.success ? secData.masters.map(m => m.value) : [];
+      const pros = proData.success ? proData.masters.map(m => m.value) : [];
+      ['mapLocation','unmapLocation'].forEach(id => populateSelect(id, locs, 'All Locations'));
+      ['mapSection','unmapSection'].forEach(id => populateSelect(id, secs, 'All Sections'));
+      ['mapProfile','unmapProfile'].forEach(id => populateSelect(id, pros, 'All Profiles'));
+    } catch(e) {}
+  }
+
+  function populateSelect(id, values, placeholder) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = '<option value="">' + placeholder + '</option>';
+    values.forEach(v => { el.innerHTML += '<option value="' + v + '">' + v + '</option>'; });
+  }
+
+  async function loadSupervisors() {
+    try {
+      const res = await fetch('/api/users');
+      const data = await res.json();
+      if (!data.success) return;
+      supervisors = data.users.filter(u => u.role === 'supervisor');
+
+      // Load employee counts per supervisor
+      const empRes = await fetch('/api/employees');
+      const empData = await empRes.json();
+      const allEmployees = empData.success ? empData.employees : [];
+      const totalActive = allEmployees.filter(e => e.isActive).length;
+      const mappedEmployees = allEmployees.filter(e => e.isActive && e.supervisorId);
+      const unmappedCount = totalActive - mappedEmployees.length;
+
+      document.getElementById('statTotal').textContent = supervisors.length;
+      document.getElementById('statActive').textContent = supervisors.filter(s => s.isActive).length;
+      document.getElementById('statMapped').textContent = mappedEmployees.length;
+      document.getElementById('statUnmapped').textContent = unmappedCount;
+
+      // Populate supervisor dropdowns
+      ['mapSupervisor','quickAssignSupervisor'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const placeholder = id === 'mapSupervisor' ? 'Select Supervisor' : 'Select Supervisor to bulk assign';
+        el.innerHTML = '<option value="">' + placeholder + '</option>';
+        supervisors.filter(s => s.isActive).forEach(s => {
+          el.innerHTML += '<option value="' + s._id + '">' + s.fullName + ' (' + s.username + ')</option>';
+        });
+      });
+
+      renderSupervisorList(supervisors, allEmployees);
+    } catch(e) { console.error(e); }
+  }
+
+  function renderSupervisorList(supervisors, allEmployees) {
+    const container = document.getElementById('supervisorList');
+    if (supervisors.length === 0) {
+      container.innerHTML = '<div class="empty-state">No supervisors found. Create users with role "supervisor" in User Management.</div>';
+      return;
+    }
+    container.innerHTML = supervisors.map(sup => {
+      const mapped = allEmployees.filter(e => e.supervisorId && e.supervisorId.toString() === sup._id.toString() && e.isActive);
+      return '<div class="supervisor-card">' +
+        '<div class="sup-info">' +
+        '<h4>' + sup.fullName + ' <span class="badge ' + (sup.isActive ? 'badge-active' : 'badge-inactive') + '">' + (sup.isActive ? 'Active' : 'Inactive') + '</span></h4>' +
+        '<p>@' + sup.username + ' | Branches: ' + (sup.branches || ['all']).join(', ') + '</p>' +
+        '</div>' +
+        '<div class="sup-stats">' +
+        '<div class="sup-stat"><label>Mapped</label><span>' + mapped.length + '</span></div>' +
+        '<button class="btn-primary" style="padding:6px 14px;font-size:12px;" onclick="viewSupervisorEmployees(\'' + sup._id + '\',\'' + sup.fullName + '\')">' +
+        '👥 View Employees</button>' +
+        '</div>' +
+        '</div>';
+    }).join('');
+  }
+
+  async function viewSupervisorEmployees(supId, supName) {
+    switchTab('mapping', document.querySelectorAll('.tab')[1]);
+    document.getElementById('mapSupervisor').value = supId;
+    await onSupervisorChange();
+  }
+
+  async function onSupervisorChange() {
+    const supId = document.getElementById('mapSupervisor').value;
+    if (!supId) { document.getElementById('mappingTableSection').style.display = 'none'; return; }
+    await loadMappingEmployees();
+  }
+
+  async function loadMappingEmployees() {
+    const supId = document.getElementById('mapSupervisor').value;
+    if (!supId) return;
+    const location = document.getElementById('mapLocation').value;
+    const section = document.getElementById('mapSection').value;
+    const profile = document.getElementById('mapProfile').value;
+    try {
+      let url = '/api/employees?';
+      if (location) url += 'location=' + encodeURIComponent(location) + '&';
+      if (section) url += 'section=' + encodeURIComponent(section) + '&';
+      if (profile) url += 'profile=' + encodeURIComponent(profile) + '&';
+      const res = await fetch(url);
+      const data = await res.json();
+      if (!data.success) return;
+      allMappingEmployees = data.employees.filter(e => e.isActive);
+      filteredMappingEmployees = [...allMappingEmployees];
+      renderMappingTable(filteredMappingEmployees, supId);
+      document.getElementById('mappingTableSection').style.display = 'block';
+    } catch(e) { console.error(e); }
+  }
+
+  function filterMappingTable() {
+    const search = document.getElementById('mapSearch').value.toLowerCase();
+    const supId = document.getElementById('mapSupervisor').value;
+    filteredMappingEmployees = allMappingEmployees.filter(e =>
+      !search || e.employeeName.toLowerCase().includes(search) || (e.ein && e.ein.toLowerCase().includes(search))
+    );
+    renderMappingTable(filteredMappingEmployees, supId);
+  }
+
+  function renderMappingTable(employees, supId) {
+    const tbody = document.getElementById('mappingTable');
+    document.getElementById('mappingCount').textContent = '(' + employees.length + ' employees)';
+    document.getElementById('selectedCount').textContent = '0 selected';
+    if (employees.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state">No employees found</div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = employees.map(emp => {
+      const isMapped = emp.supervisorId && emp.supervisorId.toString() === supId;
+      const currentSup = supervisors.find(s => s._id.toString() === (emp.supervisorId || '').toString());
+      return '<tr id="emprow-' + emp._id + '">' +
+        '<td><input type="checkbox" class="emp-checkbox" data-id="' + emp._id + '" onchange="updateSelectedCount()"></td>' +
+        '<td><strong>' + (emp.ein || '—') + '</strong></td>' +
+        '<td>' + emp.employeeName + '</td>' +
+        '<td>' + (emp.designation || '—') + '</td>' +
+        '<td>' + emp.location + '</td>' +
+        '<td>' + (emp.section === 'State' ? 'Xaviers' : 'Global') + ' ' + emp.profile + '</td>' +
+        '<td>' +
+          (isMapped
+            ? '<span class="badge badge-mapped">✅ This Supervisor</span>'
+            : currentSup
+              ? '<span class="badge" style="background:#fef3c7;color:#d97706;">' + currentSup.fullName + '</span>'
+              : '<span class="badge badge-unmapped">Not Mapped</span>') +
+        '</td>' +
+        '<td>' +
+          (isMapped
+            ? '<button class="btn-danger btn-sm" onclick="unassignOne(\'' + emp._id + '\')">Remove</button>'
+            : '<button class="btn-success btn-sm" onclick="assignOne(\'' + emp._id + '\')">Assign</button>') +
+        '</td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  function updateSelectedCount() {
+    const checked = document.querySelectorAll('.emp-checkbox:checked').length;
+    document.getElementById('selectedCount').textContent = checked + ' selected';
+  }
+
+  function toggleSelectAll() {
+    const allChecked = document.getElementById('selectAll').checked || document.getElementById('selectAllHeader').checked;
+    document.querySelectorAll('.emp-checkbox').forEach(cb => { cb.checked = allChecked; });
+    document.getElementById('selectAll').checked = allChecked;
+    document.getElementById('selectAllHeader').checked = allChecked;
+    updateSelectedCount();
+  }
+
+  function getSelectedIds() {
+    return Array.from(document.querySelectorAll('.emp-checkbox:checked')).map(cb => cb.dataset.id);
+  }
+
+  async function assignOne(empId) {
+    const supId = document.getElementById('mapSupervisor').value;
+    if (!supId) { showAlert('alertError', 'Please select a supervisor first'); return; }
+    await updateMapping([empId], supId);
+  }
+
+  async function unassignOne(empId) {
+    await updateMapping([empId], null);
+  }
+
+  async function assignSelected() {
+    const ids = getSelectedIds();
+    if (!ids.length) { showAlert('alertError', 'Please select employees first'); return; }
+    const supId = document.getElementById('mapSupervisor').value;
+    if (!supId) { showAlert('alertError', 'Please select a supervisor first'); return; }
+    await updateMapping(ids, supId);
+  }
+
+  async function unassignSelected() {
+    const ids = getSelectedIds();
+    if (!ids.length) { showAlert('alertError', 'Please select employees first'); return; }
+    await updateMapping(ids, null);
+  }
+
+  async function updateMapping(employeeIds, supervisorId) {
+    try {
+      const sup = supervisorId ? supervisors.find(s => s._id === supervisorId) : null;
+      const res = await fetch('/api/employees/bulk-update-supervisor', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          employeeIds,
+          supervisorId: supervisorId || null,
+          supervisorName: sup ? sup.fullName : ''
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showAlert('alertSuccess', data.message);
+        await loadMappingEmployees();
+        await loadSupervisors();
+        await loadUnmapped();
+      } else { showAlert('alertError', data.message); }
+    } catch(e) { showAlert('alertError', 'Error: ' + e.message); }
+  }
+
+  async function loadUnmapped() {
+    const location = document.getElementById('unmapLocation').value;
+    const section = document.getElementById('unmapSection').value;
+    const profile = document.getElementById('unmapProfile').value;
+    try {
+      let url = '/api/employees?';
+      if (location) url += 'location=' + encodeURIComponent(location) + '&';
+      if (section) url += 'section=' + encodeURIComponent(section) + '&';
+      if (profile) url += 'profile=' + encodeURIComponent(profile) + '&';
+      const res = await fetch(url);
+      const data = await res.json();
+      if (!data.success) return;
+      const unmapped = data.employees.filter(e => e.isActive && !e.supervisorId);
+      document.getElementById('unmappedCount').textContent = '(' + unmapped.length + ' employees without supervisor)';
+      const tbody = document.getElementById('unmappedTable');
+      if (unmapped.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state" style="color:#34a853;">✅ All employees are mapped to supervisors!</div></td></tr>';
+        return;
+      }
+      tbody.innerHTML = unmapped.map(emp => '<tr>' +
+        '<td><strong>' + (emp.ein || '—') + '</strong></td>' +
+        '<td>' + emp.employeeName + '</td>' +
+        '<td>' + (emp.designation || '—') + '</td>' +
+        '<td>' + emp.location + '</td>' +
+        '<td>' + emp.section + '</td>' +
+        '<td>' + emp.profile + '</td>' +
+        '<td>' +
+          '<select onchange="quickAssign(\'' + emp._id + '\', this.value)" style="padding:5px;border:1px solid #ddd;border-radius:4px;font-size:12px;">' +
+          '<option value="">Assign...</option>' +
+          supervisors.filter(s => s.isActive).map(s => '<option value="' + s._id + '">' + s.fullName + '</option>').join('') +
+          '</select>' +
+        '</td>' +
+        '</tr>'
+      ).join('');
+    } catch(e) { console.error(e); }
+  }
+
+  async function quickAssign(empId, supId) {
+    if (!supId) return;
+    await updateMapping([empId], supId);
+  }
+
+  async function bulkAssignUnmapped() {
+    const supId = document.getElementById('quickAssignSupervisor').value;
+    if (!supId) { showAlert('alertError', 'Please select a supervisor'); return; }
+    const location = document.getElementById('unmapLocation').value;
+    const section = document.getElementById('unmapSection').value;
+    const profile = document.getElementById('unmapProfile').value;
+    try {
+      let url = '/api/employees?';
+      if (location) url += 'location=' + encodeURIComponent(location) + '&';
+      if (section) url += 'section=' + encodeURIComponent(section) + '&';
+      if (profile) url += 'profile=' + encodeURIComponent(profile) + '&';
+      const res = await fetch(url);
+      const data = await res.json();
+      if (!data.success) return;
+      const unmapped = data.employees.filter(e => e.isActive && !e.supervisorId);
+      if (!unmapped.length) { showAlert('alertError', 'No unmapped employees found'); return; }
+      if (!confirm('Assign ' + unmapped.length + ' employees to this supervisor?')) return;
+      await updateMapping(unmapped.map(e => e._id), supId);
+    } catch(e) { showAlert('alertError', 'Error: ' + e.message); }
+  }
+
+  function switchTab(tab, btn) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    document.getElementById('tab-' + tab).classList.add('active');
+  }
+
+  function showAlert(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg; el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 4000);
+  }
+</script>
+</body>
+</html>

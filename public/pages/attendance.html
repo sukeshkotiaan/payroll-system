@@ -7,57 +7,26 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; }
-    .header {
-      background: #1a73e8; color: white;
-      padding: 15px 30px;
-      display: flex; justify-content: space-between; align-items: center;
-      position: sticky; top: 0; z-index: 100;
-    }
+    .header { background: #1a73e8; color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
     .header h1 { font-size: 20px; }
-    .btn-back {
-      background: white; color: #1a73e8; border: none;
-      padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600;
-    }
+    .btn-back { background: white; color: #1a73e8; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; }
     .view { display: none; }
     .view.active { display: block; }
     .container { padding: 20px; }
-    .btn-primary {
-      background: #1a73e8; color: white; border: none;
-      padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px;
-    }
+    .btn-primary { background: #1a73e8; color: white; border: none; padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
     .btn-primary:hover { background: #1557b0; }
-    .btn-success {
-      background: #34a853; color: white; border: none;
-      padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px;
-    }
-    .btn-secondary {
-      background: #f0f2f5; color: #333; border: none;
-      padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px;
-    }
-    .btn-warning {
-      background: #fbbc04; color: #333; border: none;
-      padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 600;
-    }
-    .btn-danger {
-      background: #ea4335; color: white; border: none;
-      padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 600;
-    }
-    .card {
-      background: white; border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; margin-bottom: 20px;
-    }
-    .card-header {
-      padding: 15px 20px; border-bottom: 1px solid #eee;
-      display: flex; justify-content: space-between; align-items: center;
-    }
+    .btn-success { background: #34a853; color: white; border: none; padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
+    .btn-secondary { background: #f0f2f5; color: #333; border: none; padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
+    .btn-warning { background: #fbbc04; color: #333; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 600; }
+    .btn-danger { background: #ea4335; color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 600; }
+    .card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; margin-bottom: 20px; }
+    .card-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
     .card-header h3 { font-size: 15px; color: #333; }
     .card-body { padding: 20px; }
     .form-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; }
     .form-group { display: flex; flex-direction: column; gap: 5px; }
     .form-group label { font-size: 13px; font-weight: 600; color: #555; }
-    .form-group select {
-      padding: 9px 11px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; outline: none;
-    }
+    .form-group select, .form-group input { padding: 9px 11px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; outline: none; }
     .form-group select:focus { border-color: #1a73e8; }
     .badge { padding: 3px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
     .badge-draft { background: #fef3c7; color: #d97706; }
@@ -66,176 +35,61 @@
     .alert { padding: 10px 14px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; display: none; }
     .alert-success { background: #e6f4ea; color: #34a853; }
     .alert-error { background: #fce8e6; color: #ea4335; }
-    .alert-warning { background: #fef3c7; color: #d97706; }
     .empty-state { text-align: center; padding: 40px; color: #999; }
-    .form-view-header {
-      display: flex; align-items: center; gap: 15px;
-      margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #e8f0fe;
-    }
-    .btn-back-list {
-      background: #e8f0fe; color: #1a73e8; border: none;
-      padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px;
-    }
-    .group-info {
-      background: #e8f0fe; border-radius: 8px; padding: 12px 20px;
-      display: flex; gap: 30px; margin-bottom: 20px; flex-wrap: wrap;
-    }
+    .form-view-header { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #e8f0fe; }
+    .btn-back-list { background: #e8f0fe; color: #1a73e8; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
+    .group-info { background: #e8f0fe; border-radius: 8px; padding: 12px 20px; display: flex; gap: 30px; margin-bottom: 15px; flex-wrap: wrap; }
     .group-info-item label { font-size: 11px; color: #666; font-weight: 600; display: block; }
     .group-info-item span { font-size: 14px; font-weight: 700; color: #1a73e8; }
-    .action-bar {
-      display: flex; gap: 10px; justify-content: flex-end;
-      padding: 15px 20px; border-top: 1px solid #eee; background: white;
-      position: sticky; bottom: 0; z-index: 10;
-    }
-    .summary-bar {
-      display: grid; grid-template-columns: repeat(8, 1fr);
-      gap: 8px; margin: 15px 20px;
-    }
-    .summary-item {
-      background: #f8f9fa; border-radius: 8px; padding: 10px 12px; text-align: center;
-    }
+    .action-bar { display: flex; gap: 10px; justify-content: flex-end; padding: 15px 20px; border-top: 1px solid #eee; background: white; position: sticky; bottom: 0; z-index: 10; }
+    .summary-bar { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; margin: 15px 20px; }
+    .summary-item { background: #f8f9fa; border-radius: 8px; padding: 10px 12px; text-align: center; }
     .summary-item label { font-size: 10px; color: #666; display: block; margin-bottom: 3px; font-weight: 600; }
     .summary-item span { font-size: 16px; font-weight: 700; color: #1a73e8; }
-
-    /* DAY-WISE GRID */
-    .attendance-grid-wrapper {
-      overflow-x: auto;
-      max-height: 65vh;
-      overflow-y: auto;
-    }
-    .attendance-grid {
-      border-collapse: collapse;
-      font-size: 11px;
-      white-space: nowrap;
-    }
-    .attendance-grid th, .attendance-grid td {
-      border: 1px solid #e0e0e0;
-      padding: 0;
-      text-align: center;
-    }
-    .attendance-grid thead th {
-      background: #1a73e8;
-      color: white;
-      padding: 8px 6px;
-      font-weight: 700;
-      position: sticky;
-      top: 0;
-      z-index: 20;
-      min-width: 38px;
-    }
-    .attendance-grid thead th.emp-col {
-      min-width: 160px;
-      text-align: left;
-      padding-left: 10px;
-      position: sticky;
-      left: 0;
-      z-index: 30;
-      background: #1a73e8;
-    }
-    .attendance-grid thead th.desig-col {
-      min-width: 120px;
-      position: sticky;
-      left: 160px;
-      z-index: 30;
-      background: #1a73e8;
-    }
-    .attendance-grid tbody td.emp-col {
-      position: sticky;
-      left: 0;
-      background: white;
-      z-index: 10;
-      text-align: left;
-      padding: 6px 10px;
-      font-weight: 600;
-      min-width: 160px;
-      border-right: 2px solid #ddd;
-    }
-    .attendance-grid tbody td.desig-col {
-      position: sticky;
-      left: 160px;
-      background: white;
-      z-index: 10;
-      padding: 6px 8px;
-      font-size: 10px;
-      color: #666;
-      min-width: 120px;
-      border-right: 2px solid #ddd;
-    }
+    .input-tabs { display: flex; gap: 5px; }
+    .input-tab { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; background: white; color: #666; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .input-tab.active { background: #1a73e8; color: white; }
+    .input-section { display: none; }
+    .input-section.active { display: block; }
+    .attendance-grid-wrapper { overflow-x: auto; max-height: 65vh; overflow-y: auto; }
+    .attendance-grid { border-collapse: collapse; font-size: 11px; white-space: nowrap; }
+    .attendance-grid th, .attendance-grid td { border: 1px solid #e0e0e0; padding: 0; text-align: center; }
+    .attendance-grid thead th { background: #1a73e8; color: white; padding: 8px 4px; font-weight: 700; position: sticky; top: 0; z-index: 20; min-width: 36px; }
+    .attendance-grid thead th.emp-col { min-width: 80px; text-align: left; padding-left: 8px; position: sticky; left: 0; z-index: 30; background: #1a73e8; }
+    .attendance-grid thead th.name-col { min-width: 160px; text-align: left; padding-left: 8px; position: sticky; left: 80px; z-index: 30; background: #1a73e8; }
+    .attendance-grid thead th.desig-col { min-width: 110px; position: sticky; left: 240px; z-index: 30; background: #1a73e8; }
+    .attendance-grid tbody td.emp-col { position: sticky; left: 0; background: white; z-index: 10; text-align: left; padding: 6px 8px; font-weight: 700; font-size: 11px; min-width: 80px; border-right: 2px solid #ddd; }
+    .attendance-grid tbody td.name-col { position: sticky; left: 80px; background: white; z-index: 10; text-align: left; padding: 6px 8px; font-size: 11px; min-width: 160px; border-right: 1px solid #ddd; }
+    .attendance-grid tbody td.desig-col { position: sticky; left: 240px; background: white; z-index: 10; padding: 6px 6px; font-size: 10px; color: #666; min-width: 110px; border-right: 2px solid #ddd; }
     .attendance-grid tbody tr:hover td { background: #f0f7ff; }
-    .attendance-grid tbody tr:hover td.emp-col,
-    .attendance-grid tbody tr:hover td.desig-col { background: #e8f0fe; }
-    .day-cell {
-      width: 38px;
-      height: 32px;
-      cursor: pointer;
-      font-size: 11px;
-      font-weight: 700;
-      transition: all 0.1s;
-      user-select: none;
-    }
+    .attendance-grid tbody tr:hover td.emp-col, .attendance-grid tbody tr:hover td.name-col, .attendance-grid tbody tr:hover td.desig-col { background: #e8f0fe; }
+    .day-cell { width: 36px; height: 32px; cursor: pointer; font-size: 11px; font-weight: 700; transition: all 0.1s; user-select: none; }
     .day-cell:hover { opacity: 0.8; transform: scale(1.1); z-index: 5; position: relative; }
     .day-cell.locked { cursor: default; }
     .day-cell.locked:hover { opacity: 1; transform: none; }
-    .status-P  { background: #e6f4ea; color: #34a853; }
-    .status-A  { background: #fce8e6; color: #ea4335; }
+    .status-P { background: #e6f4ea; color: #34a853; }
+    .status-A { background: #fce8e6; color: #ea4335; }
     .status-CL { background: #fff3e0; color: #e65100; }
     .status-SL { background: #fce4ec; color: #c2185b; }
     .status-PL { background: #e8eaf6; color: #3949ab; }
     .status-SpL { background: #f3e5f5; color: #7b1fa2; font-size: 9px; }
-    .status-H  { background: #e0f2f1; color: #00695c; }
+    .status-H { background: #e0f2f1; color: #00695c; }
     .status-WO { background: #f5f5f5; color: #757575; }
     .status-HD { background: #fff9c4; color: #f57f17; }
     .status-OT { background: #e3f2fd; color: #1565c0; }
     .total-col { background: #f8f9fa; font-weight: 700; padding: 4px 6px; font-size: 10px; }
-    .total-header { background: #0d47a1 !important; min-width: 40px; font-size: 10px; }
-
-    /* STATUS PICKER */
-    .status-picker {
-      position: fixed;
-      background: white;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-      z-index: 1000;
-      padding: 8px;
-      display: none;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 4px;
-      width: 220px;
-    }
-    .status-option {
-      padding: 6px 4px;
-      border-radius: 4px;
-      cursor: pointer;
-      text-align: center;
-      font-size: 11px;
-      font-weight: 700;
-      border: 1px solid transparent;
-    }
-    .status-option:hover { border-color: #1a73e8; transform: scale(1.05); }
-    .ot-input-row {
-      grid-column: 1 / -1;
-      display: none;
-      gap: 5px;
-      align-items: center;
-    }
-    .ot-input-row input {
-      flex: 1; padding: 5px; border: 1px solid #ddd;
-      border-radius: 4px; font-size: 12px; outline: none;
-    }
-    .ot-input-row button {
-      padding: 5px 10px; background: #1a73e8; color: white;
-      border: none; border-radius: 4px; cursor: pointer; font-size: 11px;
-    }
-
-    /* LIST TABLE */
+    .total-header { background: #0d47a1 !important; min-width: 36px; font-size: 10px; }
+    .status-picker { position: fixed; background: white; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); z-index: 1000; padding: 8px; display: none; grid-template-columns: repeat(5, 1fr); gap: 4px; width: 210px; }
+    .status-option { padding: 6px 4px; border-radius: 4px; cursor: pointer; text-align: center; font-size: 11px; font-weight: 700; border: 1px solid transparent; }
+    .status-option:hover { border-color: #1a73e8; }
+    .ot-input-row { grid-column: 1 / -1; display: none; gap: 5px; align-items: center; }
+    .ot-input-row input { flex: 1; padding: 5px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; outline: none; }
+    .ot-input-row button { padding: 5px 10px; background: #1a73e8; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px; }
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th {
-      background: #f8f9fa; padding: 10px 15px; text-align: left;
-      font-weight: 600; color: #555; border-bottom: 1px solid #eee;
-    }
+    th { background: #f8f9fa; padding: 10px 15px; text-align: left; font-weight: 600; color: #555; border-bottom: 1px solid #eee; }
     td { padding: 10px 15px; border-bottom: 1px solid #f5f5f5; color: #333; }
     tr:hover { background: #f8f9ff; }
+    .sup-card { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: #f8f9fa; border-radius: 8px; margin-bottom: 10px; border: 1px solid #eee; }
   </style>
 </head>
 <body>
@@ -248,7 +102,6 @@
   </div>
 </div>
 
-<!-- STATUS PICKER POPUP -->
 <div class="status-picker" id="statusPicker">
   <div class="status-option status-P" onclick="setStatus('P')">P<br><span style="font-size:9px;">Present</span></div>
   <div class="status-option status-A" onclick="setStatus('A')">A<br><span style="font-size:9px;">Absent</span></div>
@@ -310,13 +163,13 @@
     <div class="card">
       <div class="card-header">
         <h3>Attendance Records <span id="listCount" style="color:#666;font-weight:400;font-size:13px;"></span></h3>
-        <button class="btn-primary" onclick="showUploadView()">+ New Attendance</button>
+        <button class="btn-primary" onclick="showNewView()">+ New Attendance</button>
       </div>
       <table>
         <thead>
           <tr>
             <th>Group</th><th>Month / Year</th><th>Location</th>
-            <th>Employees</th><th>Uploaded By</th><th>Last Updated</th>
+            <th>Employees</th><th>Uploaded By</th><th>Updated</th>
             <th>Status</th><th>Actions</th>
           </tr>
         </thead>
@@ -328,22 +181,23 @@
   </div>
 </div>
 
-<!-- UPLOAD / SELECT VIEW -->
-<div id="uploadView" class="view">
+<!-- NEW ATTENDANCE VIEW -->
+<div id="newView" class="view">
   <div class="container">
     <div class="form-view-header">
       <button class="btn-back-list" onclick="showListView()">← Back to List</button>
       <h2>New Attendance Sheet</h2>
     </div>
-    <div class="alert alert-success" id="uploadAlertSuccess"></div>
-    <div class="alert alert-error" id="uploadAlertError"></div>
+    <div class="alert alert-success" id="newAlertSuccess"></div>
+    <div class="alert alert-error" id="newAlertError"></div>
+
     <div class="card">
-      <div class="card-header"><h3>Select Period & Group</h3></div>
+      <div class="card-header"><h3>Select Period</h3></div>
       <div class="card-body">
-        <div class="form-grid">
+        <div style="display:flex;gap:15px;flex-wrap:wrap;align-items:end;">
           <div class="form-group">
             <label>Month *</label>
-            <select id="uploadMonth">
+            <select id="selMonth" style="min-width:150px;">
               <option value="">Select Month</option>
               <option>January</option><option>February</option><option>March</option>
               <option>April</option><option>May</option><option>June</option>
@@ -353,96 +207,179 @@
           </div>
           <div class="form-group">
             <label>Year *</label>
-            <select id="uploadYear"></select>
+            <select id="selYear" style="min-width:100px;"></select>
           </div>
-          <div class="form-group">
-            <label>Location *</label>
-            <select id="uploadLocation"><option value="">Select Location</option></select>
+          <button class="btn-primary" onclick="initAttendance()">📋 Load Attendance</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="inputMethodSection" style="display:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;flex-wrap:wrap;gap:10px;">
+        <div class="input-tabs">
+          <button class="input-tab active" id="tabGrid" onclick="switchInputTab('Grid')">📋 Fill on Screen</button>
+          <button class="input-tab" id="tabUpload" onclick="switchInputTab('Upload')">📤 Upload Excel</button>
+          <button class="input-tab" id="tabSupervisor" onclick="switchInputTab('Supervisor')">👤 Pull from Supervisor</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <label style="font-size:13px;font-weight:600;color:#555;">Group:</label>
+          <select id="groupDropdown" onchange="filterByGroup()"
+            style="padding:8px 14px;border:1px solid #1a73e8;border-radius:6px;font-size:13px;outline:none;min-width:220px;">
+            <option value="">All Groups</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- FILL ON SCREEN -->
+      <div class="input-section active" id="sectionGrid">
+        <div class="card" style="overflow:visible;">
+          <div style="padding:15px 20px;">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;font-size:11px;">
+              <span style="padding:3px 8px;border-radius:4px;" class="status-P">P=Present</span>
+              <span style="padding:3px 8px;border-radius:4px;" class="status-A">A=Absent</span>
+              <span style="padding:3px 8px;border-radius:4px;" class="status-HD">HD=Half Day</span>
+              <span style="padding:3px 8px;border-radius:4px;" class="status-WO">WO=Week Off</span>
+              <span style="padding:3px 8px;border-radius:4px;" class="status-H">H=Holiday</span>
+              <span style="padding:3px 8px;border-radius:4px;" class="status-CL">CL=Casual</span>
+              <span style="padding:3px 8px;border-radius:4px;" class="status-SL">SL=Sick</span>
+              <span style="padding:3px 8px;border-radius:4px;" class="status-PL">PL=Paid</span>
+              <span style="padding:3px 8px;border-radius:4px;" class="status-SpL">SpL=Special</span>
+              <span style="padding:3px 8px;border-radius:4px;" class="status-OT">OT=Overtime</span>
+            </div>
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+              <strong style="font-size:12px;color:#666;">Bulk Mark:</strong>
+              <button onclick="bulkMark('P')" style="padding:5px 10px;background:#e6f4ea;color:#34a853;border:1px solid #34a853;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700;">All Present</button>
+              <button onclick="bulkMark('WO')" style="padding:5px 10px;background:#f5f5f5;color:#757575;border:1px solid #aaa;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700;">All Week Off</button>
+              <button onclick="bulkMarkCol()" style="padding:5px 10px;background:#e8f0fe;color:#1a73e8;border:1px solid #1a73e8;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700;">Mark Column...</button>
+              <span style="font-size:11px;color:#999;">Click any cell to change</span>
+            </div>
           </div>
-          <div class="form-group">
-            <label>Section *</label>
-            <select id="uploadSection"><option value="">Select Section</option></select>
+          <div class="summary-bar">
+            <div class="summary-item"><label>Showing</label><span id="sumTotal">0</span></div>
+            <div class="summary-item"><label>Avg Present</label><span id="sumPresent">0</span></div>
+            <div class="summary-item"><label>Total CL</label><span id="sumCL">0</span></div>
+            <div class="summary-item"><label>Total SL</label><span id="sumSL">0</span></div>
+            <div class="summary-item"><label>Total Absent</label><span id="sumAbsent" style="color:#ea4335;">0</span></div>
+            <div class="summary-item"><label>Total OT Hrs</label><span id="sumOT">0</span></div>
+            <div class="summary-item"><label>Days in Month</label><span id="sumDays">0</span></div>
+            <div class="summary-item"><label>Status</label><span id="sumStatus" style="font-size:12px;">New</span></div>
           </div>
-          <div class="form-group">
-            <label>Profile *</label>
-            <select id="uploadProfile"><option value="">Select Profile</option></select>
+          <div class="attendance-grid-wrapper">
+            <table class="attendance-grid">
+              <thead id="gridHead"></thead>
+              <tbody id="gridBody"></tbody>
+            </table>
+          </div>
+          <div class="action-bar">
+            <button class="btn-secondary" onclick="showListView()">Cancel</button>
+            <button class="btn-primary" onclick="saveGrid('Draft')">💾 Save Draft</button>
+            <button class="btn-success" onclick="saveGrid('Submit')">📤 Submit for Payroll</button>
           </div>
         </div>
-        <div style="margin-top:15px;">
-          <button class="btn-primary" onclick="loadEmployeesForGrid()">📋 Load Attendance Grid</button>
+      </div>
+
+      <!-- UPLOAD EXCEL -->
+      <div class="input-section" id="sectionUpload">
+        <div class="card">
+          <div class="card-header"><h3>📤 Upload Excel File</h3></div>
+          <div class="card-body">
+            <div style="margin-bottom:15px;">
+              <button class="btn-success" onclick="downloadTemplate()">⬇️ Download Template</button>
+              <span style="font-size:12px;color:#666;margin-left:10px;">Day-wise template with COUNTIF formulas</span>
+            </div>
+            <div style="display:flex;gap:10px;align-items:center;margin-bottom:15px;">
+              <input type="file" id="uploadFile" accept=".xlsx,.xls" style="padding:8px;border:1px solid #ddd;border-radius:6px;">
+              <button class="btn-primary" onclick="processUpload()">📤 Process File</button>
+            </div>
+            <div id="uploadPreview" style="display:none;">
+              <div style="font-size:13px;font-weight:600;color:#333;margin-bottom:8px;" id="uploadPreviewTitle"></div>
+              <div style="overflow-x:auto;margin-bottom:10px;">
+                <table style="font-size:11px;border-collapse:collapse;">
+                  <thead id="previewHead"></thead>
+                  <tbody id="previewBody"></tbody>
+                </table>
+              </div>
+              <button class="btn-primary" onclick="applyUploadToGrid()">✅ Apply to Grid & Review</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PULL FROM SUPERVISOR -->
+      <div class="input-section" id="sectionSupervisor">
+        <div class="card">
+          <div class="card-header"><h3>👤 Supervisor Submissions</h3></div>
+          <div class="card-body">
+            <div id="supervisorList"><div class="empty-state">Select a group or load to see supervisor submissions</div></div>
+          </div>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- GRID VIEW -->
-<div id="gridView" class="view">
+<!-- EDIT VIEW -->
+<div id="editView" class="view">
   <div class="container">
     <div class="form-view-header">
-      <button class="btn-back-list" onclick="showUploadView()">← Back</button>
-      <h2 id="gridTitle">Attendance Grid</h2>
+      <button class="btn-back-list" onclick="showListView()">← Back to List</button>
+      <h2 id="editViewTitle">Edit Attendance</h2>
     </div>
-    <div class="alert alert-success" id="gridAlertSuccess"></div>
-    <div class="alert alert-error" id="gridAlertError"></div>
-
-    <div class="group-info" id="gridGroupInfo"></div>
-
-    <!-- LEGEND -->
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:15px;font-size:11px;">
-      <span style="padding:3px 8px;border-radius:4px;" class="status-P">P=Present</span>
-      <span style="padding:3px 8px;border-radius:4px;" class="status-A">A=Absent</span>
-      <span style="padding:3px 8px;border-radius:4px;" class="status-HD">HD=Half Day</span>
-      <span style="padding:3px 8px;border-radius:4px;" class="status-WO">WO=Week Off</span>
-      <span style="padding:3px 8px;border-radius:4px;" class="status-H">H=Holiday</span>
-      <span style="padding:3px 8px;border-radius:4px;" class="status-CL">CL=Casual Leave</span>
-      <span style="padding:3px 8px;border-radius:4px;" class="status-SL">SL=Sick Leave</span>
-      <span style="padding:3px 8px;border-radius:4px;" class="status-PL">PL=Paid Leave</span>
-      <span style="padding:3px 8px;border-radius:4px;" class="status-SpL">SpL=Special Leave</span>
-      <span style="padding:3px 8px;border-radius:4px;" class="status-OT">OT=Overtime</span>
-    </div>
-
-    <!-- BULK ACTIONS -->
-    <div style="display:flex;gap:10px;margin-bottom:15px;flex-wrap:wrap;align-items:center;">
-      <span style="font-size:12px;color:#666;font-weight:600;">Bulk Mark:</span>
-      <button onclick="bulkMarkAll('P')" style="padding:5px 10px;background:#e6f4ea;color:#34a853;border:1px solid #34a853;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700;">All Present</button>
-      <button onclick="bulkMarkAll('WO')" style="padding:5px 10px;background:#f5f5f5;color:#757575;border:1px solid #aaa;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700;">All Week Off</button>
-      <button onclick="bulkMarkColumn()" style="padding:5px 10px;background:#e8f0fe;color:#1a73e8;border:1px solid #1a73e8;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700;">Mark Column...</button>
-      <span style="font-size:12px;color:#999;">Click any cell to change status</span>
-    </div>
-
+    <div class="alert alert-success" id="editAlertSuccess"></div>
+    <div class="alert alert-error" id="editAlertError"></div>
+    <div class="group-info" id="editGroupInfo"></div>
     <div class="card" style="overflow:visible;">
-      <!-- SUMMARY -->
-      <div class="summary-bar">
-        <div class="summary-item"><label>Employees</label><span id="sumTotal">0</span></div>
-        <div class="summary-item"><label>Avg Present</label><span id="sumPresent">0</span></div>
-        <div class="summary-item"><label>Total CL</label><span id="sumCL">0</span></div>
-        <div class="summary-item"><label>Total SL</label><span id="sumSL">0</span></div>
-        <div class="summary-item"><label>Total PL</label><span id="sumPL">0</span></div>
-        <div class="summary-item"><label>Total Absent</label><span id="sumAbsent" style="color:#ea4335;">0</span></div>
-        <div class="summary-item"><label>Total OT Hrs</label><span id="sumOT">0</span></div>
-        <div class="summary-item"><label>Days in Month</label><span id="sumDays">0</span></div>
+      <div style="padding:15px 20px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;font-size:11px;">
+          <span style="padding:3px 8px;border-radius:4px;" class="status-P">P=Present</span>
+          <span style="padding:3px 8px;border-radius:4px;" class="status-A">A=Absent</span>
+          <span style="padding:3px 8px;border-radius:4px;" class="status-HD">HD=Half</span>
+          <span style="padding:3px 8px;border-radius:4px;" class="status-WO">WO=Week Off</span>
+          <span style="padding:3px 8px;border-radius:4px;" class="status-H">H=Holiday</span>
+          <span style="padding:3px 8px;border-radius:4px;" class="status-CL">CL</span>
+          <span style="padding:3px 8px;border-radius:4px;" class="status-SL">SL</span>
+          <span style="padding:3px 8px;border-radius:4px;" class="status-PL">PL</span>
+          <span style="padding:3px 8px;border-radius:4px;" class="status-SpL">SpL</span>
+          <span style="padding:3px 8px;border-radius:4px;" class="status-OT">OT</span>
+        </div>
+        <div id="editBulkBar" style="display:flex;gap:10px;align-items:center;">
+          <strong style="font-size:12px;color:#666;">Bulk:</strong>
+          <button onclick="bulkMark('P')" style="padding:5px 10px;background:#e6f4ea;color:#34a853;border:1px solid #34a853;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700;">All P</button>
+          <button onclick="bulkMark('WO')" style="padding:5px 10px;background:#f5f5f5;color:#757575;border:1px solid #aaa;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700;">All WO</button>
+          <button onclick="bulkMarkCol()" style="padding:5px 10px;background:#e8f0fe;color:#1a73e8;border:1px solid #1a73e8;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700;">Mark Col</button>
+        </div>
       </div>
-
+      <div class="summary-bar">
+        <div class="summary-item"><label>Employees</label><span id="sumTotal2">0</span></div>
+        <div class="summary-item"><label>Avg Present</label><span id="sumPresent2">0</span></div>
+        <div class="summary-item"><label>Total CL</label><span id="sumCL2">0</span></div>
+        <div class="summary-item"><label>Total SL</label><span id="sumSL2">0</span></div>
+        <div class="summary-item"><label>Total Absent</label><span id="sumAbsent2" style="color:#ea4335;">0</span></div>
+        <div class="summary-item"><label>Total OT Hrs</label><span id="sumOT2">0</span></div>
+        <div class="summary-item"><label>Days</label><span id="sumDays2">0</span></div>
+        <div class="summary-item"><label>Status</label><span id="sumStatus2" style="font-size:12px;">—</span></div>
+      </div>
       <div class="attendance-grid-wrapper">
-        <table class="attendance-grid" id="attendanceGrid">
-          <thead id="gridHead"></thead>
-          <tbody id="gridBody"></tbody>
+        <table class="attendance-grid">
+          <thead id="editGridHead"></thead>
+          <tbody id="editGridBody"></tbody>
         </table>
       </div>
-
       <div class="action-bar">
-        <button class="btn-secondary" onclick="showListView()">Cancel</button>
-        <button class="btn-primary" onclick="saveGrid('Draft')">💾 Save Draft</button>
-        <button class="btn-success" onclick="saveGrid('Submit')">📤 Submit for Payroll</button>
+        <button class="btn-secondary" onclick="showListView()">Close</button>
+        <button class="btn-primary" id="editSaveBtn" onclick="saveEditGrid('Draft')">💾 Save Draft</button>
+        <button class="btn-success" id="editSubmitBtn" onclick="saveEditGrid('Submit')">📤 Submit</button>
+        <button class="btn-warning" id="editLockBtn" onclick="lockEdit()" style="display:none;">🔒 Lock</button>
       </div>
     </div>
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
   let currentUser = {};
   let attendanceRecords = [];
+  let displayRecords = [];
   let currentDaysInMonth = 30;
   let currentAttendanceId = null;
   let currentMonth = '';
@@ -450,18 +387,17 @@
   let currentLocation = '';
   let currentSection = '';
   let currentProfile = '';
+  let isLocked = false;
   let pickerEin = '';
   let pickerDay = 0;
-  let isGridLocked = false;
+  let activeMode = 'new';
+  let uploadedData = [];
+  let allGroups = [];
+  let activeGroupFilter = '';
 
   const MONTHS = ['January','February','March','April','May','June',
     'July','August','September','October','November','December'];
-
-  const STATUS_COLORS = {
-    P: 'status-P', A: 'status-A', CL: 'status-CL', SL: 'status-SL',
-    PL: 'status-PL', SpL: 'status-SpL', H: 'status-H',
-    WO: 'status-WO', HD: 'status-HD', OT: 'status-OT'
-  };
+  const STATUS_COLORS = { P:'status-P', A:'status-A', CL:'status-CL', SL:'status-SL', PL:'status-PL', SpL:'status-SpL', H:'status-H', WO:'status-WO', HD:'status-HD', OT:'status-OT' };
 
   window.onload = async () => {
     await checkAuth();
@@ -481,20 +417,8 @@
 
   async function loadMasterData() {
     try {
-      const [locRes, secRes, proRes] = await Promise.all([
-        fetch('/api/masters/location'),
-        fetch('/api/masters/section'),
-        fetch('/api/masters/profile')
-      ]);
-      const [locData, secData, proData] = await Promise.all([
-        locRes.json(), secRes.json(), proRes.json()
-      ]);
-      if (locData.success) {
-        populateSelect('filterLocation', locData.masters.map(m => m.value), 'All Locations');
-        populateSelect('uploadLocation', locData.masters.map(m => m.value), 'Select Location');
-      }
-      if (secData.success) populateSelect('uploadSection', secData.masters.map(m => m.value), 'Select Section');
-      if (proData.success) populateSelect('uploadProfile', proData.masters.map(m => m.value), 'Select Profile');
+      const locRes = await (await fetch('/api/masters/location')).json();
+      if (locRes.success) populateSelect('filterLocation', locRes.masters.map(m => m.value), 'All Locations');
     } catch(e) {}
   }
 
@@ -506,23 +430,21 @@
   }
 
   function populateYears() {
-    const currentYear = new Date().getFullYear();
-    ['filterYear','uploadYear'].forEach(id => {
+    const now = new Date().getFullYear();
+    ['filterYear','selYear'].forEach(id => {
       const el = document.getElementById(id);
       if (!el) return;
       el.innerHTML = id === 'filterYear' ? '<option value="">All Years</option>' : '';
-      for (let y = currentYear + 1; y >= currentYear - 3; y--) {
-        el.innerHTML += '<option value="' + y + '">' + y + '</option>';
-      }
+      for (let y = now + 1; y >= now - 3; y--) el.innerHTML += '<option value="' + y + '">' + y + '</option>';
     });
   }
 
   function setDefaultMonthYear() {
     const now = new Date();
-    const monthEl = document.getElementById('uploadMonth');
-    const yearEl = document.getElementById('uploadYear');
-    if (monthEl) monthEl.value = MONTHS[now.getMonth()];
-    if (yearEl) yearEl.value = now.getFullYear();
+    const m = document.getElementById('selMonth');
+    const y = document.getElementById('selYear');
+    if (m) m.value = MONTHS[now.getMonth()];
+    if (y) y.value = now.getFullYear();
   }
 
   async function loadAttendanceList() {
@@ -545,151 +467,221 @@
   function renderAttendanceList(records) {
     const tbody = document.getElementById('attendanceList');
     document.getElementById('listCount').textContent = '(' + records.length + ' records)';
-    if (records.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state">No attendance records found</div></td></tr>';
-      return;
-    }
-    tbody.innerHTML = records.map(r => `
-      <tr>
-        <td><strong>${r.groupName || r.section + ' ' + r.location}</strong></td>
-        <td>${r.month} ${r.year}</td>
-        <td>${r.location}</td>
-        <td>${r.records ? r.records.length : '—'}</td>
-        <td>${r.uploadedBy || '—'}</td>
-        <td>${r.updatedAt ? new Date(r.updatedAt).toLocaleDateString('en-IN') : '—'}</td>
-        <td><span class="badge badge-${r.status.toLowerCase()}">${r.status}</span></td>
-        <td>
-          <button class="btn-warning" onclick="editAttendance('${r._id}')">
-            ${r.status === 'Locked' ? '👁 View' : '✏️ Edit'}
-          </button>
-          ${r.status === 'Draft' ? '<button class="btn-danger" onclick="deleteAttendance(\'' + r._id + '\')" style="margin-left:4px;">Delete</button>' : ''}
-          ${r.status === 'Submitted' && (currentUser.role === 'admin' || currentUser.role === 'accountant') ?
-            '<button class="btn-success" onclick="lockAttendance(\'' + r._id + '\')" style="margin-left:4px;padding:5px 10px;font-size:11px;">🔒 Lock</button>' : ''}
-        </td>
-      </tr>
-    `).join('');
+    if (!records.length) { tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state">No records found</div></td></tr>'; return; }
+    tbody.innerHTML = records.map(r =>
+      '<tr><td><strong>' + (r.groupName || r.section + ' ' + r.location) + '</strong></td>' +
+      '<td>' + r.month + ' ' + r.year + '</td><td>' + r.location + '</td>' +
+      '<td>' + (r.records ? r.records.length : '—') + '</td>' +
+      '<td>' + (r.uploadedBy || '—') + '</td>' +
+      '<td>' + (r.updatedAt ? new Date(r.updatedAt).toLocaleDateString('en-IN') : '—') + '</td>' +
+      '<td><span class="badge badge-' + r.status.toLowerCase() + '">' + r.status + '</span></td>' +
+      '<td><button class="btn-warning" onclick="editAttendance(\'' + r._id + '\')">' + (r.status === 'Locked' ? '👁 View' : '✏️ Edit') + '</button>' +
+      (r.status === 'Draft' ? ' <button class="btn-danger" onclick="deleteAtt(\'' + r._id + '\')">Delete</button>' : '') +
+      (r.status === 'Submitted' ? ' <button class="btn-success" style="padding:5px 10px;font-size:11px;" onclick="lockAtt(\'' + r._id + '\')">🔒 Lock</button>' : '') +
+      '</td></tr>'
+    ).join('');
   }
 
-  async function loadEmployeesForGrid() {
-    const month = document.getElementById('uploadMonth').value;
-    const year = document.getElementById('uploadYear').value;
-    const location = document.getElementById('uploadLocation').value;
-    const section = document.getElementById('uploadSection').value;
-    const profile = document.getElementById('uploadProfile').value;
-    if (!month || !year || !location || !section || !profile) {
-      showAlert('uploadAlertError', 'Please select all fields');
-      return;
-    }
+  async function initAttendance() {
+    const month = document.getElementById('selMonth').value;
+    const year = document.getElementById('selYear').value;
+    if (!month || !year) { showAlert('newAlertError', 'Please select Month and Year'); return; }
+    currentMonth = month;
+    currentYear = year;
+    activeMode = 'new';
+    showAlert('newAlertSuccess', 'Loading groups...');
     try {
-      const res = await fetch('/api/attendance/template/employees?location=' + encodeURIComponent(location) +
-        '&section=' + encodeURIComponent(section) + '&profile=' + encodeURIComponent(profile) +
-        '&month=' + encodeURIComponent(month) + '&year=' + year);
-      const data = await res.json();
-      if (!data.success) { showAlert('uploadAlertError', data.message); return; }
-      if (data.employees.length === 0) {
-        showAlert('uploadAlertError', 'No active employees found for this group');
-        return;
+      const locData = await (await fetch('/api/masters/location')).json();
+      const secData = await (await fetch('/api/masters/section')).json();
+      const proData = await (await fetch('/api/masters/profile')).json();
+      const locs = locData.success ? locData.masters.map(m => m.value) : [];
+      const secs = secData.success ? secData.masters.map(m => m.value) : [];
+      const pros = proData.success ? proData.masters.map(m => m.value) : [];
+      allGroups = [];
+      attendanceRecords = [];
+      currentDaysInMonth = 30;
+
+      for (const loc of locs) {
+        for (const sec of secs) {
+          for (const pro of pros) {
+            try {
+              const empData = await (await fetch('/api/attendance/template/employees?location=' +
+                encodeURIComponent(loc) + '&section=' + encodeURIComponent(sec) +
+                '&profile=' + encodeURIComponent(pro) + '&month=' + encodeURIComponent(month) +
+                '&year=' + year)).json();
+              if (empData.success && empData.employees && empData.employees.length > 0) {
+                const sname = sec === 'State' ? 'Xaviers' : 'Global';
+                const gname = sname + ' ' + loc + ' ' + pro;
+                const days = empData.daysInMonth;
+                if (days > currentDaysInMonth) currentDaysInMonth = days;
+                allGroups.push({ name: gname, location: loc, section: sec, profile: pro, count: empData.employees.length, daysInMonth: days });
+                empData.employees.forEach(emp => {
+                  attendanceRecords.push({
+                    ein: emp.ein, employeeId: emp._id, employeeName: emp.employeeName,
+                    designation: emp.designation || '', location: loc, section: sec, profile: pro,
+                    groupName: gname, daysInMonth: days,
+                    days: Array.from({ length: days }, (_, i) => ({ day: i+1, status: '', otHours: 0 })),
+                    presentDays: 0, cl: 0, sl: 0, pl: 0, spL: 0,
+                    absent: 0, halfDays: 0, weekOff: 0, holidays: 0, otHours: 0, lopDays: 0, payableDays: 0
+                  });
+                });
+              }
+            } catch(ex) {}
+          }
+        }
       }
-      currentMonth = month;
-      currentYear = year;
-      currentLocation = location;
-      currentSection = section;
-      currentProfile = profile;
-      currentDaysInMonth = data.daysInMonth;
-      currentAttendanceId = null;
-      isGridLocked = false;
-      attendanceRecords = data.employees.map(emp => ({
-        ein: emp.ein,
-        employeeId: emp._id,
-        employeeName: emp.employeeName,
-        designation: emp.designation || '',
-        daysInMonth: data.daysInMonth,
-        days: Array.from({ length: data.daysInMonth }, (_, i) => ({
-          day: i + 1, status: 'P', otHours: 0
-        })),
-        presentDays: data.daysInMonth,
-        cl: 0, sl: 0, pl: 0, spL: 0, absent: 0,
-        halfDays: 0, weekOff: 0, holidays: 0,
-        otHours: 0, lopDays: 0, payableDays: data.daysInMonth
-      }));
-      renderGrid();
-      switchView('gridView');
-    } catch(e) { showAlert('uploadAlertError', 'Error: ' + e.message); }
+
+      if (!allGroups.length) { showAlert('newAlertError', 'No active employees found'); return; }
+
+      // Load existing attendance data
+      for (const g of allGroups) {
+        try {
+          const attRes = await (await fetch('/api/attendance?location=' + encodeURIComponent(g.location) +
+            '&section=' + encodeURIComponent(g.section) + '&profile=' + encodeURIComponent(g.profile) +
+            '&month=' + encodeURIComponent(month) + '&year=' + year)).json();
+          if (attRes.success && attRes.records.length > 0) {
+            const existing = await (await fetch('/api/attendance/' + attRes.records[0]._id)).json();
+            if (existing.success) {
+              existing.record.records.forEach(r => {
+                const idx = attendanceRecords.findIndex(x => x.ein === r.ein);
+                if (idx >= 0) Object.assign(attendanceRecords[idx], r);
+              });
+            }
+          }
+        } catch(ex) {}
+      }
+
+      // Populate group dropdown
+      const dd = document.getElementById('groupDropdown');
+      dd.innerHTML = '<option value="">All Groups (' + attendanceRecords.length + ' employees)</option>';
+      allGroups.forEach(g => { dd.innerHTML += '<option value="' + g.name + '">' + g.name + ' (' + g.count + ')</option>'; });
+      activeGroupFilter = '';
+      displayRecords = attendanceRecords;
+      document.getElementById('inputMethodSection').style.display = 'block';
+      renderNewGrid();
+      document.getElementById('inputMethodSection').scrollIntoView({ behavior: 'smooth' });
+      showAlert('newAlertSuccess', allGroups.length + ' groups — ' + attendanceRecords.length + ' employees loaded');
+    } catch(e) { showAlert('newAlertError', 'Error: ' + e.message); }
   }
 
-  function renderGrid() {
-    const sectionName = currentSection === 'State' ? 'Xaviers' : 'Global';
-    document.getElementById('gridTitle').textContent =
-      'Attendance — ' + sectionName + ' ' + currentLocation + ' ' + currentProfile +
-      ' | ' + currentMonth + ' ' + currentYear;
-    document.getElementById('gridGroupInfo').innerHTML = `
-      <div class="group-info-item"><label>Group</label><span>${sectionName} ${currentLocation} ${currentProfile}</span></div>
-      <div class="group-info-item"><label>Period</label><span>${currentMonth} ${currentYear}</span></div>
-      <div class="group-info-item"><label>Days in Month</label><span>${currentDaysInMonth}</span></div>
-      <div class="group-info-item"><label>Employees</label><span>${attendanceRecords.length}</span></div>
-      <div class="group-info-item"><label>Status</label><span>${isGridLocked ? '🔒 Locked' : currentAttendanceId ? 'Draft' : 'New'}</span></div>
-    `;
+  function filterByGroup() {
+    activeGroupFilter = document.getElementById('groupDropdown').value;
+    displayRecords = activeGroupFilter ? attendanceRecords.filter(r => r.groupName === activeGroupFilter) : attendanceRecords;
+    renderNewGrid();
+    if (document.getElementById('sectionSupervisor').classList.contains('active')) loadSupervisorSubmissions();
+  }
 
-    // Build header
-    const thead = document.getElementById('gridHead');
-    let headerRow = '<tr>';
-    headerRow += '<th class="emp-col">Employee</th>';
-    headerRow += '<th class="desig-col">Designation</th>';
-    for (let d = 1; d <= currentDaysInMonth; d++) {
-      const date = new Date(parseInt(currentYear), MONTHS.indexOf(currentMonth), d);
-      const dayName = ['Su','Mo','Tu','We','Th','Fr','Sa'][date.getDay()];
-      const isSun = date.getDay() === 0;
-      headerRow += '<th style="' + (isSun ? 'background:#ea4335;' : '') + '">' + d + '<br><span style="font-size:9px;opacity:0.8;">' + dayName + '</span></th>';
+  function switchInputTab(tab) {
+    document.querySelectorAll('.input-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.input-section').forEach(s => s.classList.remove('active'));
+    document.getElementById('tab' + tab).classList.add('active');
+    document.getElementById('section' + tab).classList.add('active');
+    if (tab === 'Supervisor') loadSupervisorSubmissions();
+  }
+
+  async function loadSupervisorSubmissions() {
+    const container = document.getElementById('supervisorList');
+    try {
+      const grp = allGroups.find(g => g.name === activeGroupFilter);
+      let url = '/api/attendance?month=' + encodeURIComponent(currentMonth) + '&year=' + currentYear;
+      if (grp) url += '&location=' + encodeURIComponent(grp.location) + '&section=' + encodeURIComponent(grp.section) + '&profile=' + encodeURIComponent(grp.profile);
+      const res = await fetch(url);
+      const data = await res.json();
+      const submitted = data.success ? data.records.filter(r => r.status === 'Submitted') : [];
+      if (!submitted.length) { container.innerHTML = '<div class="empty-state">No supervisor submissions found</div>'; return; }
+      container.innerHTML = submitted.map(r =>
+        '<div class="sup-card"><div>' +
+        '<strong>' + (r.groupName || r.section + ' ' + r.location) + '</strong>' +
+        '<span style="font-size:12px;color:#666;margin-left:10px;">' + (r.records ? r.records.length : 0) + ' employees</span>' +
+        '<span style="font-size:12px;color:#666;margin-left:10px;">By: ' + (r.uploadedBy || '—') + '</span>' +
+        '</div><button class="btn-primary" onclick="pullSupervisor(\'' + r._id + '\')">📥 Pull & Edit</button></div>'
+      ).join('');
+    } catch(e) { container.innerHTML = '<div class="empty-state">Error loading</div>'; }
+  }
+
+  async function pullSupervisor(id) {
+    try {
+      const res = await fetch('/api/attendance/' + id);
+      const data = await res.json();
+      if (!data.success) return;
+      data.record.records.forEach(r => {
+        const idx = attendanceRecords.findIndex(x => x.ein === r.ein);
+        if (idx >= 0) Object.assign(attendanceRecords[idx], r);
+      });
+      displayRecords = activeGroupFilter ? attendanceRecords.filter(r => r.groupName === activeGroupFilter) : attendanceRecords;
+      switchInputTab('Grid');
+      renderNewGrid();
+      showAlert('newAlertSuccess', 'Supervisor attendance loaded. Review and submit.');
+    } catch(e) {}
+  }
+
+  function renderNewGrid() {
+    renderGrid('gridHead', 'gridBody', 'sumTotal', 'sumPresent', 'sumCL', 'sumSL', 'sumAbsent', 'sumOT', 'sumDays', displayRecords, false);
+  }
+
+  function renderGrid(headId, bodyId, s1, s2, s3, s4, s5, s6, s7, records, locked) {
+    const thead = document.getElementById(headId);
+    const tbody = document.getElementById(bodyId);
+    if (!thead || !tbody || !records.length) {
+      if (tbody) tbody.innerHTML = '<tr><td colspan="20"><div class="empty-state">No employees to display</div></td></tr>';
+      return;
     }
-    headerRow += '<th class="total-header">P</th>';
-    headerRow += '<th class="total-header">A</th>';
-    headerRow += '<th class="total-header">CL</th>';
-    headerRow += '<th class="total-header">SL</th>';
-    headerRow += '<th class="total-header">PL</th>';
-    headerRow += '<th class="total-header">SpL</th>';
-    headerRow += '<th class="total-header">WO</th>';
-    headerRow += '<th class="total-header">H</th>';
-    headerRow += '<th class="total-header">HD</th>';
-    headerRow += '<th class="total-header">OT</th>';
-    headerRow += '<th class="total-header">LOP</th>';
-    headerRow += '<th class="total-header">Pay</th>';
-    headerRow += '</tr>';
-    thead.innerHTML = headerRow;
+    const days = records[0].daysInMonth || currentDaysInMonth;
 
-    // Build body
-    const tbody = document.getElementById('gridBody');
-    tbody.innerHTML = attendanceRecords.map((emp, ei) => {
-      let row = '<tr id="emprow-' + ei + '">';
-      row += '<td class="emp-col">' + (emp.ein || '') + '<br><span style="font-size:10px;color:#555;">' + emp.employeeName + '</span></td>';
-      row += '<td class="desig-col" style="font-size:10px;">' + (emp.designation || '') + '</td>';
-      for (let d = 1; d <= currentDaysInMonth; d++) {
-        const dayData = emp.days.find(x => x.day === d) || { status: 'P', otHours: 0 };
-        const cls = STATUS_COLORS[dayData.status] || 'status-P';
-        const locked = isGridLocked ? ' locked' : '';
-        const click = isGridLocked ? '' : 'onclick="openPicker(\'' + emp.ein + '\',' + d + ',event)"';
-        const title = dayData.status === 'OT' ? dayData.status + '(' + dayData.otHours + 'h)' : dayData.status;
-        row += '<td class="day-cell ' + cls + locked + '" id="cell-' + emp.ein + '-' + d + '" ' + click + '>' + title + '</td>';
+    let hrow = '<tr><th class="emp-col">EIN</th><th class="name-col">Name</th><th class="desig-col">Designation</th>';
+    for (let d = 1; d <= days; d++) {
+      const date = new Date(parseInt(currentYear), MONTHS.indexOf(currentMonth), d);
+      const dn = ['Su','Mo','Tu','We','Th','Fr','Sa'][date.getDay()];
+      const sun = date.getDay() === 0;
+      hrow += '<th style="' + (sun ? 'background:#ea4335;' : '') + '">' + d + '<br><span style="font-size:9px;opacity:0.8;">' + dn + '</span></th>';
+    }
+    hrow += '<th class="total-header">P</th><th class="total-header">A</th><th class="total-header">CL</th><th class="total-header">SL</th><th class="total-header">PL</th><th class="total-header">SpL</th><th class="total-header">WO</th><th class="total-header">H</th><th class="total-header">HD</th><th class="total-header">OT</th><th class="total-header">LOP</th><th class="total-header">Pay</th></tr>';
+    thead.innerHTML = hrow;
+
+    tbody.innerHTML = records.map((emp, ei) => {
+      let row = '<tr><td class="emp-col">' + (emp.ein||'') + '</td><td class="name-col">' + emp.employeeName + '</td><td class="desig-col">' + (emp.designation||'') + '</td>';
+      for (let d = 1; d <= days; d++) {
+        const dd = emp.days ? emp.days.find(x => x.day === d) : null;
+        const st = dd ? dd.status : '';
+        const cls = st ? (STATUS_COLORS[st] || '') : '';
+        const lk = locked ? ' locked' : '';
+        const clk = locked ? '' : 'onclick="openPicker(\'' + emp.ein + '\',' + d + ',event)"';
+        row += '<td class="day-cell ' + cls + lk + '" id="cell-' + emp.ein + '-' + d + '" ' + clk + '>' + (st || '·') + '</td>';
       }
-      row += '<td class="total-col" id="tot-P-' + ei + '">' + (emp.presentDays || 0) + '</td>';
-      row += '<td class="total-col" id="tot-A-' + ei + '" style="color:#ea4335;">' + (emp.absent || 0) + '</td>';
-      row += '<td class="total-col" id="tot-CL-' + ei + '">' + (emp.cl || 0) + '</td>';
-      row += '<td class="total-col" id="tot-SL-' + ei + '">' + (emp.sl || 0) + '</td>';
-      row += '<td class="total-col" id="tot-PL-' + ei + '">' + (emp.pl || 0) + '</td>';
-      row += '<td class="total-col" id="tot-SpL-' + ei + '">' + (emp.spL || 0) + '</td>';
-      row += '<td class="total-col" id="tot-WO-' + ei + '">' + (emp.weekOff || 0) + '</td>';
-      row += '<td class="total-col" id="tot-H-' + ei + '">' + (emp.holidays || 0) + '</td>';
-      row += '<td class="total-col" id="tot-HD-' + ei + '">' + (emp.halfDays || 0) + '</td>';
-      row += '<td class="total-col" id="tot-OT-' + ei + '">' + (emp.otHours || 0) + '</td>';
-      row += '<td class="total-col" id="tot-LOP-' + ei + '" style="color:#ea4335;">' + (emp.lopDays || 0) + '</td>';
-      row += '<td class="total-col" id="tot-Pay-' + ei + '" style="color:#34a853;">' + (emp.payableDays || 0) + '</td>';
+      row += '<td class="total-col" id="tp-' + ei + '">' + (emp.presentDays||0) + '</td>';
+      row += '<td class="total-col" id="ta-' + ei + '" style="color:#ea4335;">' + (emp.absent||0) + '</td>';
+      row += '<td class="total-col" id="tcl-' + ei + '">' + (emp.cl||0) + '</td>';
+      row += '<td class="total-col" id="tsl-' + ei + '">' + (emp.sl||0) + '</td>';
+      row += '<td class="total-col" id="tpl-' + ei + '">' + (emp.pl||0) + '</td>';
+      row += '<td class="total-col" id="tspl-' + ei + '">' + (emp.spL||0) + '</td>';
+      row += '<td class="total-col" id="two-' + ei + '">' + (emp.weekOff||0) + '</td>';
+      row += '<td class="total-col" id="th-' + ei + '">' + (emp.holidays||0) + '</td>';
+      row += '<td class="total-col" id="thd-' + ei + '">' + (emp.halfDays||0) + '</td>';
+      row += '<td class="total-col" id="tot-' + ei + '">' + (emp.otHours||0) + '</td>';
+      row += '<td class="total-col" id="tlop-' + ei + '" style="color:#ea4335;">' + (emp.lopDays||0) + '</td>';
+      row += '<td class="total-col" id="tpay-' + ei + '" style="color:#34a853;">' + (emp.payableDays||0) + '</td>';
       row += '</tr>';
       return row;
     }).join('');
-    updateSummary();
+
+    updateSummary(s1, s2, s3, s4, s5, s6, s7, records);
+  }
+
+  function updateSummary(s1, s2, s3, s4, s5, s6, s7, records) {
+    if (!records) return;
+    const total = records.length;
+    const avgP = total > 0 ? (records.reduce((s,e) => s+(e.presentDays||0), 0)/total).toFixed(1) : 0;
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    set(s1, total); set(s2, avgP);
+    set(s3, records.reduce((s,e) => s+(e.cl||0), 0));
+    set(s4, records.reduce((s,e) => s+(e.sl||0), 0));
+    set(s5, records.reduce((s,e) => s+(e.absent||0), 0));
+    set(s6, records.reduce((s,e) => s+(e.otHours||0), 0));
+    set(s7, currentDaysInMonth);
   }
 
   function openPicker(ein, day, event) {
-    if (isGridLocked) return;
+    if (isLocked) return;
     event.stopPropagation();
     pickerEin = ein;
     pickerDay = day;
@@ -705,138 +697,221 @@
     picker.style.left = left + 'px';
   }
 
-  function showOTInput() {
-    document.getElementById('otInputRow').style.display = 'flex';
-  }
+  function showOTInput() { document.getElementById('otInputRow').style.display = 'flex'; }
 
   function setStatus(status) {
     if (!pickerEin || !pickerDay) return;
-    const otHours = status === 'OT' ? (parseFloat(document.getElementById('otHoursInput').value) || 0) : 0;
-    const empIndex = attendanceRecords.findIndex(r => r.ein === pickerEin);
-    if (empIndex < 0) return;
-    const emp = attendanceRecords[empIndex];
-    const dayIndex = emp.days.findIndex(d => d.day === pickerDay);
-    if (dayIndex >= 0) {
-      emp.days[dayIndex].status = status;
-      emp.days[dayIndex].otHours = otHours;
-    } else {
-      emp.days.push({ day: pickerDay, status, otHours });
+    const otH = status === 'OT' ? (parseFloat(document.getElementById('otHoursInput').value) || 0) : 0;
+    // Update in main attendanceRecords
+    const empIdx = attendanceRecords.findIndex(r => r.ein === pickerEin);
+    if (empIdx >= 0) {
+      const emp = attendanceRecords[empIdx];
+      const di = emp.days ? emp.days.findIndex(d => d.day === pickerDay) : -1;
+      if (di >= 0) { emp.days[di].status = status; emp.days[di].otHours = otH; }
+      else { if (!emp.days) emp.days = []; emp.days.push({ day: pickerDay, status, otHours: otH }); }
+      recalcEmp(empIdx);
     }
-    recalcTotals(empIndex);
+    // Update display
+    const dispIdx = displayRecords.findIndex(r => r.ein === pickerEin);
     const cell = document.getElementById('cell-' + pickerEin + '-' + pickerDay);
-    if (cell) {
-      cell.className = 'day-cell ' + (STATUS_COLORS[status] || 'status-P');
-      cell.textContent = status === 'OT' ? 'OT(' + otHours + ')' : status;
+    if (cell) { cell.className = 'day-cell ' + (STATUS_COLORS[status] || ''); cell.textContent = status || '·'; }
+    if (dispIdx >= 0) {
+      const emp = displayRecords[dispIdx];
+      const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+      set('tp-'+dispIdx, emp.presentDays||0); set('ta-'+dispIdx, emp.absent||0);
+      set('tcl-'+dispIdx, emp.cl||0); set('tsl-'+dispIdx, emp.sl||0);
+      set('tpl-'+dispIdx, emp.pl||0); set('tspl-'+dispIdx, emp.spL||0);
+      set('two-'+dispIdx, emp.weekOff||0); set('th-'+dispIdx, emp.holidays||0);
+      set('thd-'+dispIdx, emp.halfDays||0); set('tot-'+dispIdx, emp.otHours||0);
+      set('tlop-'+dispIdx, emp.lopDays||0); set('tpay-'+dispIdx, emp.payableDays||0);
     }
-    updateSummary();
+    updateSummary('sumTotal','sumPresent','sumCL','sumSL','sumAbsent','sumOT','sumDays', displayRecords);
     document.getElementById('statusPicker').style.display = 'none';
   }
 
-  function recalcTotals(empIndex) {
-    const emp = attendanceRecords[empIndex];
-    let presentDays = 0, cl = 0, sl = 0, pl = 0, spL = 0;
-    let absent = 0, halfDays = 0, weekOff = 0, holidays = 0, otHours = 0;
-    emp.days.forEach(d => {
-      switch(d.status) {
-        case 'P':   presentDays += 1; break;
-        case 'A':   absent += 1; break;
-        case 'CL':  cl += 1; presentDays += 1; break;
-        case 'SL':  sl += 1; presentDays += 1; break;
-        case 'PL':  pl += 1; presentDays += 1; break;
-        case 'SpL': spL += 1; presentDays += 1; break;
-        case 'H':   holidays += 1; break;
-        case 'WO':  weekOff += 1; break;
-        case 'HD':  halfDays += 1; presentDays += 0.5; break;
-        case 'OT':  presentDays += 1; otHours += d.otHours || 0; break;
-      }
+  function recalcEmp(idx) {
+    const emp = attendanceRecords[idx];
+    let p=0, a=0, cl=0, sl=0, pl=0, spL=0, hd=0, wo=0, h=0, ot=0, otH=0;
+    (emp.days||[]).forEach(d => {
+      if (d.status==='P') p++;
+      else if (d.status==='A') a++;
+      else if (d.status==='CL') { cl++; p++; }
+      else if (d.status==='SL') { sl++; p++; }
+      else if (d.status==='PL') { pl++; p++; }
+      else if (d.status==='SpL') { spL++; p++; }
+      else if (d.status==='H') h++;
+      else if (d.status==='WO') wo++;
+      else if (d.status==='HD') { hd++; p+=0.5; }
+      else if (d.status==='OT') { ot++; p++; otH+=d.otHours||0; }
     });
-    emp.presentDays = presentDays;
-    emp.cl = cl; emp.sl = sl; emp.pl = pl; emp.spL = spL;
-    emp.absent = absent; emp.halfDays = halfDays;
-    emp.weekOff = weekOff; emp.holidays = holidays;
-    emp.otHours = otHours;
-    emp.lopDays = absent;
-    emp.payableDays = parseFloat((presentDays).toFixed(1));
-    const t = (id) => { const el = document.getElementById(id); if (el) el.textContent = emp[id.split('-')[1] === 'Pay' ? 'payableDays' : id.split('-')[1] === 'LOP' ? 'lopDays' : id.split('-')[1] === 'SpL' ? 'spL' : id.split('-')[1].toLowerCase()]; };
-    document.getElementById('tot-P-' + empIndex).textContent = emp.presentDays;
-    document.getElementById('tot-A-' + empIndex).textContent = emp.absent;
-    document.getElementById('tot-CL-' + empIndex).textContent = emp.cl;
-    document.getElementById('tot-SL-' + empIndex).textContent = emp.sl;
-    document.getElementById('tot-PL-' + empIndex).textContent = emp.pl;
-    document.getElementById('tot-SpL-' + empIndex).textContent = emp.spL;
-    document.getElementById('tot-WO-' + empIndex).textContent = emp.weekOff;
-    document.getElementById('tot-H-' + empIndex).textContent = emp.holidays;
-    document.getElementById('tot-HD-' + empIndex).textContent = emp.halfDays;
-    document.getElementById('tot-OT-' + empIndex).textContent = emp.otHours;
-    document.getElementById('tot-LOP-' + empIndex).textContent = emp.lopDays;
-    document.getElementById('tot-Pay-' + empIndex).textContent = emp.payableDays;
+    emp.presentDays=p; emp.absent=a; emp.cl=cl; emp.sl=sl; emp.pl=pl; emp.spL=spL;
+    emp.halfDays=hd; emp.weekOff=wo; emp.holidays=h; emp.otHours=otH;
+    emp.lopDays=a; emp.payableDays=parseFloat(p.toFixed(1));
   }
 
-  function updateSummary() {
-    const total = attendanceRecords.length;
-    const avgP = total > 0 ? (attendanceRecords.reduce((s, e) => s + (e.presentDays || 0), 0) / total).toFixed(1) : 0;
-    document.getElementById('sumTotal').textContent = total;
-    document.getElementById('sumPresent').textContent = avgP;
-    document.getElementById('sumCL').textContent = attendanceRecords.reduce((s, e) => s + (e.cl || 0), 0);
-    document.getElementById('sumSL').textContent = attendanceRecords.reduce((s, e) => s + (e.sl || 0), 0);
-    document.getElementById('sumPL').textContent = attendanceRecords.reduce((s, e) => s + (e.pl || 0), 0);
-    document.getElementById('sumAbsent').textContent = attendanceRecords.reduce((s, e) => s + (e.absent || 0), 0);
-    document.getElementById('sumOT').textContent = attendanceRecords.reduce((s, e) => s + (e.otHours || 0), 0);
-    document.getElementById('sumDays').textContent = currentDaysInMonth;
-  }
-
-  function bulkMarkAll(status) {
-    attendanceRecords.forEach((emp, ei) => {
-      emp.days.forEach(d => { d.status = status; d.otHours = 0; });
-      recalcTotals(ei);
-      for (let d = 1; d <= currentDaysInMonth; d++) {
+  function bulkMark(status) {
+    const records = activeMode === 'new' ? displayRecords : displayRecords;
+    records.forEach((emp, di) => {
+      const mainIdx = attendanceRecords.findIndex(r => r.ein === emp.ein);
+      (emp.days||[]).forEach(d => { d.status = status; d.otHours = 0; });
+      if (mainIdx >= 0) recalcEmp(mainIdx);
+      for (let d = 1; d <= (emp.daysInMonth||currentDaysInMonth); d++) {
         const cell = document.getElementById('cell-' + emp.ein + '-' + d);
-        if (cell) { cell.className = 'day-cell ' + (STATUS_COLORS[status] || 'status-P'); cell.textContent = status; }
+        if (cell) { cell.className = 'day-cell ' + (STATUS_COLORS[status]||''); cell.textContent = status; }
       }
     });
-    updateSummary();
+    updateSummary('sumTotal','sumPresent','sumCL','sumSL','sumAbsent','sumOT','sumDays', displayRecords);
   }
 
-  function bulkMarkColumn() {
+  function bulkMarkCol() {
     const day = parseInt(prompt('Enter day number (1-' + currentDaysInMonth + '):'));
     if (!day || day < 1 || day > currentDaysInMonth) return;
     const status = prompt('Enter status (P/A/WO/H/CL/SL/PL/SpL/HD/OT):');
     if (!status) return;
-    const validStatuses = ['P','A','WO','H','CL','SL','PL','SpL','HD','OT'];
-    if (!validStatuses.includes(status)) { alert('Invalid status'); return; }
-    attendanceRecords.forEach((emp, ei) => {
-      const dayData = emp.days.find(d => d.day === day);
-      if (dayData) { dayData.status = status; dayData.otHours = 0; }
-      recalcTotals(ei);
+    const valid = ['P','A','WO','H','CL','SL','PL','SpL','HD','OT'];
+    if (!valid.includes(status)) { alert('Invalid status'); return; }
+    displayRecords.forEach((emp, di) => {
+      const mainIdx = attendanceRecords.findIndex(r => r.ein === emp.ein);
+      const dd = emp.days ? emp.days.find(d => d.day === day) : null;
+      if (dd) { dd.status = status; dd.otHours = 0; }
+      if (mainIdx >= 0) recalcEmp(mainIdx);
       const cell = document.getElementById('cell-' + emp.ein + '-' + day);
-      if (cell) { cell.className = 'day-cell ' + (STATUS_COLORS[status] || 'status-P'); cell.textContent = status; }
+      if (cell) { cell.className = 'day-cell ' + (STATUS_COLORS[status]||''); cell.textContent = status; }
     });
-    updateSummary();
+    updateSummary('sumTotal','sumPresent','sumCL','sumSL','sumAbsent','sumOT','sumDays', displayRecords);
   }
 
   async function saveGrid(action) {
-    if (!attendanceRecords.length) { showAlert('gridAlertError', 'No data to save'); return; }
+    if (!attendanceRecords.length) { showAlert('newAlertError', 'No data to save'); return; }
     try {
-      const res = await fetch('/api/attendance', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          month: currentMonth, year: parseInt(currentYear),
-          location: currentLocation, section: currentSection,
-          profile: currentProfile, records: attendanceRecords
-        })
-      });
-      const data = await res.json();
-      if (!data.success) { showAlert('gridAlertError', data.message); return; }
-      currentAttendanceId = data.record._id;
-      if (action === 'Submit') {
-        await fetch('/api/attendance/' + currentAttendanceId + '/submit', { method: 'PATCH' });
-        showAlert('gridAlertSuccess', '✅ Attendance submitted for payroll processing');
-        setTimeout(() => { showListView(); }, 1500);
-      } else {
-        showAlert('gridAlertSuccess', '✅ Attendance saved as draft');
+      const groupsToSave = activeGroupFilter ?
+        allGroups.filter(g => g.name === activeGroupFilter) : allGroups;
+      let saved = 0;
+      for (const g of groupsToSave) {
+        const recs = attendanceRecords.filter(r => r.location===g.location && r.section===g.section && r.profile===g.profile);
+        if (!recs.length) continue;
+        const res = await fetch('/api/attendance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ month: currentMonth, year: parseInt(currentYear), location: g.location, section: g.section, profile: g.profile, records: recs })
+        });
+        const data = await res.json();
+        if (data.success) {
+          if (action === 'Submit') await fetch('/api/attendance/' + data.record._id + '/submit', { method: 'PATCH' });
+          saved++;
+        }
       }
-    } catch(e) { showAlert('gridAlertError', 'Error: ' + e.message); }
+      if (action === 'Submit') {
+        showAlert('newAlertSuccess', '✅ ' + saved + ' groups submitted for payroll');
+        setTimeout(showListView, 2000);
+      } else {
+        showAlert('newAlertSuccess', '✅ ' + saved + ' groups saved as draft');
+      }
+    } catch(e) { showAlert('newAlertError', 'Error: ' + e.message); }
+  }
+
+  function downloadTemplate() {
+    const grp = allGroups.find(g => g.name === activeGroupFilter);
+    const loc = grp ? grp.location : '';
+    const sec = grp ? grp.section : '';
+    const pro = grp ? grp.profile : '';
+    const gname = activeGroupFilter || 'All Groups';
+    let url = '/api/attendance-template/download?month=' + encodeURIComponent(currentMonth) +
+      '&year=' + currentYear + '&groupName=' + encodeURIComponent(gname);
+    if (loc) url += '&location=' + encodeURIComponent(loc);
+    if (sec) url += '&section=' + encodeURIComponent(sec);
+    if (pro) url += '&profile=' + encodeURIComponent(pro);
+    window.open(url, '_blank');
+    return;
+    // old code below (unreachable)
+    const recs = displayRecords.length ? displayRecords : attendanceRecords;
+    if (!recs.length) { showAlert('newAlertError', 'Load attendance first'); return; }
+    const shortMonth = currentMonth.substring(0, 3);
+    const days = recs[0].daysInMonth || currentDaysInMonth;
+    const fixedCols = ['EIN','Employee Name','Designation','Payable','Present','CL','SL','PL','Sp.L','HD','Absent','OT'];
+    const fc = fixedCols.length;
+    const dateHeaders = [];
+    for (let d = 1; d <= days; d++) dateHeaders.push(d + '-' + shortMonth);
+    const headers = fixedCols.concat(dateHeaders);
+    const ws_data = [headers];
+    recs.forEach(emp => {
+      const row = [emp.ein, emp.employeeName, emp.designation || ''];
+      for (let i = 0; i < 9; i++) row.push('');
+      for (let d = 0; d < days; d++) row.push('');
+      ws_data.push(row);
+    });
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    const cols = [{wch:12},{wch:22},{wch:16},{wch:9},{wch:8},{wch:6},{wch:6},{wch:6},{wch:6},{wch:6},{wch:8},{wch:6}];
+    for (let d = 0; d < days; d++) cols.push({wch:5});
+    ws['!cols'] = cols;
+    const colLetter = idx => { let s=''; idx++; while(idx>0){const r=(idx-1)%26;s=String.fromCharCode(65+r)+s;idx=Math.floor((idx-1)/26);} return s; };
+    const dStart = colLetter(fc);
+    const dEnd = colLetter(fc + days - 1);
+    recs.forEach((emp, ri) => {
+      const row = ri + 2;
+      const rng = dStart + row + ':' + dEnd + row;
+      ws[colLetter(3)+row] = { f: 'COUNTIF('+rng+',"P")+COUNTIF('+rng+',"OT")+COUNTIF('+rng+',"CL")+COUNTIF('+rng+',"SL")+COUNTIF('+rng+',"PL")+COUNTIF('+rng+',"SpL")+COUNTIF('+rng+',"HD")*0.5' };
+      ws[colLetter(4)+row] = { f: 'COUNTIF('+rng+',"P")' };
+      ws[colLetter(5)+row] = { f: 'COUNTIF('+rng+',"CL")' };
+      ws[colLetter(6)+row] = { f: 'COUNTIF('+rng+',"SL")' };
+      ws[colLetter(7)+row] = { f: 'COUNTIF('+rng+',"PL")' };
+      ws[colLetter(8)+row] = { f: 'COUNTIF('+rng+',"Sp.L")' };
+      ws[colLetter(9)+row] = { f: 'COUNTIF('+rng+',"HD")' };
+      ws[colLetter(10)+row] = { f: 'COUNTIF('+rng+',"A")' };
+      ws[colLetter(11)+row] = { f: 'COUNTIF('+rng+',"OT")' };
+    });
+    const groupName = activeGroupFilter || 'All';
+    XLSX.utils.book_append_sheet(wb, ws, groupName.substring(0,31));
+    XLSX.writeFile(wb, 'Attendance_' + groupName.replace(/ /g,'_') + '_' + currentMonth + '_' + currentYear + '.xlsx');
+  }
+
+  function processUpload() {
+    const file = document.getElementById('uploadFile').files[0];
+    if (!file) { alert('Please select a file'); return; }
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const wb = XLSX.read(ev.target.result, { type: 'binary' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(ws, { defval: '' });
+        if (!json.length) { alert('No data'); return; }
+        uploadedData = json;
+        const cols = Object.keys(json[0]);
+        document.getElementById('previewHead').innerHTML = '<tr>' + cols.map(c => '<th style="padding:6px;background:#f0f2f5;border:1px solid #ddd;font-size:11px;">' + c + '</th>').join('') + '</tr>';
+        document.getElementById('previewBody').innerHTML = json.slice(0,5).map(r => '<tr>' + cols.map(c => '<td style="padding:6px;border:1px solid #eee;font-size:11px;">' + r[c] + '</td>').join('') + '</tr>').join('');
+        document.getElementById('uploadPreviewTitle').textContent = 'Preview (' + json.length + ' rows)';
+        document.getElementById('uploadPreview').style.display = 'block';
+      } catch(e) { alert('Error: ' + e.message); }
+    };
+    reader.readAsBinaryString(file);
+  }
+
+  function applyUploadToGrid() {
+    if (!uploadedData.length) return;
+    const shortMonth = currentMonth.substring(0, 3);
+    const validStatuses = ['P','A','CL','SL','PL','SpL','H','WO','HD','OT'];
+    uploadedData.forEach(row => {
+      const ein = String(row['EIN'] || '').trim().toUpperCase();
+      const mainIdx = attendanceRecords.findIndex(r => r.ein === ein);
+      if (mainIdx < 0) return;
+      const emp = attendanceRecords[mainIdx];
+      const keys = Object.keys(row);
+      const dateKeys = keys.filter(k => /^\d{1,2}-[A-Za-z]{3}$/.test(k.trim()));
+      if (dateKeys.length > 0) {
+        emp.days = [];
+        for (let d = 1; d <= (emp.daysInMonth||currentDaysInMonth); d++) {
+          const key = d + '-' + shortMonth;
+          const val = String(row[key] || '').trim();
+          emp.days.push({ day: d, status: validStatuses.includes(val) ? val : '', otHours: val==='OT' ? 1 : 0 });
+        }
+      }
+      recalcEmp(mainIdx);
+    });
+    displayRecords = activeGroupFilter ? attendanceRecords.filter(r => r.groupName === activeGroupFilter) : attendanceRecords;
+    switchInputTab('Grid');
+    renderNewGrid();
+    showAlert('newAlertSuccess', 'Data applied. Review and submit.');
   }
 
   async function editAttendance(id) {
@@ -844,23 +919,76 @@
       const res = await fetch('/api/attendance/' + id);
       const data = await res.json();
       if (!data.success) return;
-      const record = data.record;
+      const rec = data.record;
       currentAttendanceId = id;
-      currentMonth = record.month;
-      currentYear = String(record.year);
-      currentLocation = record.location;
-      currentSection = record.section;
-      currentProfile = record.profile;
-      currentDaysInMonth = record.records.length > 0 ? record.records[0].daysInMonth : 30;
-      isGridLocked = record.status === 'Locked';
-      attendanceRecords = record.records;
-      renderGrid();
-      switchView('gridView');
+      currentMonth = rec.month;
+      currentYear = String(rec.year);
+      currentDaysInMonth = rec.records.length > 0 ? rec.records[0].daysInMonth : 30;
+      isLocked = rec.status === 'Locked';
+      activeMode = 'edit';
+      displayRecords = rec.records;
+      attendanceRecords = rec.records;
+      const sname = rec.section === 'State' ? 'Xaviers' : 'Global';
+      document.getElementById('editViewTitle').textContent = (rec.groupName || sname+' '+rec.location+' '+rec.profile) + ' — ' + rec.month + ' ' + rec.year;
+      document.getElementById('editGroupInfo').innerHTML =
+        '<div class="group-info-item"><label>Group</label><span>' + (rec.groupName||'') + '</span></div>' +
+        '<div class="group-info-item"><label>Period</label><span>' + rec.month + ' ' + rec.year + '</span></div>' +
+        '<div class="group-info-item"><label>Employees</label><span>' + rec.records.length + '</span></div>' +
+        '<div class="group-info-item"><label>Status</label><span>' + rec.status + '</span></div>';
+      document.getElementById('editSaveBtn').style.display = isLocked ? 'none' : 'inline-block';
+      document.getElementById('editSubmitBtn').style.display = isLocked ? 'none' : 'inline-block';
+      document.getElementById('editLockBtn').style.display = rec.status === 'Submitted' ? 'inline-block' : 'none';
+      document.getElementById('editBulkBar').style.display = isLocked ? 'none' : 'flex';
+      document.getElementById('sumStatus2').textContent = rec.status;
+      renderGrid('editGridHead','editGridBody','sumTotal2','sumPresent2','sumCL2','sumSL2','sumAbsent2','sumOT2','sumDays2', rec.records, isLocked);
+      switchView('editView');
     } catch(e) { console.error(e); }
   }
 
-  async function lockAttendance(id) {
-    if (!confirm('Lock this attendance? It cannot be edited after locking.')) return;
+  async function saveEditGrid(action) {
+    try {
+      const loc = attendanceRecords[0]?.location || '';
+      const sec = attendanceRecords[0]?.section || '';
+      const pro = attendanceRecords[0]?.profile || '';
+      const res = await fetch('/api/attendance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ month: currentMonth, year: parseInt(currentYear), location: loc, section: sec, profile: pro, records: attendanceRecords })
+      });
+      const data = await res.json();
+      if (!data.success) { showAlert('editAlertError', data.message); return; }
+      currentAttendanceId = data.record._id;
+      if (action === 'Submit') {
+        await fetch('/api/attendance/' + currentAttendanceId + '/submit', { method: 'PATCH' });
+        showAlert('editAlertSuccess', '✅ Submitted for payroll');
+        document.getElementById('sumStatus2').textContent = 'Submitted';
+        document.getElementById('editSubmitBtn').style.display = 'none';
+        document.getElementById('editSaveBtn').style.display = 'none';
+        document.getElementById('editLockBtn').style.display = 'inline-block';
+      } else {
+        showAlert('editAlertSuccess', '✅ Saved as draft');
+      }
+    } catch(e) { showAlert('editAlertError', 'Error: ' + e.message); }
+  }
+
+  async function lockEdit() {
+    if (!confirm('Lock attendance? Cannot edit after locking.')) return;
+    try {
+      const res = await fetch('/api/attendance/' + currentAttendanceId + '/lock', { method: 'PATCH' });
+      const data = await res.json();
+      if (data.success) {
+        isLocked = true;
+        document.getElementById('editLockBtn').style.display = 'none';
+        document.getElementById('editSubmitBtn').style.display = 'none';
+        document.getElementById('editSaveBtn').style.display = 'none';
+        document.getElementById('sumStatus2').textContent = 'Locked';
+        showAlert('editAlertSuccess', data.message);
+      }
+    } catch(e) {}
+  }
+
+  async function lockAtt(id) {
+    if (!confirm('Lock this attendance?')) return;
     try {
       const res = await fetch('/api/attendance/' + id + '/lock', { method: 'PATCH' });
       const data = await res.json();
@@ -868,42 +996,25 @@
     } catch(e) {}
   }
 
-  async function deleteAttendance(id) {
+  async function deleteAtt(id) {
     if (!confirm('Delete this attendance record?')) return;
     try {
       const res = await fetch('/api/attendance/' + id, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) { showListAlert('listAlertSuccess', data.message); await loadAttendanceList(); }
-      else { showListAlert('listAlertError', data.message); }
+      else showListAlert('listAlertError', data.message);
     } catch(e) {}
   }
 
-  function showUploadView() { switchView('uploadView'); }
+  function showNewView() { switchView('newView'); document.getElementById('inputMethodSection').style.display = 'none'; }
   function showListView() { switchView('listView'); loadAttendanceList(); }
-  function switchView(viewId) {
-    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-    document.getElementById(viewId).classList.add('active');
-    window.scrollTo(0, 0);
-  }
+  function switchView(id) { document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); document.getElementById(id).classList.add('active'); window.scrollTo(0,0); }
+  function showAlert(id, msg) { const el = document.getElementById(id); if (!el) return; el.textContent = msg; el.style.display = 'block'; setTimeout(() => el.style.display = 'none', 5000); }
+  function showListAlert(id, msg) { const el = document.getElementById(id); if (!el) return; el.textContent = msg; el.style.display = 'block'; setTimeout(() => el.style.display = 'none', 4000); }
 
-  function showAlert(id, msg) {
-    const el = document.getElementById(id);
-    el.textContent = msg; el.style.display = 'block';
-    setTimeout(() => el.style.display = 'none', 4000);
-  }
-
-  function showListAlert(id, msg) {
-    const el = document.getElementById(id);
-    el.textContent = msg; el.style.display = 'block';
-    setTimeout(() => el.style.display = 'none', 4000);
-  }
-
-  // Close picker when clicking outside
-  document.addEventListener('click', function(e) {
+  document.addEventListener('click', e => {
     const picker = document.getElementById('statusPicker');
-    if (picker && !picker.contains(e.target) && !e.target.classList.contains('day-cell')) {
-      picker.style.display = 'none';
-    }
+    if (picker && !picker.contains(e.target) && !e.target.classList.contains('day-cell')) picker.style.display = 'none';
   });
 </script>
 </body>
