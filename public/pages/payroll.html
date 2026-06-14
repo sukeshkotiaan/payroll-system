@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payroll — Payroll System</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; }
+    .header {
+      background: #1a73e8; color: white;
+      padding: 15px 30px;
+      display: flex; justify-content: space-between; align-items: center;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .header h1 { font-size: 20px; }
+    .btn-back {
+      background: white; color: #1a73e8; border: none;
+      padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600;
+    }
+    .view { display: none; }
+    .view.active { display: block; }
+    .container { padding: 20px; }
+    .btn-primary {
+      background: #1a73e8; color: white; border: none;
+      padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px;
+    }
+    .btn-success {
+      background: #34a853; color: white; border: none;
+      padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px;
+    }
+    .btn-secondary {
+      background: #f0f2f5; color: #333; border: none;
+      padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px;
+    }
+    .btn-warning {
+      background: #fbbc04; color: #333; border: none;
+      padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 600;
+    }
+    .btn-danger {
+      background: #ea4335; color: white; border: none;
+      padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 600;
+    }
+    .card {
+      background: white; border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; margin-bottom: 20px;
+    }
+    .card-header {
+      padding: 15px 20px; border-bottom: 1px solid #eee;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .card-header h3 { font-size: 15px; color: #333; }
+    .card-body { padding: 20px; }
+    .form-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group label { font-size: 13px; font-weight: 600; color: #555; }
+    .form-group select, .form-group input {
+      padding: 9px 11px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; outline: none;
+    }
+    .form-group select:focus, .form-group input:focus { border-color: #1a73e8; }
+    .badge { padding: 3px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+    .badge-draft { background: #fef3c7; color: #d97706; }
+    .badge-pending { background: #e8f0fe; color: #1a73e8; }
+    .badge-approved { background: #e6f4ea; color: #34a853; }
+    .badge-locked { background: #f3e8ff; color: #7b1fa2; }
+    .alert { padding: 10px 14px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; display: none; }
+    .alert-success { background: #e6f4ea; color: #34a853; }
+    .alert-error { background: #fce8e6; color: #ea4335; }
+    .alert-warning { background: #fef3c7; color: #d97706; }
+    .empty-state { text-align: center; padding: 40px; color: #999; }
+    .form-view-header {
+      display: flex; align-items: center; gap: 15px;
+      margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #e8f0fe;
+    }
+    .btn-back-list {
+      background: #e8f0fe; color: #1a73e8; border: none;
+      padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px;
+    }
+    .summary-grid {
+      display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 20px;
+    }
+    .summary-card {
+      background: white; border-radius: 10px; padding: 15px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center;
+    }
+    .summary-card label { font-size: 11px; color: #666; display: block; margin-bottom: 5px; font-weight: 600; }
+    .summary-card span { font-size: 18px; font-weight: 700; color: #1a73e8; }
+    .payroll-table-wrapper { overflow-x: auto; max-height: 60vh; overflow-y: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; white-space: nowrap; }
+    th {
+      background: #1a73e8; color: white; padding: 10px 10px;
+      text-align: right; font-weight: 600; position: sticky; top: 0; z-index: 10;
+    }
+    th.left { text-align: left; }
+    td { padding: 9px 10px; border-bottom: 1px solid #f5f5f5; color: #333; text-align: right; }
+    td.left { text-align: left; }
+    tr:hover { background: #f8f9ff; }
+    tr.total-row td { background: #e8f0fe; font-weight: 700; color: #1a73e8; border-top: 2px solid #1a73e8; }
+    .editable { background: #fff9c4; cursor: pointer; }
+    .editable:hover { background: #fff3b0; }
+    .action-bar {
+      display: flex; gap: 10px; justify-content: flex-end;
+      padding: 15px 20px; border-top: 1px solid #eee; background: white;
+      position: sticky; bottom: 0; z-index: 10;
+    }
+    .group-info {
+      background: #e8f0fe; border-radius: 8px; padding: 12px 20px;
+      display: flex; gap: 30px; margin-bottom: 20px; flex-wrap: wrap;
+    }
+    .group-info-item label { font-size: 11px; color: #666; font-weight: 600; display: block; }
+    .group-info-item span { font-size: 14px; font-weight: 700; color: #1a73e8; }
+    .list-table table { font-size: 13px; }
+    .list-table th { background: #f8f9fa; color: #555; padding: 12px 15px; text-align: left; border-bottom: 1px solid #eee; position: static; }
+    .list-table td { padding: 12px 15px; text-align: left; }
+    .modal-overlay {
+      display: none; position: fixed; top: 0; left: 0;
+      width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;
+    }
+    .modal {
+      background: white; margin: 50px auto; border-radius: 12px;
+      width: 90%; max-width: 500px; padding: 25px;
+    }
+    .modal-header {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
+    }
+    .modal-header h3 { color: #333; }
+    .btn-close { background: none; border: none; font-size: 22px; cursor: pointer; }
+    .tds-options { display: flex; gap: 10px; margin-bottom: 15px; }
+    .tds-option {
+      flex: 1; padding: 10px; border: 2px solid #ddd; border-radius: 8px;
+      cursor: pointer; text-align: center; font-size: 13px; font-weight: 600;
+    }
+    .tds-option.active { border-color: #1a73e8; background: #e8f0fe; color: #1a73e8; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>💰 Payroll Processing</h1>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span id="headerUser" style="font-size:13px;"></span>
+    <button class="btn-back" onclick="window.location.href='/dashboard'">← Dashboard</button>
+  </div>
+</div>
+
+<!-- LIST VIEW -->
+<div id="listView" class="view active">
+  <div class="container">
+    <div class="alert alert-success" id="listAlertSuccess"></div>
+    <div class="alert alert-error" id="listAlertError"></div>
+
+    <!-- FILTERS -->
+    <div class="card">
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Month</label>
+            <select id="filterMonth">
+              <option value="">All Months</option>
+              <option>January</option><option>February</option><option>March</option>
+              <option>April</option><option>May</option><option>June</option>
+              <option>July</option><option>August</option><option>September</option>
+              <option>October</option><option>November</option><option>December</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Year</label>
+            <select id="filterYear"><option value="">All Years</option></select>
+          </div>
+          <div class="form-group">
+            <label>Location</label>
+            <select id="filterLocation"><option value="">All Locations</option></select>
+          </div>
+          <div class="form-group">
+            <label>Status</label>
+            <select id="filterStatus">
+              <option value="">All Status</option>
+              <option value="Draft">Draft</option>
+              <option value="Pending Approval">Pending Approval</option>
+              <option value="Approved">Approved</option>
+              <option value="Locked">Locked</option>
+            </select>
+          </div>
+          <div class="form-group" style="align-self:end;">
+            <button class="btn-primary" onclick="loadPayrollList()">🔍 Search</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LIST -->
+    <div class="card list-table">
+      <div class="card-header">
+        <h3>Payroll Records <span id="listCount" style="color:#666;font-weight:400;font-size:13px;"></span></h3>
+        <button class="btn-primary" onclick="showProcessView()">+ Process Payroll</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Group</th><th>Month / Year</th><th>Employees</th>
+            <th>Total Gross</th><th>Total Net</th>
+            <th>Processed By</th><th>Status</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="payrollList">
+          <tr><td colspan="8"><div class="empty-state">Loading...</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- PROCESS VIEW -->
+<div id="processView" class="view">
+  <div class="container">
+    <div class="form-view-header">
+      <button class="btn-back-list" onclick="showListView()">← Back to List</button>
+      <h2>Process Payroll</h2>
+    </div>
+    <div class="alert alert-success" id="processAlertSuccess"></div>
+    <div class="alert alert-error" id="processAlertError"></div>
+    <div class="alert alert-warning" id="processAlertWarning"></div>
+
+    <div class="card">
+      <div class="card-header"><h3>Select Period & Group</h3></div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Month *</label>
+            <select id="processMonth">
+              <option value="">Select Month</option>
+              <option>January</option><option>February</option><option>March</option>
+              <option>April</option><option>May</option><option>June</option>
+              <option>July</option><option>August</option><option>September</option>
+              <option>October</option><option>November</option><option>December</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Year *</label>
+            <select id="processYear"></select>
+          </div>
+          <div class="form-group">
+            <label>Location *</label>
+            <select id="processLocation"><option value="">Select Location</option></select>
+          </div>
+          <div class="form-group">
+            <label>Section *</label>
+            <select id="processSection"><option value="">Select Section</option></select>
+          </div>
+          <div class="form-group">
+            <label>Profile *</label>
+            <select id="processProfile"><option value="">Select Profile</option></select>
+          </div>
+        </div>
+        <div style="margin-top:15px;">
+          <button class="btn-primary" onclick="processPayroll()">⚙️ Calculate Payroll</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAYROLL DETAIL VIEW -->
+<div id="detailView" class="view">
+  <div class="container">
+    <div class="form-view-header">
+      <button class="btn-back-list" onclick="showListView()">← Back to List</button>
+      <h2 id="detailTitle">Payroll Detail</h2>
+    </div>
+    <div class="alert alert-success" id="detailAlertSuccess"></div>
+    <div class="alert alert-error" id="detailAlertError"></div>
+
+    <div class="group-info" id="detailGroupInfo"></div>
+
+    <!-- SUMMARY -->
+    <div class="summary-grid">
+      <div class="summary-card"><label>Employees</label><span id="sumEmp">0</span></div>
+      <div class="summary-card"><label>Total Gross</label><span id="sumGross">₹0</span></div>
+      <div class="summary-card"><label>Total PF</label><span id="sumPF">₹0</span></div>
+      <div class="summary-card"><label>Total PT</label><span id="sumPT">₹0</span></div>
+      <div class="summary-card"><label>Total TDS</label><span id="sumTDS">₹0</span></div>
+      <div class="summary-card"><label>Total Net</label><span id="sumNet" style="color:#34a853;">₹0</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3>Payroll Sheet</h3>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-success" onclick="exportPayroll()">📤 Export</button>
+        </div>
+      </div>
+
+      <div class="payroll-table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th class="left" style="min-width:50px;">#</th>
+              <th class="left" style="min-width:80px;">EIN</th>
+              <th class="left" style="min-width:160px;">Name</th>
+              <th class="left" style="min-width:100px;">Designation</th>
+              <th style="min-width:80px;">Salary</th>
+              <th style="min-width:60px;">Days</th>
+              <th style="min-width:60px;">Present</th>
+              <th style="min-width:50px;">LOP</th>
+              <th style="min-width:80px;">LOP Ded.</th>
+              <th style="min-width:80px;">Gross</th>
+              <th style="min-width:70px;">Basic</th>
+              <th style="min-width:70px;">HRA</th>
+              <th style="min-width:60px;">PF</th>
+              <th style="min-width:50px;">PT</th>
+              <th style="min-width:60px;">ESIC</th>
+              <th class="editable" style="min-width:60px;">TDS ✏️</th>
+              <th class="editable" style="min-width:70px;">Arrear ✏️</th>
+              <th class="editable" style="min-width:70px;">Advance ✏️</th>
+              <th style="min-width:60px;">OT Hrs</th>
+              <th style="min-width:70px;">OT Amt</th>
+              <th style="min-width:80px;">Total Ded.</th>
+              <th style="min-width:80px;">Net Salary</th>
+              <th class="left" style="min-width:100px;">Remarks</th>
+            </tr>
+          </thead>
+          <tbody id="payrollTableBody"></tbody>
+        </table>
+      </div>
+
+      <div class="action-bar" id="detailActionBar">
+        <button class="btn-secondary" onclick="showListView()">Close</button>
+        <button class="btn-primary" id="btnReprocess" onclick="reprocessPayroll()">🔄 Reprocess</button>
+        <button class="btn-warning" id="btnSubmit" onclick="submitForApproval()">📤 Submit for Approval</button>
+        <button class="btn-success" id="btnApprove" onclick="approvePayroll()">✅ Approve</button>
+        <button class="btn-danger" id="btnLock" onclick="lockPayroll()">🔒 Lock</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TDS EDIT MODAL -->
+<div class="modal-overlay" id="tdsModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>✏️ Edit Employee Deductions</h3>
+      <button class="btn-close" onclick="closeTdsModal()">×</button>
+    </div>
+    <input type="hidden" id="tdsEin">
+    <div style="font-size:13px;font-weight:600;color:#333;margin-bottom:15px;" id="tdsEmpName"></div>
+
+    <div style="margin-bottom:15px;">
+      <label style="font-size:13px;font-weight:600;color:#555;display:block;margin-bottom:8px;">TDS Type</label>
+      <div class="tds-options">
+        <div class="tds-option active" id="tdsNone" onclick="setTdsType('none')">No TDS</div>
+        <div class="tds-option" id="tdsManual" onclick="setTdsType('manual')">Manual Amount</div>
+        <div class="tds-option" id="tdsPercent" onclick="setTdsType('percent')">% of Gross</div>
+      </div>
+    </div>
+
+    <div id="tdsManualField" style="display:none;margin-bottom:15px;">
+      <label style="font-size:13px;font-weight:600;color:#555;display:block;margin-bottom:5px;">TDS Amount (₹)</label>
+      <input type="number" id="tdsAmount" placeholder="Enter TDS amount"
+        style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-size:13px;outline:none;">
+    </div>
+
+    <div id="tdsPercentField" style="display:none;margin-bottom:15px;">
+      <label style="font-size:13px;font-weight:600;color:#555;display:block;margin-bottom:5px;">TDS % of Gross</label>
+      <input type="number" id="tdsPercentVal" placeholder="e.g. 10"
+        style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-size:13px;outline:none;">
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">
+      <div>
+        <label style="font-size:13px;font-weight:600;color:#555;display:block;margin-bottom:5px;">Arrear (₹)</label>
+        <input type="number" id="arrearAmt" placeholder="0"
+          style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-size:13px;outline:none;">
+        <div style="font-size:11px;color:#999;margin-top:3px;">Positive = add to salary</div>
+      </div>
+      <div>
+        <label style="font-size:13px;font-weight:600;color:#555;display:block;margin-bottom:5px;">Advance (₹)</label>
+        <input type="number" id="advanceAmt" placeholder="0"
+          style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-size:13px;outline:none;">
+        <div style="font-size:11px;color:#999;margin-top:3px;">Deducted from salary</div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:15px;">
+      <label style="font-size:13px;font-weight:600;color:#555;display:block;margin-bottom:5px;">Remarks</label>
+      <input type="text" id="tdsRemarks" placeholder="Optional remarks"
+        style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-size:13px;outline:none;">
+    </div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button class="btn-secondary" onclick="closeTdsModal()">Cancel</button>
+      <button class="btn-primary" onclick="saveTdsEdit()">💾 Save</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+  let currentUser = {};
+  let currentPayrollId = null;
+  let currentPayroll = null;
+  let currentTdsType = 'none';
+
+  const MONTHS = ['January','February','March','April','May','June',
+    'July','August','September','October','November','December'];
+
+  window.onload = async () => {
+    await checkAuth();
+    await loadMasterData();
+    populateYears();
+    setDefaultMonthYear();
+    await loadPayrollList();
+  };
+
+  async function checkAuth() {
+    const res = await fetch('/api/auth/me');
+    const data = await res.json();
+    if (!data.success) { window.location.href = '/'; return; }
+    currentUser = data.user;
+    document.getElementById('headerUser').textContent = data.user.fullName;
+  }
+
+  async function loadMasterData() {
+    try {
+      const [locRes, secRes, proRes] = await Promise.all([
+        fetch('/api/masters/location'),
+        fetch('/api/masters/section'),
+        fetch('/api/masters/profile')
+      ]);
+      const [locData, secData, proData] = await Promise.all([
+        locRes.json(), secRes.json(), proRes.json()
+      ]);
+      if (locData.success) {
+        populateSelect('filterLocation', locData.masters.map(m => m.value), 'All Locations');
+        populateSelect('processLocation', locData.masters.map(m => m.value), 'Select Location');
+      }
+      if (secData.success) populateSelect('processSection', secData.masters.map(m => m.value), 'Select Section');
+      if (proData.success) populateSelect('processProfile', proData.masters.map(m => m.value), 'Select Profile');
+    } catch(e) {}
+  }
+
+  function populateSelect(id, values, placeholder) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = '<option value="">' + placeholder + '</option>';
+    values.forEach(v => { el.innerHTML += '<option value="' + v + '">' + v + '</option>'; });
+  }
+
+  function populateYears() {
+    const now = new Date().getFullYear();
+    ['filterYear','processYear'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.innerHTML = id === 'filterYear' ? '<option value="">All Years</option>' : '';
+      for (let y = now + 1; y >= now - 3; y--) {
+        el.innerHTML += '<option value="' + y + '">' + y + '</option>';
+      }
+    });
+  }
+
+  function setDefaultMonthYear() {
+    const now = new Date();
+    const m = document.getElementById('processMonth');
+    const y = document.getElementById('processYear');
+    if (m) m.value = MONTHS[now.getMonth()];
+    if (y) y.value = now.getFullYear();
+  }
+
+  async function loadPayrollList() {
+    try {
+      const month = document.getElementById('filterMonth').value;
+      const year = document.getElementById('filterYear').value;
+      const location = document.getElementById('filterLocation').value;
+      const status = document.getElementById('filterStatus').value;
+      let url = '/api/payroll?';
+      if (month) url += 'month=' + month + '&';
+      if (year) url += 'year=' + year + '&';
+      if (location) url += 'location=' + location + '&';
+      if (status) url += 'status=' + encodeURIComponent(status) + '&';
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.success) renderPayrollList(data.records);
+    } catch(e) {}
+  }
+
+  function renderPayrollList(records) {
+    const tbody = document.getElementById('payrollList');
+    document.getElementById('listCount').textContent = '(' + records.length + ' records)';
+    if (records.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state">No payroll records found</div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = records.map(r => `
+      <tr>
+        <td>${r.groupName || r.section + ' ' + r.location}</td>
+        <td>${r.month} ${r.year}</td>
+        <td>${r.records ? r.records.length : '—'}</td>
+        <td>₹${formatNum(r.totalGross)}</td>
+        <td>₹${formatNum(r.totalNet)}</td>
+        <td>${r.processedBy || '—'}</td>
+        <td><span class="badge badge-${r.status.toLowerCase().replace(' ','-')}">${r.status}</span></td>
+        <td>
+          <button class="btn-warning" onclick="viewPayroll('${r._id}')">View</button>
+          ${r.status === 'Draft' ? '<button class="btn-danger" onclick="deletePayroll(\'' + r._id + '\')" style="margin-left:4px;">Delete</button>' : ''}
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  async function processPayroll() {
+    const month = document.getElementById('processMonth').value;
+    const year = document.getElementById('processYear').value;
+    const location = document.getElementById('processLocation').value;
+    const section = document.getElementById('processSection').value;
+    const profile = document.getElementById('processProfile').value;
+    if (!month || !year || !location || !section || !profile) {
+      showAlert('processAlertError', 'Please select all fields');
+      return;
+    }
+    showAlert('processAlertWarning', '⏳ Processing payroll...');
+    try {
+      const res = await fetch('/api/payroll/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ month, year: parseInt(year), location, section, profile })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showAlert('processAlertSuccess', '✅ ' + data.message);
+        setTimeout(() => {
+          viewPayroll(data.payroll._id);
+        }, 1000);
+      } else {
+        showAlert('processAlertError', data.message);
+      }
+    } catch(e) { showAlert('processAlertError', 'Error: ' + e.message); }
+  }
+
+  async function viewPayroll(id) {
+    try {
+      const res = await fetch('/api/payroll/' + id);
+      const data = await res.json();
+      if (!data.success) return;
+      currentPayroll = data.payroll;
+      currentPayrollId = id;
+      renderPayrollDetail(data.payroll);
+      switchView('detailView');
+    } catch(e) { console.error(e); }
+  }
+
+  function renderPayrollDetail(payroll) {
+    document.getElementById('detailTitle').textContent =
+      payroll.groupName + ' — ' + payroll.month + ' ' + payroll.year;
+
+    document.getElementById('detailGroupInfo').innerHTML = `
+      <div class="group-info-item"><label>Group</label><span>${payroll.groupName}</span></div>
+      <div class="group-info-item"><label>Period</label><span>${payroll.month} ${payroll.year}</span></div>
+      <div class="group-info-item"><label>Location</label><span>${payroll.location}</span></div>
+      <div class="group-info-item"><label>Status</label><span>${payroll.status}</span></div>
+      <div class="group-info-item"><label>Processed By</label><span>${payroll.processedBy || '—'}</span></div>
+      ${payroll.approvedBy ? '<div class="group-info-item"><label>Approved By</label><span>' + payroll.approvedBy + '</span></div>' : ''}
+    `;
+
+    document.getElementById('sumEmp').textContent = payroll.records.length;
+    document.getElementById('sumGross').textContent = '₹' + formatNum(payroll.totalGross);
+    document.getElementById('sumPF').textContent = '₹' + formatNum(payroll.totalPF);
+    document.getElementById('sumPT').textContent = '₹' + formatNum(payroll.totalPT);
+    document.getElementById('sumTDS').textContent = '₹' + formatNum(payroll.totalTDS);
+    document.getElementById('sumNet').textContent = '₹' + formatNum(payroll.totalNet);
+
+    const isLocked = payroll.status === 'Locked';
+    const isApproved = payroll.status === 'Approved';
+    const isPending = payroll.status === 'Pending Approval';
+    const isDraft = payroll.status === 'Draft';
+
+    document.getElementById('btnReprocess').style.display = isDraft ? 'inline-block' : 'none';
+    document.getElementById('btnSubmit').style.display = isDraft ? 'inline-block' : 'none';
+    document.getElementById('btnApprove').style.display = isPending ? 'inline-block' : 'none';
+    document.getElementById('btnLock').style.display = isApproved ? 'inline-block' : 'none';
+
+    const tbody = document.getElementById('payrollTableBody');
+    let totalGross = 0, totalPF = 0, totalPT = 0, totalESIC = 0,
+      totalTDS = 0, totalNet = 0, totalLOP = 0;
+
+    tbody.innerHTML = payroll.records.map((r, i) => {
+      totalGross += r.grossSalary || 0;
+      totalPF += r.pfDeduction || 0;
+      totalPT += r.ptDeduction || 0;
+      totalESIC += r.esicDeduction || 0;
+      totalTDS += r.tdsDeduction || 0;
+      totalNet += r.netSalary || 0;
+      totalLOP += r.lopDeduction || 0;
+
+      const editClick = isLocked ? '' :
+        'onclick="openTdsModal(\'' + r.ein + '\',\'' + r.employeeName.replace(/'/g,'') + '\',' +
+        r.tdsType + ',' + r.tdsDeduction + ',' + r.arrear + ',' + r.advance + ',\'' + (r.remarks||'') + '\')"';
+
+      return `<tr>
+        <td class="left">${i + 1}</td>
+        <td class="left"><strong>${r.ein}</strong></td>
+        <td class="left">${r.employeeName}</td>
+        <td class="left" style="font-size:11px;">${r.designation}</td>
+        <td>₹${formatNum(r.monthlySalary)}</td>
+        <td>${r.daysInMonth}</td>
+        <td>${r.presentDays}</td>
+        <td style="color:#ea4335;">${r.lopDays}</td>
+        <td style="color:#ea4335;">₹${formatNum(r.lopDeduction)}</td>
+        <td><strong>₹${formatNum(r.grossSalary)}</strong></td>
+        <td>₹${formatNum(r.basic)}</td>
+        <td>₹${formatNum(r.hra)}</td>
+        <td style="color:#ea4335;">₹${formatNum(r.pfDeduction)}</td>
+        <td style="color:#ea4335;">₹${formatNum(r.ptDeduction)}</td>
+        <td style="color:#ea4335;">₹${formatNum(r.esicDeduction)}</td>
+        <td class="${isLocked ? '' : 'editable'}" style="color:#ea4335;" ${editClick}>
+          ₹${formatNum(r.tdsDeduction)}${r.tdsType !== 'none' ? ' (' + r.tdsType + ')' : ''}
+        </td>
+        <td class="${isLocked ? '' : 'editable'}" style="color:#34a853;" ${editClick}>
+          ₹${formatNum(r.arrear)}
+        </td>
+        <td class="${isLocked ? '' : 'editable'}" style="color:#ea4335;" ${editClick}>
+          ₹${formatNum(r.advance)}
+        </td>
+        <td>${r.otHours || 0}</td>
+        <td style="color:#34a853;">₹${formatNum(r.otAmount)}</td>
+        <td style="color:#ea4335;"><strong>₹${formatNum(r.totalDeductions)}</strong></td>
+        <td style="color:#34a853;"><strong>₹${formatNum(r.netSalary)}</strong></td>
+        <td class="left" style="font-size:11px;">${r.remarks || ''}</td>
+      </tr>`;
+    }).join('');
+
+    // Total row
+    tbody.innerHTML += `<tr class="total-row">
+      <td class="left" colspan="4">TOTAL</td>
+      <td></td><td></td><td></td><td></td>
+      <td>₹${formatNum(totalLOP)}</td>
+      <td>₹${formatNum(totalGross)}</td>
+      <td></td><td></td>
+      <td>₹${formatNum(totalPF)}</td>
+      <td>₹${formatNum(totalPT)}</td>
+      <td>₹${formatNum(totalESIC)}</td>
+      <td>₹${formatNum(totalTDS)}</td>
+      <td></td><td></td><td></td><td></td>
+      <td></td>
+      <td>₹${formatNum(totalNet)}</td>
+      <td></td>
+    </tr>`;
+  }
+
+  function openTdsModal(ein, name, tdsType, tdsDeduction, arrear, advance, remarks) {
+    document.getElementById('tdsEin').value = ein;
+    document.getElementById('tdsEmpName').textContent = name;
+    document.getElementById('tdsAmount').value = tdsDeduction || 0;
+    document.getElementById('tdsPercentVal').value = 0;
+    document.getElementById('arrearAmt').value = arrear || 0;
+    document.getElementById('advanceAmt').value = advance || 0;
+    document.getElementById('tdsRemarks').value = remarks || '';
+    setTdsType(tdsType || 'none');
+    document.getElementById('tdsModal').style.display = 'block';
+  }
+
+  function setTdsType(type) {
+    currentTdsType = type;
+    ['tdsNone','tdsManual','tdsPercent'].forEach(id => {
+      document.getElementById(id).classList.remove('active');
+    });
+    document.getElementById('tds' + type.charAt(0).toUpperCase() + type.slice(1)).classList.add('active');
+    document.getElementById('tdsManualField').style.display = type === 'manual' ? 'block' : 'none';
+    document.getElementById('tdsPercentField').style.display = type === 'percent' ? 'block' : 'none';
+  }
+
+  function closeTdsModal() {
+    document.getElementById('tdsModal').style.display = 'none';
+  }
+
+  async function saveTdsEdit() {
+    const ein = document.getElementById('tdsEin').value;
+    const tdsAmount = parseFloat(document.getElementById('tdsAmount').value) || 0;
+    const tdsPercent = parseFloat(document.getElementById('tdsPercentVal').value) || 0;
+    const arrear = parseFloat(document.getElementById('arrearAmt').value) || 0;
+    const advance = parseFloat(document.getElementById('advanceAmt').value) || 0;
+    const remarks = document.getElementById('tdsRemarks').value;
+    try {
+      const res = await fetch('/api/payroll/' + currentPayrollId + '/record', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          ein,
+          tdsType: currentTdsType,
+          tdsPercent,
+          tdsDeduction: currentTdsType === 'manual' ? tdsAmount : 0,
+          arrear,
+          advance,
+          remarks
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        closeTdsModal();
+        await viewPayroll(currentPayrollId);
+        showAlert('detailAlertSuccess', 'Updated successfully');
+      } else {
+        showAlert('detailAlertError', data.message);
+      }
+    } catch(e) { showAlert('detailAlertError', 'Error: ' + e.message); }
+  }
+
+  async function reprocessPayroll() {
+    if (!currentPayroll) return;
+    if (!confirm('Reprocess payroll? All manual TDS/arrear/advance edits will be reset.')) return;
+    const month = currentPayroll.month;
+    const year = currentPayroll.year;
+    const location = currentPayroll.location;
+    const section = currentPayroll.section;
+    const profile = currentPayroll.profile;
+    showAlert('detailAlertWarning', '⏳ Reprocessing...');
+    try {
+      const res = await fetch('/api/payroll/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ month, year, location, section, profile })
+      });
+      const data = await res.json();
+      if (data.success) {
+        await viewPayroll(data.payroll._id);
+        showAlert('detailAlertSuccess', '✅ Reprocessed successfully');
+      } else {
+        showAlert('detailAlertError', data.message);
+      }
+    } catch(e) { showAlert('detailAlertError', 'Error: ' + e.message); }
+  }
+
+  async function submitForApproval() {
+    try {
+      const res = await fetch('/api/payroll/' + currentPayrollId + '/submit', {
+        method: 'PATCH', credentials: 'include'
+      });
+      const data = await res.json();
+      if (data.success) {
+        showAlert('detailAlertSuccess', data.message);
+        await viewPayroll(currentPayrollId);
+      } else { showAlert('detailAlertError', data.message); }
+    } catch(e) { showAlert('detailAlertError', 'Error: ' + e.message); }
+  }
+
+  async function approvePayroll() {
+    if (!confirm('Approve this payroll?')) return;
+    try {
+      const res = await fetch('/api/payroll/' + currentPayrollId + '/approve', {
+        method: 'PATCH', credentials: 'include'
+      });
+      const data = await res.json();
+      if (data.success) {
+        showAlert('detailAlertSuccess', data.message);
+        await viewPayroll(currentPayrollId);
+      } else { showAlert('detailAlertError', data.message); }
+    } catch(e) { showAlert('detailAlertError', 'Error: ' + e.message); }
+  }
+
+  async function lockPayroll() {
+    if (!confirm('Lock this payroll? It cannot be edited after locking.')) return;
+    try {
+      const res = await fetch('/api/payroll/' + currentPayrollId + '/lock', {
+        method: 'PATCH', credentials: 'include'
+      });
+      const data = await res.json();
+      if (data.success) {
+        showAlert('detailAlertSuccess', data.message);
+        await viewPayroll(currentPayrollId);
+      } else { showAlert('detailAlertError', data.message); }
+    } catch(e) { showAlert('detailAlertError', 'Error: ' + e.message); }
+  }
+
+  async function deletePayroll(id) {
+    if (!confirm('Delete this payroll record?')) return;
+    try {
+      const res = await fetch('/api/payroll/' + id, {
+        method: 'DELETE', credentials: 'include'
+      });
+      const data = await res.json();
+      if (data.success) {
+        showListAlert('listAlertSuccess', data.message);
+        await loadPayrollList();
+      } else { showListAlert('listAlertError', data.message); }
+    } catch(e) {}
+  }
+
+  function exportPayroll() {
+    if (!currentPayroll) return;
+    const headers = ['#','EIN','Name','Designation','Monthly Salary','Days','Present',
+      'LOP Days','LOP Deduction','Gross Salary','Basic','HRA',
+      'PF','PT','ESIC','TDS','Arrear','Advance','OT Hours','OT Amount',
+      'Total Deductions','Net Salary','Remarks'];
+    const rows = [headers];
+    currentPayroll.records.forEach((r, i) => {
+      rows.push([
+        i+1, r.ein, r.employeeName, r.designation,
+        r.monthlySalary, r.daysInMonth, r.presentDays,
+        r.lopDays, r.lopDeduction, r.grossSalary, r.basic, r.hra,
+        r.pfDeduction, r.ptDeduction, r.esicDeduction,
+        r.tdsDeduction, r.arrear, r.advance,
+        r.otHours, r.otAmount, r.totalDeductions, r.netSalary, r.remarks || ''
+      ]);
+    });
+    rows.push(['','','','TOTAL','','','','',
+      currentPayroll.records.reduce((s,r)=>s+(r.lopDeduction||0),0).toFixed(2),
+      currentPayroll.totalGross,'','',
+      currentPayroll.totalPF, currentPayroll.totalPT, currentPayroll.totalESIC,
+      currentPayroll.totalTDS,'','','','','',currentPayroll.totalNet,'']);
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Payroll');
+    XLSX.writeFile(wb, 'Payroll_' + currentPayroll.groupName + '_' +
+      currentPayroll.month + '_' + currentPayroll.year + '.xlsx');
+  }
+
+  function formatNum(n) {
+    if (!n) return '0';
+    return parseFloat(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function showProcessView() { switchView('processView'); }
+  function showListView() { switchView('listView'); loadPayrollList(); }
+  function switchView(viewId) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById(viewId).classList.add('active');
+    window.scrollTo(0, 0);
+  }
+  function showAlert(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg; el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 5000);
+  }
+  function showListAlert(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg; el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 4000);
+  }
+</script>
+</body>
+</html>

@@ -9,6 +9,7 @@ const ALL_MENUS = [
   { key: 'exits', label: '🚪 Exit Management' },
   { key: 'attendance', label: '📋 Attendance Upload' },
   { key: 'payroll', label: '💰 Payroll Processing' },
+  { key: 'arrears', label: '📊 Arrears & Advances' },
   { key: 'payroll-approval', label: '✅ Payroll Approval' },
   { key: 'payslip', label: '🧾 Payslip' },
   { key: 'archive', label: '📁 Archive' },
