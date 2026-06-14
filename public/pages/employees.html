@@ -753,7 +753,7 @@
       { id: 'title', label: 'Title' }, { id: 'gender', label: 'Gender' },
       { id: 'employeeName', label: 'Employee Name' },
       { id: 'dateOfBirth', label: 'Date of Birth' }, { id: 'dateOfJoining', label: 'Date of Joining' },
-      { id: 'phoneNumber', label: 'Phone Number' }, { id: 'monthlySalary', label: 'Monthly Salary' }
+       { id: 'monthlySalary', label: 'Monthly Salary' }
     ];
     for (const f of required) {
       const el = document.getElementById(f.id);
@@ -855,28 +855,53 @@
 
   async function importEmployees() {
     if (!importData.length) return;
-    const mapped = importData.map(row => ({
-      ein: String(row['EIN'] || '').trim(), location: row['Location'] || '', section: row['Section'] || '',
-      profile: row['Profile'] || '', department: row['Department'] || '', title: row['Title'] || '',
-      gender: row['Gender'] || 'Male', employeeName: row['Employee Name'] || '',
-      designation: row['Designation'] || '', dateOfBirth: row['Date of Birth'] || '',
-      dateOfJoining: row['Date of Joining'] || '', panNumber: row['PAN Number'] || '',
-      aadhaarNumber: String(row['Aadhaar Number'] || ''), phoneNumber: String(row['Phone Number'] || ''),
-      email: row['Email'] || '', address: row['Address'] || '',
-      monthlySalary: parseFloat(row['Monthly Salary']) || 0,
-      ctcAnnual: (parseFloat(row['Monthly Salary']) || 0) * 12,
-      ctcMonthly: parseFloat(row['Monthly Salary']) || 0,
-      pfApplicable: String(row['PF Applicable']).toLowerCase() === 'yes',
-      esicApplicable: String(row['ESIC Applicable']).toLowerCase() === 'yes',
-      ptApplicable: String(row['PT Applicable']).toLowerCase() === 'yes',
-      isRestricted: String(row['Restricted']).toLowerCase() === 'yes',
-      uanNumber: String(row['UAN Number'] || '')
-    }));
+    const mapped = importData.map(row => {
+      const monthly = parseFloat(row['Monthly Salary']) || 0;
+      return {
+        ein: String(row['EIN'] || '').trim() || undefined,
+        location: row['Location'] || '',
+        section: row['Section'] || '',
+        profile: row['Profile'] || '',
+        department: row['Department'] || 'Secondary',
+        title: row['Title'] || '',
+        gender: row['Gender'] || '',
+        employeeName: row['Employee Name'] || '',
+        designation: row['Designation'] || 'Teacher',
+        dateOfBirth: row['Date of Birth'] ? new Date(row['Date of Birth']).toISOString() : new Date('1990-01-01').toISOString(),
+        dateOfJoining: row['Date of Joining'] ? new Date(row['Date of Joining']).toISOString() : new Date().toISOString(),
+        panNumber: row['PAN Number'] || '',
+        aadhaarNumber: String(row['Aadhaar Number'] || ''),
+        phoneNumber: String(row['Phone Number'] || '0000000000'),
+        email: row['Email'] || '',
+        address: row['Address'] || '',
+        monthlySalary: monthly,
+        ctcAnnual: monthly * 12,
+        ctcMonthly: monthly,
+        basic: parseFloat((monthly * 0.76923).toFixed(2)),
+        hraAllowance: parseFloat((monthly * 0.23077).toFixed(2)),
+        pfApplicable: String(row['PF Applicable'] || '').toLowerCase() === 'yes',
+        esicApplicable: String(row['ESIC Applicable'] || '').toLowerCase() === 'yes',
+        ptApplicable: String(row['PT Applicable'] || '').toLowerCase() === 'yes',
+        isRestricted: String(row['Restricted'] || '').toLowerCase() === 'yes',
+        uanNumber: String(row['UAN Number'] || '')
+      };
+    }).filter(e => e.employeeName && e.location && e.section && e.profile);
     try {
-      const res = await fetch('/api/employees/bulk-import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ employees: mapped }) });
-      const data = await res.json();
-      if (data.success) { showImportMsg('importSuccess', data.message); await loadEmployees(); setTimeout(closeImportModal, 2000); }
-      else { showImportMsg('importError', data.message); }
+      const batchSize = 50;
+      let totalCreated = 0, totalSkipped = 0;
+      for (let i = 0; i < mapped.length; i += batchSize) {
+        const batch = mapped.slice(i, i + batchSize);
+        showImportMsg('importSuccess', 'Importing ' + Math.min(i + batchSize, mapped.length) + ' of ' + mapped.length + '...');
+        const res = await fetch('/api/employees/bulk-import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ employees: batch }) });
+        const data = await res.json();
+        if (data.success) {
+          const match = data.message.match(/Created: (d+), Skipped: (d+)/);
+          if (match) { totalCreated += parseInt(match[1]); totalSkipped += parseInt(match[2]); }
+        } else { showImportMsg('importError', data.message); return; }
+      }
+      showImportMsg('importSuccess', 'Import complete! Created: ' + totalCreated + ', Skipped: ' + totalSkipped);
+      await loadEmployees();
+      setTimeout(closeImportModal, 3000);
     } catch(e) { showImportMsg('importError', 'Error: ' + e.message); }
   }
 

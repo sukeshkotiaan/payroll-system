@@ -165,16 +165,38 @@ router.post('/bulk-import', isLoggedIn, isAdmin, async (req, res) => {
     let created = 0;
     let skipped = 0;
     const errors = [];
+
+    const einCounters = {};
+    const getNextEIN = async (location, section, profile) => {
+      const locCode = location === 'Thane' ? 'T' : location === 'Panvel' ? 'P' : location.charAt(0).toUpperCase();
+      const secCode = section === 'State' ? 'S' : section === 'Global' ? 'G' : section.charAt(0).toUpperCase();
+      const proCode = profile === 'Teaching' ? 'T' : profile === 'Non-Teaching' ? 'N' : profile.charAt(0).toUpperCase();
+      const prefix = secCode + locCode + proCode;
+      if (!einCounters[prefix]) {
+        const all = await Employee.find({ ein: { $regex: '^' + prefix + '-' } }).select('ein');
+        const nums = all.map(e => parseInt(e.ein.split('-')[1])).filter(n => Number.isFinite(n));
+        einCounters[prefix] = nums.length > 0 ? Math.max(...nums) : 1000;
+      }
+      einCounters[prefix]++;
+      return prefix + '-' + einCounters[prefix];
+    };
+
     for (const emp of employees) {
       try {
-        if (emp.ein) {
+        if (emp.ein && emp.ein.trim()) {
           const exists = await Employee.findOne({ ein: emp.ein });
-          if (exists) { skipped++; continue; }
+          if (exists) {
+            await Employee.findByIdAndUpdate(exists._id, { $set: emp });
+            skipped++;
+            continue;
+          }
+        } else {
+          emp.ein = await getNextEIN(emp.location, emp.section, emp.profile);
         }
         await Employee.create(emp);
         created++;
       } catch (e) {
-        errors.push({ ein: emp.ein, error: e.message });
+        errors.push({ name: emp.employeeName, error: e.message });
       }
     }
     return res.json({ success: true, message: 'Import complete. Created: ' + created + ', Skipped: ' + skipped, errors });

@@ -24,7 +24,7 @@ const employeeSchema = new mongoose.Schema({
   dateOfExit: { type: Date, default: null },
   panNumber: { type: String, trim: true, uppercase: true, default: '' },
   aadhaarNumber: { type: String, trim: true, default: '' },
-  phoneNumber: { type: String, required: true, trim: true },
+  phoneNumber: { type: String, required: false, trim: true, default: '' },
   email: { type: String, trim: true, lowercase: true, default: '' },
   address: { type: String, trim: true, default: '' },
   photo: { type: String, default: '' },
