@@ -287,8 +287,28 @@
       <div class="alert alert-success" id="alertSuccess"></div>
       <div class="alert alert-error" id="alertError"></div>
       <input type="hidden" id="userId">
+      <input type="hidden" id="linkedEmployeeId">
 
-      <div class="section-title">👤 User Details</div>
+      <!-- STEP 1: EIN SEARCH -->
+      <div class="section-title">🔍 Step 1 — Search Employee</div>
+      <div style="display:flex;gap:10px;margin-bottom:15px;">
+        <input type="text" id="einSearchInput" placeholder="Enter EIN (e.g. STT-1001)"
+          style="flex:1;max-width:300px;padding:10px;border:2px solid #1a73e8;border-radius:6px;font-size:13px;outline:none;text-transform:uppercase;"
+          onkeypress="if(event.key==='Enter') searchEINForUser()">
+        <button class="btn-primary" onclick="searchEINForUser()">🔍 Search</button>
+        <button class="btn-secondary" onclick="clearEINSearch()">Clear</button>
+      </div>
+      <div id="einSearchResult" style="display:none;background:#e8f0fe;border-radius:8px;padding:12px 15px;margin-bottom:15px;">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+          <div><div style="font-size:11px;color:#666;font-weight:600;">EIN</div><div style="font-weight:700;color:#1a73e8;" id="resEIN">—</div></div>
+          <div><div style="font-size:11px;color:#666;font-weight:600;">Name</div><div style="font-weight:700;color:#1a73e8;" id="resName">—</div></div>
+          <div><div style="font-size:11px;color:#666;font-weight:600;">Designation</div><div style="font-weight:700;color:#1a73e8;" id="resDesig">—</div></div>
+          <div><div style="font-size:11px;color:#666;font-weight:600;">Location</div><div style="font-weight:700;color:#1a73e8;" id="resLoc">—</div></div>
+        </div>
+      </div>
+
+      <!-- STEP 2: USER DETAILS -->
+      <div class="section-title">👤 Step 2 — User Details</div>
       <div class="form-grid">
         <div class="form-group full-width">
           <label>Full Name <span class="req">*</span></label>
@@ -296,7 +316,7 @@
         </div>
         <div class="form-group">
           <label>Username <span class="req">*</span></label>
-          <input type="text" id="username" placeholder="e.g. rahul.sharma" autocomplete="off">
+          <input type="text" id="username" placeholder="e.g. stt1001" autocomplete="off">
           <div class="hint">Lowercase only, no spaces</div>
         </div>
         <div class="form-group">
@@ -306,11 +326,13 @@
             <option value="admin">Admin</option>
             <option value="management">Management</option>
             <option value="accountant">Accountant</option>
+            <option value="supervisor">Supervisor</option>
           </select>
         </div>
       </div>
 
-      <div class="section-title">🏢 Branch Access</div>
+      <!-- STEP 3: BRANCH ACCESS -->
+      <div class="section-title">🏢 Step 3 — Branch Access</div>
       <div class="form-group">
         <label>Assign Branches <span class="req">*</span></label>
         <div class="branch-options" id="branchOptions">
@@ -319,7 +341,8 @@
         <div class="hint" id="branchHint">Select one or more branches</div>
       </div>
 
-      <div class="section-title" id="passwordSection">🔒 Password</div>
+      <!-- STEP 4: PASSWORD -->
+      <div class="section-title" id="passwordSection">🔒 Step 4 — Password</div>
       <div class="form-grid" id="passwordFields">
         <div class="form-group">
           <label id="passwordLabel">Password <span class="req">*</span></label>
@@ -453,8 +476,62 @@
     return selected.length > 0 ? selected : ['all'];
   }
 
+
+
+
+  async function searchEINForUser() {
+    const search = document.getElementById('einSearchInput').value.trim();
+    if (!search) { alert('Please enter EIN or Name'); return; }
+    try {
+      const res = await fetch('/api/tds/find-employee/' + encodeURIComponent(search));
+      const data = await res.json();
+      if (data.success) {
+        fillEmpDetails(data.employee);
+      } else {
+        alert('Employee not found: ' + search);
+      }
+    } catch(e) { alert('Error: ' + e.message); }
+  }
+
+  function fillEmpDetails(emp) {
+    document.getElementById('linkedEmployeeId').value = emp._id;
+    document.getElementById('resEIN').textContent = emp.ein || '—';
+    document.getElementById('resName').textContent = emp.employeeName || '—';
+    document.getElementById('resDesig').textContent = emp.designation || '—';
+    document.getElementById('resLoc').textContent = emp.location || '—';
+    document.getElementById('einSearchResult').style.display = 'block';
+    const fn = document.getElementById('fullName');
+    const un = document.getElementById('username');
+    if (fn && !fn.value) fn.value = emp.employeeName;
+    if (un && !un.value && emp.ein) {
+      un.value = emp.ein.toLowerCase().replace('-', '');
+    }
+    const role = document.getElementById('role');
+    if (role && !role.value) { role.value = 'supervisor'; onRoleChange(); }
+    if (emp.location) {
+      setTimeout(function() {
+        document.querySelectorAll('.branch-cb').forEach(function(cb) {
+          if (cb.value === emp.location) cb.checked = true;
+          if (cb.value === 'all') cb.checked = false;
+        });
+      }, 300);
+    }
+  }
+
+  function clearEINSearch() {
+    document.getElementById('einSearchInput').value = '';
+    document.getElementById('einSearchResult').style.display = 'none';
+    document.getElementById('linkedEmployeeId').value = '';
+    document.getElementById('fullName').value = '';
+    document.getElementById('username').value = '';
+    document.getElementById('role').value = '';
+    onRoleChange();
+  }
+
   function onRoleChange() {
     const role = document.getElementById('role').value;
+    const supSection = document.getElementById('supervisorEmpSection');
+    if (supSection) supSection.style.display = role === 'supervisor' ? 'block' : 'none';
     const hint = document.getElementById('branchHint');
     if (role === 'admin' || role === 'management') {
       renderBranchOptions(['all']);
@@ -575,14 +652,17 @@
       if (password !== confirmPassword) { showAlert('alertError', 'Passwords do not match'); return; }
     }
 
+    const linkedEmployeeId = document.getElementById('linkedEmployeeId').value;
     const payload = { fullName, role, branches };
     if (!editMode) { payload.username = username; payload.password = password; }
+    if (linkedEmployeeId) payload.linkedEmployeeId = linkedEmployeeId;
 
     try {
       const url = editMode ? '/api/users/' + id : '/api/users';
       const method = editMode ? 'PUT' : 'POST';
       const res = await fetch(url, {
         method,
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });

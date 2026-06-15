@@ -420,6 +420,22 @@
     if (!data.success) { window.location.href = '/'; return; }
     currentUser = data.user;
     document.getElementById('headerUser').textContent = data.user.fullName;
+    // If supervisor - auto load attendance
+    if (data.user.role === 'supervisor') {
+      setupSupervisorView();
+    }
+  }
+
+  function setupSupervisorView() {
+    // Hide filter fields for supervisor - they only see their group
+    const selLocation = document.getElementById('selLocation');
+    const selSection = document.getElementById('selSection');
+    const selProfile = document.getElementById('selProfile');
+    if (selLocation) selLocation.parentElement.style.display = 'none';
+    if (selSection) selSection.parentElement.style.display = 'none';
+    if (selProfile) selProfile.parentElement.style.display = 'none';
+    // Auto-init with current month
+    setTimeout(function() { initAttendance(); }, 500);
   }
 
   async function loadMasterData() {
@@ -530,14 +546,23 @@
                 const days = empData.daysInMonth;
                 if (days > currentDaysInMonth) currentDaysInMonth = days;
                 allGroups.push({ name: gname, location: loc, section: sec, profile: pro, count: empData.employees.length, daysInMonth: days });
+                const today = new Date().getDate();
+                const isCurrentMonth = (new Date().getMonth() === MONTHS.indexOf(month)) && (new Date().getFullYear() === parseInt(year));
                 empData.employees.forEach(emp => {
                   attendanceRecords.push({
                     ein: emp.ein, employeeId: emp._id, employeeName: emp.employeeName,
                     designation: emp.designation || '', location: loc, section: sec, profile: pro,
                     groupName: gname, daysInMonth: days,
-                    days: Array.from({ length: days }, (_, i) => ({ day: i+1, status: '', otHours: 0 })),
-                    presentDays: 0, cl: 0, sl: 0, pl: 0, spL: 0,
-                    absent: 0, halfDays: 0, weekOff: 0, holidays: 0, otHours: 0, lopDays: 0, payableDays: 0
+                    days: Array.from({ length: days }, function(_, i) {
+                      const day = i + 1;
+                      // Pre-fill P for supervisor up to today for current month
+                      const status = (currentUser.role === 'supervisor' && isCurrentMonth && day <= today) ? 'P' : '';
+                      return { day: day, status: status, otHours: 0 };
+                    }),
+                    presentDays: (currentUser.role === 'supervisor' && isCurrentMonth) ? Math.min(today, days) : 0,
+                    cl: 0, sl: 0, pl: 0, spL: 0,
+                    absent: 0, halfDays: 0, weekOff: 0, holidays: 0, otHours: 0, lopDays: 0,
+                    payableDays: (currentUser.role === 'supervisor' && isCurrentMonth) ? Math.min(today, days) : 0
                   });
                 });
               }

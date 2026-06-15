@@ -206,3 +206,39 @@ router.post('/bulk-import', isLoggedIn, isAdmin, async (req, res) => {
 });
 
 module.exports = router;
+
+// BULK UPDATE SUPERVISOR
+router.patch('/bulk-update-supervisor', isLoggedIn, isAdmin, async (req, res) => {
+  try {
+    const { employeeIds, supervisorId, supervisorName } = req.body;
+    if (!employeeIds || !employeeIds.length) {
+      return res.status(400).json({ success: false, message: 'No employees selected' });
+    }
+    await Employee.updateMany(
+      { _id: { $in: employeeIds } },
+      { $set: { supervisorId: supervisorId || null, supervisorName: supervisorName || '' } }
+    );
+    const action = supervisorId ? 'assigned to supervisor' : 'unassigned from supervisor';
+    return res.json({ success: true, message: employeeIds.length + ' employees ' + action });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// BULK UPDATE SUPERVISOR
+router.patch('/bulk-update-supervisor', isLoggedIn, isAdmin, async (req, res) => {
+  try {
+    const { employeeIds, supervisorId, supervisorName } = req.body;
+    if (!employeeIds || !employeeIds.length) {
+      return res.status(400).json({ success: false, message: 'No employees selected' });
+    }
+    await Employee.updateMany(
+      { _id: { $in: employeeIds } },
+      { $set: { supervisorId: supervisorId || null, supervisorName: supervisorName || '' } }
+    );
+    const action = supervisorId ? 'assigned to supervisor' : 'unassigned from supervisor';
+    return res.json({ success: true, message: employeeIds.length + ' employees ' + action });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
