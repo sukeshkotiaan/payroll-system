@@ -185,7 +185,7 @@
     </div>
 
     <!-- ADD FORM -->
-    <div class="card" id="monthlyAddCard" style="display:none;">
+    <div class="card" id="monthlyAddCard" style="display:none;overflow:visible;">
       <div class="card-header">
         <h3>+ Add TDS Entry</h3>
         <button class="btn-secondary" onclick="hideMonthlyAddForm()">✕ Close</button>
@@ -260,6 +260,16 @@
   const SHORT_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
   window.onload = async () => {
+    // Attach auto-suggest to employee search
+    attachEINSearch('monthlyEmpSearch', function(emp) {
+      currentMonthlyEIN = emp.ein;
+      document.getElementById('mInfoEIN').textContent = emp.ein;
+      document.getElementById('mInfoName').textContent = emp.employeeName;
+      document.getElementById('mInfoLoc').textContent = emp.location;
+      document.getElementById('mInfoSalary').textContent = '₹' + (emp.monthlySalary||0).toLocaleString('en-IN');
+      document.getElementById('monthlyEmpInfo').style.display = 'block';
+      document.getElementById('monthlyAmtFields').style.display = 'block';
+    });
     await checkAuth();
     await loadLocations();
     populateYears();
@@ -573,5 +583,6 @@
     setTimeout(() => el.style.display = 'none', 4000);
   }
 </script>
+<script src="/js/emp-search.js?v=2"></script>
 </body>
 </html>

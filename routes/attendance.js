@@ -72,15 +72,6 @@ router.get('/', isLoggedIn, async (req, res) => {
 });
 
 // GET single attendance record
-router.get('/:id', isLoggedIn, async (req, res) => {
-  try {
-    const record = await Attendance.findById(req.params.id);
-    if (!record) return res.status(404).json({ success: false, message: 'Not found' });
-    return res.json({ success: true, record });
-  } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
-  }
-});
 
 // GET employees for template
 router.get('/template/employees', isLoggedIn, async (req, res) => {
@@ -227,32 +218,8 @@ router.delete('/:id', isLoggedIn, async (req, res) => {
 
 
 // APPROVE attendance
-router.patch('/:id/approve', isLoggedIn, async (req, res) => {
-  try {
-    const attendance = await Attendance.findById(req.params.id);
-    if (!attendance) return res.status(404).json({ success: false, message: 'Not found' });
-    attendance.status = 'Approved';
-    attendance.updatedAt = new Date();
-    await attendance.save();
-    return res.json({ success: true, message: 'Attendance approved successfully' });
-  } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
-  }
-});
 
 // REJECT attendance
-router.patch('/:id/reject', isLoggedIn, async (req, res) => {
-  try {
-    const attendance = await Attendance.findById(req.params.id);
-    if (!attendance) return res.status(404).json({ success: false, message: 'Not found' });
-    attendance.status = 'Draft';
-    attendance.updatedAt = new Date();
-    await attendance.save();
-    return res.json({ success: true, message: 'Attendance rejected and returned to Draft' });
-  } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
-  }
-});
 
 
 // APPROVE attendance
@@ -283,4 +250,14 @@ router.patch('/:id/reject', isLoggedIn, async (req, res) => {
   }
 });
 
+
+router.get('/:id', isLoggedIn, async (req, res) => {
+  try {
+    const record = await Attendance.findById(req.params.id);
+    if (!record) return res.status(404).json({ success: false, message: 'Not found' });
+    return res.json({ success: true, record });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
 module.exports = router;

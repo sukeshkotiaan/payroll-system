@@ -276,6 +276,16 @@
   const DEDUCTION_TYPES = ['Advance', 'Loan Deduction'];
 
   window.onload = async () => {
+    attachEINSearch('einSearch', function(emp) {
+      currentEmployee = emp;
+      document.getElementById('empId').value = emp._id;
+      document.getElementById('infoEIN').textContent = emp.ein;
+      document.getElementById('infoName').textContent = emp.employeeName;
+      document.getElementById('infoDesig').textContent = emp.designation || '—';
+      document.getElementById('infoLoc').textContent = emp.location;
+      document.getElementById('empInfoBar').style.display = 'block';
+      document.getElementById('arrearFormCard').style.display = 'block';
+    });
     await checkAuth();
     populateYears();
     setDefaultMonthYear();
@@ -496,5 +506,6 @@
     setTimeout(() => el.style.display = 'none', 4000);
   }
 </script>
+<script src="/js/emp-search.js?v=2"></script>
 </body>
 </html>

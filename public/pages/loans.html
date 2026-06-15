@@ -308,6 +308,15 @@
     'July','August','September','October','November','December'];
 
   window.onload = async () => {
+    attachEINSearch('empSearch', function(emp) {
+      document.getElementById('loanEIN').value = emp.ein;
+      document.getElementById('infoEIN').textContent = emp.ein;
+      document.getElementById('infoName').textContent = emp.employeeName;
+      document.getElementById('infoDesig').textContent = emp.designation || '—';
+      document.getElementById('infoSalary').textContent = '₹' + (emp.monthlySalary||0).toLocaleString('en-IN');
+      document.getElementById('empInfoBar').style.display = 'block';
+      document.getElementById('loanFormCard').style.display = 'block';
+    });
     await checkAuth();
     await loadLocations();
     populateYears();
@@ -640,5 +649,6 @@
     setTimeout(function() { el.style.display = 'none'; }, 4000);
   }
 </script>
+<script src="/js/emp-search.js?v=2"></script>
 </body>
 </html>

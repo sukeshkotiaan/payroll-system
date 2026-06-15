@@ -400,6 +400,9 @@
   let locations = [];
 
   window.onload = async () => {
+    attachEINSearch('einSearchInput', function(emp) {
+      fillEmpDetails(emp);
+    });
     await checkAuth();
     await loadLocations();
     await loadUsers();
@@ -754,5 +757,6 @@
     el.style.display = 'block';
   }
 </script>
+<script src="/js/emp-search.js?v=2"></script>
 </body>
 </html>

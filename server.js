@@ -72,6 +72,10 @@ app.get('/attendance', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'pages', 'attendance.html'));
 });
 
+app.get('/payslip', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'pages', 'payslip.html'));
+});
+
 app.get('/payroll', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'pages', 'payroll.html'));
 });

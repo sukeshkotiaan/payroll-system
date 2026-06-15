@@ -71,6 +71,26 @@ router.get('/', isLoggedIn, async (req, res) => {
   }
 });
 
+
+// SEARCH employees by EIN or Name
+router.get('/search', isLoggedIn, async (req, res) => {
+  try {
+    const q = req.query.q || '';
+    if (!q || q.length < 2) return res.json({ success: true, employees: [] });
+    const employees = await Employee.find({
+      isActive: true,
+      $or: [
+        { ein: { $regex: '^' + q, $options: 'i' } },
+        { employeeName: { $regex: q, $options: 'i' } }
+      ]
+    }).select('ein employeeName designation location section profile monthlySalary').limit(10);
+    return res.json({ success: true, employees });
+  } catch (err) {
+    console.error('Search error:', err.message, err.stack);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 router.get('/:id', isLoggedIn, async (req, res) => {
   try {
     const employee = await Employee.findById(req.params.id);
@@ -204,6 +224,7 @@ router.post('/bulk-import', isLoggedIn, isAdmin, async (req, res) => {
     return res.status(500).json({ success: false, message: err.message });
   }
 });
+
 
 module.exports = router;
 

@@ -508,6 +508,16 @@
   let currentEmployeeData = null;
 
   window.onload = async () => {
+    // Attach search - will find EIN input automatically
+    const einInput = document.querySelector('input[placeholder*="EIN"], input[id*="ein"], input[id*="EIN"]');
+    if (einInput) {
+      attachEINSearch(einInput.id, function(emp) {
+        einInput.value = emp.ein;
+        // Trigger any existing search
+        const searchBtn = document.querySelector('button[onclick*="search"], button[onclick*="Search"]');
+        if (searchBtn) searchBtn.click();
+      });
+    }
     await checkAuth();
     await loadExits();
   };
@@ -780,5 +790,6 @@
     setTimeout(() => el.style.display = 'none', 4000);
   }
 </script>
+<script src="/js/emp-search.js?v=2"></script>
 </body>
 </html>
