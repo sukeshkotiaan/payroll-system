@@ -3,99 +3,49 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Arrears — Payroll System</title>
+  <title>Arrears & Advances — Payroll System</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; }
-    .header {
-      background: #1a73e8; color: white;
-      padding: 15px 30px;
-      display: flex; justify-content: space-between; align-items: center;
-      position: sticky; top: 0; z-index: 100;
-    }
+    .header { background: #1a73e8; color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
     .header h1 { font-size: 20px; }
-    .btn-back {
-      background: white; color: #1a73e8; border: none;
-      padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600;
-    }
+    .btn-back { background: white; color: #1a73e8; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; }
     .view { display: none; }
     .view.active { display: block; }
     .container { padding: 20px; max-width: 1100px; margin: 0 auto; }
-    .btn-primary {
-      background: #1a73e8; color: white; border: none;
-      padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px;
-    }
-    .btn-success {
-      background: #34a853; color: white; border: none;
-      padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px;
-    }
-    .btn-secondary {
-      background: #f0f2f5; color: #333; border: none;
-      padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px;
-    }
-    .btn-warning {
-      background: #fbbc04; color: #333; border: none;
-      padding: 5px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 600;
-    }
-    .btn-danger {
-      background: #ea4335; color: white; border: none;
-      padding: 5px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 600;
-    }
-    .card {
-      background: white; border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; margin-bottom: 20px;
-    }
-    .card-header {
-      padding: 15px 20px; border-bottom: 1px solid #eee;
-      display: flex; justify-content: space-between; align-items: center;
-    }
+    .btn-primary { background: #1a73e8; color: white; border: none; padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
+    .btn-secondary { background: #f0f2f5; color: #333; border: none; padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
+    .btn-danger { background: #ea4335; color: white; border: none; padding: 5px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 600; }
+    .btn-warning { background: #fbbc04; color: #333; border: none; padding: 5px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 600; }
+    .card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: visible; margin-bottom: 20px; }
+    .card-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
     .card-header h3 { font-size: 15px; color: #333; }
-    .card-body { padding: 20px; }
-    .form-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
+    .card-body { padding: 20px; overflow: visible; }
     .form-group { display: flex; flex-direction: column; gap: 5px; }
     .form-group label { font-size: 13px; font-weight: 600; color: #555; }
-    .form-group select, .form-group input {
-      padding: 9px 11px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; outline: none;
-    }
+    .form-group select, .form-group input { padding: 9px 11px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; outline: none; }
     .form-group select:focus, .form-group input:focus { border-color: #1a73e8; }
-    .hint { font-size: 11px; color: #999; }
     .alert { padding: 10px 14px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; display: none; }
     .alert-success { background: #e6f4ea; color: #34a853; }
     .alert-error { background: #fce8e6; color: #ea4335; }
     .empty-state { text-align: center; padding: 40px; color: #999; }
-    .form-view-header {
-      display: flex; align-items: center; gap: 15px;
-      margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #e8f0fe;
-    }
-    .btn-back-list {
-      background: #e8f0fe; color: #1a73e8; border: none;
-      padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px;
-    }
+    .form-view-header { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #e8f0fe; }
+    .btn-back-list { background: #e8f0fe; color: #1a73e8; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th {
-      background: #f8f9fa; padding: 12px 15px; text-align: left;
-      font-weight: 600; color: #555; border-bottom: 1px solid #eee;
-    }
+    th { background: #f8f9fa; padding: 12px 15px; text-align: left; font-weight: 600; color: #555; border-bottom: 1px solid #eee; }
     td { padding: 12px 15px; border-bottom: 1px solid #f5f5f5; color: #333; }
     tr:hover { background: #f8f9ff; }
     .badge { padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
-    .badge-arrear { background: #e8f0fe; color: #1a73e8; }
-    .badge-advance { background: #fce8e6; color: #ea4335; }
-    .badge-loan { background: #fef3c7; color: #d97706; }
-    .badge-leave { background: #e6f4ea; color: #34a853; }
-    .badge-bonus { background: #f3e8ff; color: #7b1fa2; }
-    .badge-other { background: #f5f5f5; color: #666; }
-    .badge-pulled { background: #e6f4ea; color: #34a853; }
     .badge-pending { background: #fef3c7; color: #d97706; }
-    .emp-info-bar {
-      background: #e8f0fe; border-radius: 8px; padding: 12px 15px;
-      display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 15px;
-    }
+    .badge-pulled { background: #e6f4ea; color: #34a853; }
+    .emp-info-bar { background: #e8f0fe; border-radius: 8px; padding: 12px 15px; display: grid; grid-template-columns: repeat(4,1fr); gap: 15px; margin-bottom: 15px; }
     .emp-info-item label { font-size: 11px; color: #666; font-weight: 600; display: block; }
-    .emp-info-item span { font-size: 14px; font-weight: 700; color: #1a73e8; }
-    .type-badge { padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
-    .amount-positive { color: #34a853; font-weight: 700; }
-    .amount-negative { color: #ea4335; font-weight: 700; }
+    .emp-info-item span { font-size: 13px; font-weight: 700; color: #1a73e8; }
+    .tab { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; background: white; color: #666; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .tab.active { background: #1a73e8; color: white; }
+    .tab-section { display: none; }
+    .tab-section.active { display: block; }
+    .form-card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 25px; overflow: visible; }
   </style>
 </head>
 <body>
@@ -114,82 +64,127 @@
     <div class="alert alert-success" id="listAlertSuccess"></div>
     <div class="alert alert-error" id="listAlertError"></div>
 
-    <div class="card">
-      <div class="card-body">
-        <div class="form-grid">
-          <div class="form-group">
-            <label>Month</label>
-            <select id="filterMonth">
-              <option value="">All Months</option>
-              <option>January</option><option>February</option><option>March</option>
-              <option>April</option><option>May</option><option>June</option>
-              <option>July</option><option>August</option><option>September</option>
-              <option>October</option><option>November</option><option>December</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Year</label>
-            <select id="filterYear"><option value="">All Years</option></select>
-          </div>
-          <div class="form-group">
-            <label>Status</label>
-            <select id="filterPulled">
-              <option value="">All</option>
-              <option value="false">Pending (not pulled)</option>
-              <option value="true">Pulled to Payroll</option>
-            </select>
-          </div>
-          <div class="form-group" style="align-self:end;">
-            <button class="btn-primary" onclick="loadArrears()">🔍 Search</button>
+    <!-- TABS -->
+    <div style="display:flex;gap:8px;margin-bottom:20px;">
+      <button class="tab active" id="tabList" onclick="switchArrearTab('List')">📋 All Arrears</button>
+      <button class="tab" id="tabMonthly" onclick="switchArrearTab('Monthly')">📅 Monthly View</button>
+    </div>
+
+    <!-- TAB 1: ALL ARREARS -->
+    <div class="tab-section active" id="sectionList">
+      <div class="card">
+        <div class="card-body">
+          <div style="display:flex;gap:15px;flex-wrap:wrap;align-items:end;">
+            <div class="form-group">
+              <label>Location</label>
+              <select id="filterLocation" onchange="loadArrears()">
+                <option value="">All Locations</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Status</label>
+              <select id="filterStatus" onchange="loadArrears()">
+                <option value="">All</option>
+                <option value="false">Pending</option>
+                <option value="true">Pulled to Payroll</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Search EIN / Name</label>
+              <input type="text" id="filterSearch" placeholder="Type to filter..." oninput="filterTable()">
+            </div>
           </div>
         </div>
       </div>
+      <div class="card">
+        <div class="card-header">
+          <h3>Arrears <span id="listCount" style="color:#666;font-weight:400;font-size:13px;"></span></h3>
+          <button class="btn-primary" onclick="showAddView()">+ Add Arrear</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>EIN</th><th>Name</th><th>Type</th><th>Amount</th>
+              <th>Month</th><th>Remarks</th><th>Status</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="arrearList">
+            <tr><td colspan="8"><div class="empty-state">Loading...</div></td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
-    <div class="card">
-      <div class="card-header">
-        <h3>Arrears & Advances <span id="listCount" style="color:#666;font-weight:400;font-size:13px;"></span></h3>
-        <button class="btn-primary" onclick="showAddForm()">+ Add Entry</button>
+    <!-- TAB 2: MONTHLY VIEW -->
+    <div class="tab-section" id="sectionMonthly">
+      <div class="card">
+        <div class="card-body">
+          <div style="display:flex;gap:15px;flex-wrap:wrap;align-items:end;">
+            <div class="form-group">
+              <label>Month *</label>
+              <select id="arrMonthly">
+                <option value="">Select Month</option>
+                <option>January</option><option>February</option><option>March</option>
+                <option>April</option><option>May</option><option>June</option>
+                <option>July</option><option>August</option><option>September</option>
+                <option>October</option><option>November</option><option>December</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Year *</label>
+              <select id="arrYearly"></select>
+            </div>
+            <div class="form-group">
+              <label>Location</label>
+              <select id="arrLocation"><option value="">All Locations</option></select>
+            </div>
+            <div class="form-group" style="align-self:end;">
+              <button class="btn-primary" onclick="loadMonthlyArrears()">📋 Load</button>
+            </div>
+          </div>
+        </div>
       </div>
-      <table>
-        <thead>
-          <tr>
-            <th>EIN</th>
-            <th>Employee Name</th>
-            <th>Month / Year</th>
-            <th>Type</th>
-            <th>Amount</th>
-            <th>Remarks</th>
-            <th>Added By</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="arrearsList">
-          <tr><td colspan="9"><div class="empty-state">Loading...</div></td></tr>
-        </tbody>
-      </table>
+      <div class="card">
+        <div class="card-header">
+          <h3 id="arrMonthlyTitle">Monthly Arrears</h3>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <span id="arrMonthlyInfo" style="font-size:13px;color:#666;"></span>
+            <button class="btn-primary" onclick="showAddView()" id="addFromMonthly" style="display:none;">+ Add Arrear</button>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>EIN</th><th>Name</th><th>Type</th><th>Amount</th>
+              <th>Remarks</th><th>Status</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="arrMonthlyTable">
+            <tr><td colspan="7"><div class="empty-state">Select month and year then click Load</div></td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- ADD / EDIT VIEW -->
+<!-- ADD VIEW -->
 <div id="formView" class="view">
   <div class="container">
     <div class="form-view-header">
       <button class="btn-back-list" onclick="showListView()">← Back to List</button>
-      <h2 id="formTitle">Add Arrear / Advance</h2>
+      <h2>Add Arrear / Advance</h2>
     </div>
-
     <div class="alert alert-success" id="formAlertSuccess"></div>
     <div class="alert alert-error" id="formAlertError"></div>
 
+    <!-- SEARCH -->
     <div class="card">
       <div class="card-header"><h3>🔍 Search Employee</h3></div>
       <div class="card-body">
         <div style="display:flex;gap:10px;margin-bottom:15px;">
-          <input type="text" id="einSearch" placeholder="Enter EIN (e.g. STT-1001)"
-            style="flex:1;max-width:300px;padding:10px;border:2px solid #1a73e8;border-radius:6px;font-size:14px;outline:none;text-transform:uppercase;"
+          <input type="text" id="einSearch" placeholder="Enter EIN or Name"
+            style="flex:1;max-width:350px;padding:10px;border:2px solid #1a73e8;border-radius:6px;font-size:13px;outline:none;"
             onkeypress="if(event.key==='Enter') searchEmployee()">
           <button class="btn-primary" onclick="searchEmployee()">🔍 Search</button>
         </div>
@@ -204,12 +199,29 @@
       </div>
     </div>
 
-    <div class="card" id="arrearFormCard" style="display:none;">
-      <div class="card-header"><h3>📝 Entry Details</h3></div>
+    <!-- FORM -->
+    <div class="card" id="arrearFormCard" style="display:none;overflow:visible;">
+      <div class="card-header"><h3>Arrear Details</h3></div>
       <div class="card-body">
-        <input type="hidden" id="arrearId">
         <input type="hidden" id="empId">
-        <div class="form-grid">
+        <input type="hidden" id="empEIN">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:15px;">
+          <div class="form-group">
+            <label>Type *</label>
+            <select id="arrearType">
+              <option value="">Select Type</option>
+              <option>Arrear</option>
+              <option>Bonus</option>
+              <option>Leave Encashment</option>
+              <option>Festival Advance</option>
+              <option>Salary Advance</option>
+              <option>Other Advance</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Amount (₹) *</label>
+            <input type="number" id="arrearAmount" placeholder="e.g. 5000" min="0">
+          </div>
           <div class="form-group">
             <label>Month *</label>
             <select id="arrearMonth">
@@ -219,37 +231,19 @@
               <option>July</option><option>August</option><option>September</option>
               <option>October</option><option>November</option><option>December</option>
             </select>
-            <div class="hint">Month this entry will be applied to</div>
           </div>
           <div class="form-group">
             <label>Year *</label>
             <select id="arrearYear"></select>
           </div>
-          <div class="form-group">
-            <label>Type *</label>
-            <select id="arrearType" onchange="updateAmountHint()">
-              <option value="">Select Type</option>
-              <option value="Arrear">Arrear (adds to salary)</option>
-              <option value="Bonus">Bonus (adds to salary)</option>
-              <option value="Leave Encashment">Leave Encashment (adds to salary)</option>
-              <option value="Advance">Advance (deducted from salary)</option>
-              <option value="Loan Deduction">Loan Deduction (deducted from salary)</option>
-              <option value="Other">Other</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Amount (₹) *</label>
-            <input type="number" id="arrearAmount" placeholder="e.g. 5000" min="0">
-            <div class="hint" id="amountHint">Enter positive amount</div>
-          </div>
-          <div class="form-group" style="grid-column: 1 / -1;">
+          <div class="form-group" style="grid-column:1/-1;">
             <label>Remarks</label>
-            <input type="text" id="arrearRemarks" placeholder="Reason for this entry">
+            <input type="text" id="arrearRemarks" placeholder="e.g. Diwali bonus">
           </div>
         </div>
-        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+        <div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end;">
           <button class="btn-secondary" onclick="showListView()">Cancel</button>
-          <button class="btn-primary" onclick="saveArrear()">💾 Save Entry</button>
+          <button class="btn-primary" onclick="saveArrear()">💾 Save</button>
         </div>
       </div>
     </div>
@@ -258,27 +252,22 @@
 
 <script>
   let currentUser = {};
+  let allArrears = [];
   let currentEmployee = null;
-  let editMode = false;
 
   const MONTHS = ['January','February','March','April','May','June',
     'July','August','September','October','November','December'];
 
-  const TYPE_BADGES = {
-    'Arrear': 'badge-arrear',
-    'Advance': 'badge-advance',
-    'Loan Deduction': 'badge-loan',
-    'Leave Encashment': 'badge-leave',
-    'Bonus': 'badge-bonus',
-    'Other': 'badge-other'
-  };
-
-  const DEDUCTION_TYPES = ['Advance', 'Loan Deduction'];
-
   window.onload = async () => {
+    await checkAuth();
+    await loadLocations();
+    populateYears();
+    setDefaults();
+    await loadArrears();
     attachEINSearch('einSearch', function(emp) {
       currentEmployee = emp;
       document.getElementById('empId').value = emp._id;
+      document.getElementById('empEIN').value = emp.ein;
       document.getElementById('infoEIN').textContent = emp.ein;
       document.getElementById('infoName').textContent = emp.employeeName;
       document.getElementById('infoDesig').textContent = emp.designation || '—';
@@ -286,10 +275,6 @@
       document.getElementById('empInfoBar').style.display = 'block';
       document.getElementById('arrearFormCard').style.display = 'block';
     });
-    await checkAuth();
-    populateYears();
-    setDefaultMonthYear();
-    await loadArrears();
   };
 
   async function checkAuth() {
@@ -300,206 +285,221 @@
     document.getElementById('headerUser').textContent = data.user.fullName;
   }
 
+  async function loadLocations() {
+    try {
+      const res = await fetch('/api/masters/location');
+      const data = await res.json();
+      if (data.success) {
+        ['filterLocation','arrLocation'].forEach(id => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          el.innerHTML = '<option value="">All Locations</option>';
+          data.masters.forEach(m => { el.innerHTML += '<option value="' + m.value + '">' + m.value + '</option>'; });
+        });
+      }
+    } catch(e) {}
+  }
+
   function populateYears() {
     const now = new Date().getFullYear();
-    ['filterYear','arrearYear'].forEach(id => {
+    ['arrearYear','arrYearly'].forEach(id => {
       const el = document.getElementById(id);
       if (!el) return;
-      el.innerHTML = id === 'filterYear' ? '<option value="">All Years</option>' : '<option value="">Select Year</option>';
+      el.innerHTML = '<option value="">Select Year</option>';
       for (let y = now + 1; y >= now - 3; y--) {
-        el.innerHTML += '<option value="' + y + '">' + y + '</option>';
+        el.innerHTML += '<option value="' + y + '"' + (y === now ? ' selected' : '') + '>' + y + '</option>';
       }
     });
   }
 
-  function setDefaultMonthYear() {
+  function setDefaults() {
     const now = new Date();
-    const m = document.getElementById('arrearMonth');
-    const y = document.getElementById('arrearYear');
-    if (m) m.value = MONTHS[now.getMonth()];
-    if (y) y.value = now.getFullYear();
+    const am = document.getElementById('arrearMonth');
+    const mm = document.getElementById('arrMonthly');
+    if (am) am.value = MONTHS[now.getMonth()];
+    if (mm) mm.value = MONTHS[now.getMonth()];
+    const ay = document.getElementById('arrYearly');
+    if (ay) ay.value = now.getFullYear();
+  }
+
+  function switchArrearTab(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
+    document.getElementById('tab' + tab).classList.add('active');
+    document.getElementById('section' + tab).classList.add('active');
   }
 
   async function loadArrears() {
     try {
-      const month = document.getElementById('filterMonth').value;
-      const year = document.getElementById('filterYear').value;
-      const pulled = document.getElementById('filterPulled').value;
+      const location = document.getElementById('filterLocation').value;
+      const status = document.getElementById('filterStatus').value;
       let url = '/api/arrears?';
-      if (month) url += 'month=' + month + '&';
-      if (year) url += 'year=' + year + '&';
-      if (pulled) url += 'pulled=' + pulled + '&';
+      if (location) url += 'location=' + encodeURIComponent(location) + '&';
+      if (status !== '') url += 'pulledToPayroll=' + status + '&';
       const res = await fetch(url);
       const data = await res.json();
-      if (data.success) renderArrears(data.arrears);
+      if (data.success) { allArrears = data.arrears; filterTable(); }
     } catch(e) {}
   }
 
-  function renderArrears(arrears) {
-    const tbody = document.getElementById('arrearsList');
-    document.getElementById('listCount').textContent = '(' + arrears.length + ' entries)';
-    if (arrears.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state">No entries found</div></td></tr>';
-      return;
-    }
-    tbody.innerHTML = arrears.map(a => {
-      const isDeduction = DEDUCTION_TYPES.includes(a.type);
-      return `<tr>
-        <td><strong>${a.ein}</strong></td>
-        <td>${a.employeeName}</td>
-        <td>${a.month} ${a.year}</td>
-        <td><span class="badge ${TYPE_BADGES[a.type] || 'badge-other'}">${a.type}</span></td>
-        <td class="${isDeduction ? 'amount-negative' : 'amount-positive'}">
-          ${isDeduction ? '-' : '+'}₹${Math.abs(a.amount).toLocaleString('en-IN')}
-        </td>
-        <td>${a.remarks || '—'}</td>
-        <td>${a.addedBy || '—'}</td>
-        <td>
-          <span class="badge ${a.pulledToPayroll ? 'badge-pulled' : 'badge-pending'}">
-            ${a.pulledToPayroll ? '✅ Pulled to Payroll' : '⏳ Pending'}
-          </span>
-        </td>
-        <td>
-          ${!a.pulledToPayroll ? `
-            <button class="btn-warning" onclick="editArrear('${a._id}','${a.ein}','${a.employeeName}','${a.month}',${a.year},'${a.type}',${a.amount},'${a.remarks || ''}')">Edit</button>
-            <button class="btn-danger" onclick="deleteArrear('${a._id}')" style="margin-left:4px;">Delete</button>
-          ` : '<span style="color:#999;font-size:12px;">Locked</span>'}
-        </td>
-      </tr>`;
-    }).join('');
+  function filterTable() {
+    const search = document.getElementById('filterSearch').value.toLowerCase();
+    const filtered = search ? allArrears.filter(a =>
+      (a.ein && a.ein.toLowerCase().includes(search)) ||
+      (a.employeeName && a.employeeName.toLowerCase().includes(search))
+    ) : allArrears;
+    renderList(filtered);
   }
 
-  function showAddForm() {
-    editMode = false;
-    document.getElementById('formTitle').textContent = 'Add Arrear / Advance';
-    document.getElementById('arrearId').value = '';
+  function renderList(arrears) {
+    const tbody = document.getElementById('arrearList');
+    document.getElementById('listCount').textContent = '(' + arrears.length + ' records)';
+    if (!arrears.length) {
+      tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state">No arrears found</div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = arrears.map(a => '<tr>' +
+      '<td><strong>' + a.ein + '</strong></td>' +
+      '<td>' + a.employeeName + '</td>' +
+      '<td>' + a.type + '</td>' +
+      '<td><strong style="color:#1a73e8;">₹' + (a.amount||0).toLocaleString('en-IN') + '</strong></td>' +
+      '<td>' + (a.month||'—') + ' ' + (a.year||'') + '</td>' +
+      '<td>' + (a.remarks||'—') + '</td>' +
+      '<td><span class="badge badge-' + (a.pulledToPayroll ? 'pulled' : 'pending') + '">' + (a.pulledToPayroll ? 'Pulled' : 'Pending') + '</span></td>' +
+      '<td>' + (!a.pulledToPayroll ? '<button class="btn-danger" onclick="deleteArrear(\'' + a._id + '\')">Delete</button>' : '—') + '</td>' +
+      '</tr>'
+    ).join('');
+  }
+
+  async function loadMonthlyArrears() {
+    const month = document.getElementById('arrMonthly').value;
+    const year = document.getElementById('arrYearly').value;
+    const location = document.getElementById('arrLocation').value;
+    if (!month || !year) { alert('Please select month and year'); return; }
+    try {
+      let url = '/api/arrears?month=' + encodeURIComponent(month) + '&year=' + year;
+      if (location) url += '&location=' + encodeURIComponent(location);
+      const res = await fetch(url);
+      const data = await res.json();
+      if (!data.success) return;
+      const records = data.arrears;
+      const total = records.reduce((s,r) => s + (r.amount||0), 0);
+      document.getElementById('arrMonthlyTitle').textContent = 'Arrears — ' + month + ' ' + year;
+      document.getElementById('arrMonthlyInfo').textContent = records.length + ' entries | Total: ₹' + total.toLocaleString('en-IN');
+      document.getElementById('addFromMonthly').style.display = 'inline-block';
+      const tbody = document.getElementById('arrMonthlyTable');
+      if (!records.length) {
+        tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state">No arrears for ' + month + ' ' + year + '. Click + Add Arrear.</div></td></tr>';
+        return;
+      }
+      tbody.innerHTML = records.map(r => '<tr>' +
+        '<td><strong>' + r.ein + '</strong></td>' +
+        '<td>' + r.employeeName + '</td>' +
+        '<td>' + r.type + '</td>' +
+        '<td><strong style="color:#1a73e8;">₹' + (r.amount||0).toLocaleString('en-IN') + '</strong></td>' +
+        '<td>' + (r.remarks||'—') + '</td>' +
+        '<td><span class="badge badge-' + (r.pulledToPayroll ? 'pulled' : 'pending') + '">' + (r.pulledToPayroll ? 'Pulled' : 'Pending') + '</span></td>' +
+        '<td>' + (!r.pulledToPayroll ? '<button class="btn-danger" style="font-size:11px;padding:4px 10px;" onclick="deleteArrear(\'' + r._id + '\')">Delete</button>' : '—') + '</td>' +
+        '</tr>'
+      ).join('');
+    } catch(e) { console.error(e); }
+  }
+
+  async function searchEmployee() {
+    const search = document.getElementById('einSearch').value.trim();
+    if (!search) { showFormAlert('formAlertError', 'Please enter EIN or Name'); return; }
+    try {
+      const res = await fetch('/api/tds/find-employee/' + encodeURIComponent(search));
+      const data = await res.json();
+      if (data.success) {
+        currentEmployee = data.employee;
+        document.getElementById('empId').value = data.employee._id;
+        document.getElementById('empEIN').value = data.employee.ein;
+        document.getElementById('infoEIN').textContent = data.employee.ein;
+        document.getElementById('infoName').textContent = data.employee.employeeName;
+        document.getElementById('infoDesig').textContent = data.employee.designation || '—';
+        document.getElementById('infoLoc').textContent = data.employee.location;
+        document.getElementById('empInfoBar').style.display = 'block';
+        document.getElementById('arrearFormCard').style.display = 'block';
+      } else { showFormAlert('formAlertError', data.message); }
+    } catch(e) { showFormAlert('formAlertError', 'Error: ' + e.message); }
+  }
+
+  async function saveArrear() {
+    const empId = document.getElementById('empId').value;
+    const ein = document.getElementById('empEIN').value;
+    const type = document.getElementById('arrearType').value;
+    const amount = document.getElementById('arrearAmount').value;
+    const month = document.getElementById('arrearMonth').value;
+    const year = document.getElementById('arrearYear').value;
+    const remarks = document.getElementById('arrearRemarks').value;
+    if (!empId || !type || !amount || !month || !year) {
+      showFormAlert('formAlertError', 'Please fill all required fields'); return;
+    }
+    try {
+      const emp = currentEmployee || {};
+      const res = await fetch('/api/arrears', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          employeeId: empId, ein,
+          employeeName: emp.employeeName || '',
+          location: emp.location || '',
+          section: emp.section || '',
+          profile: emp.profile || '',
+          type, amount: parseFloat(amount),
+          month, year: parseInt(year), remarks
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showFormAlert('formAlertSuccess', '✅ ' + data.message);
+        await loadArrears();
+        setTimeout(showListView, 1500);
+      } else { showFormAlert('formAlertError', data.message); }
+    } catch(e) { showFormAlert('formAlertError', 'Error: ' + e.message); }
+  }
+
+  async function deleteArrear(id) {
+    if (!confirm('Delete this arrear entry?')) return;
+    try {
+      const res = await fetch('/api/arrears/' + id, { method: 'DELETE', credentials: 'include' });
+      const data = await res.json();
+      if (data.success) {
+        showListAlert('listAlertSuccess', data.message);
+        await loadArrears();
+        await loadMonthlyArrears();
+      } else { showListAlert('listAlertError', data.message); }
+    } catch(e) {}
+  }
+
+  function showAddView() {
     document.getElementById('einSearch').value = '';
     document.getElementById('empInfoBar').style.display = 'none';
     document.getElementById('arrearFormCard').style.display = 'none';
     document.getElementById('arrearType').value = '';
     document.getElementById('arrearAmount').value = '';
     document.getElementById('arrearRemarks').value = '';
+    setDefaults();
     currentEmployee = null;
-    setDefaultMonthYear();
     switchView('formView');
-  }
-
-  async function searchEmployee() {
-    const ein = document.getElementById('einSearch').value.trim().toUpperCase();
-    if (!ein) { showFormAlert('formAlertError', 'Please enter an EIN'); return; }
-    try {
-      const res = await fetch('/api/arrears/find-employee/' + ein);
-      const data = await res.json();
-      if (data.success) {
-        currentEmployee = data.employee;
-        document.getElementById('infoEIN').textContent = data.employee.ein;
-        document.getElementById('infoName').textContent = data.employee.employeeName;
-        document.getElementById('infoDesig').textContent = data.employee.designation;
-        document.getElementById('infoLoc').textContent = data.employee.location;
-        document.getElementById('empId').value = data.employee._id;
-        document.getElementById('empInfoBar').style.display = 'block';
-        document.getElementById('arrearFormCard').style.display = 'block';
-      } else {
-        showFormAlert('formAlertError', data.message);
-        document.getElementById('empInfoBar').style.display = 'none';
-        document.getElementById('arrearFormCard').style.display = 'none';
-      }
-    } catch(e) { showFormAlert('formAlertError', 'Error: ' + e.message); }
-  }
-
-  function updateAmountHint() {
-    const type = document.getElementById('arrearType').value;
-    const hint = document.getElementById('amountHint');
-    if (DEDUCTION_TYPES.includes(type)) {
-      hint.textContent = '⚠️ This will be DEDUCTED from salary';
-      hint.style.color = '#ea4335';
-    } else {
-      hint.textContent = '✅ This will be ADDED to salary';
-      hint.style.color = '#34a853';
-    }
-  }
-
-  async function saveArrear() {
-    const id = document.getElementById('arrearId').value;
-    const ein = document.getElementById('einSearch').value.trim().toUpperCase();
-    const month = document.getElementById('arrearMonth').value;
-    const year = document.getElementById('arrearYear').value;
-    const type = document.getElementById('arrearType').value;
-    const amount = document.getElementById('arrearAmount').value;
-    const remarks = document.getElementById('arrearRemarks').value;
-
-    if (!ein || !month || !year || !type || !amount) {
-      showFormAlert('formAlertError', 'Please fill all required fields');
-      return;
-    }
-
-    try {
-      const url = id ? '/api/arrears/' + id : '/api/arrears';
-      const method = id ? 'PUT' : 'POST';
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ ein, month, year: parseInt(year), type, amount: parseFloat(amount), remarks })
-      });
-      const data = await res.json();
-      if (data.success) {
-        showFormAlert('formAlertSuccess', data.message);
-        await loadArrears();
-        setTimeout(showListView, 1500);
-      } else {
-        showFormAlert('formAlertError', data.message);
-      }
-    } catch(e) { showFormAlert('formAlertError', 'Error: ' + e.message); }
-  }
-
-  function editArrear(id, ein, name, month, year, type, amount, remarks) {
-    editMode = true;
-    document.getElementById('formTitle').textContent = 'Edit Arrear / Advance';
-    document.getElementById('arrearId').value = id;
-    document.getElementById('einSearch').value = ein;
-    document.getElementById('infoEIN').textContent = ein;
-    document.getElementById('infoName').textContent = name;
-    document.getElementById('infoDesig').textContent = '';
-    document.getElementById('infoLoc').textContent = '';
-    document.getElementById('empInfoBar').style.display = 'block';
-    document.getElementById('arrearFormCard').style.display = 'block';
-    document.getElementById('arrearMonth').value = month;
-    document.getElementById('arrearYear').value = year;
-    document.getElementById('arrearType').value = type;
-    document.getElementById('arrearAmount').value = amount;
-    document.getElementById('arrearRemarks').value = remarks;
-    updateAmountHint();
-    switchView('formView');
-  }
-
-  async function deleteArrear(id) {
-    if (!confirm('Delete this entry?')) return;
-    try {
-      const res = await fetch('/api/arrears/' + id, {
-        method: 'DELETE', credentials: 'include'
-      });
-      const data = await res.json();
-      if (data.success) {
-        showListAlert('listAlertSuccess', data.message);
-        await loadArrears();
-      } else {
-        showListAlert('listAlertError', data.message);
-      }
-    } catch(e) {}
   }
 
   function showListView() { switchView('listView'); loadArrears(); }
+
   function switchView(viewId) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById(viewId).classList.add('active');
     window.scrollTo(0, 0);
   }
+
   function showFormAlert(id, msg) {
     const el = document.getElementById(id);
     el.textContent = msg; el.style.display = 'block';
     setTimeout(() => el.style.display = 'none', 4000);
   }
+
   function showListAlert(id, msg) {
     const el = document.getElementById(id);
     el.textContent = msg; el.style.display = 'block';

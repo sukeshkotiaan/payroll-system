@@ -16,7 +16,7 @@
     .btn-primary { background: #1a73e8; color: white; border: none; padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
     .btn-success { background: #34a853; color: white; border: none; padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
     .btn-secondary { background: #f0f2f5; color: #333; border: none; padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
-    .card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; margin-bottom: 20px; }
+    .card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: visible; margin-bottom: 20px; }
     .card-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
     .card-header h3 { font-size: 15px; color: #333; }
     .card-body { padding: 20px; }
@@ -86,6 +86,35 @@
   </style>
 </head>
 <body>
+
+
+<!-- EMAIL MODAL -->
+<div id="emailOverlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;"></div>
+<div id="emailModal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;border-radius:12px;padding:25px;width:420px;z-index:2001;box-shadow:0 8px 30px rgba(0,0,0,0.2);">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
+    <h3 style="font-size:16px;color:#333;">📧 Send Payslip</h3>
+    <button onclick="closeEmailModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#666;">×</button>
+  </div>
+  <div style="background:#e8f0fe;border-radius:8px;padding:10px 15px;margin-bottom:15px;font-size:13px;">
+    <strong id="emailEmpName">—</strong><br>
+    <span id="emailMonth" style="color:#666;font-size:12px;"></span>
+  </div>
+  <div style="margin-bottom:15px;">
+    <label style="font-size:13px;font-weight:600;color:#555;display:block;margin-bottom:5px;">To Email Address *</label>
+    <input type="email" id="emailTo" placeholder="employee@email.com"
+      style="width:100%;padding:10px;border:2px solid #1a73e8;border-radius:6px;font-size:13px;outline:none;">
+  </div>
+  <div style="margin-bottom:15px;">
+    <label style="font-size:13px;font-weight:600;color:#555;display:block;margin-bottom:5px;">Subject</label>
+    <input type="text" id="emailSubject" placeholder="Salary Slip — June 2026"
+      style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-size:13px;outline:none;">
+  </div>
+  <div id="emailAlert" style="display:none;padding:8px 12px;border-radius:6px;margin-bottom:10px;font-size:13px;"></div>
+  <div style="display:flex;gap:10px;justify-content:flex-end;">
+    <button onclick="closeEmailModal()" style="background:#f0f2f5;color:#333;border:none;padding:9px 18px;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;">Cancel</button>
+    <button onclick="sendPayslipEmail()" style="background:#1a73e8;color:white;border:none;padding:9px 18px;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;">📧 Send Email</button>
+  </div>
+</div>
 
 <div class="header">
   <h1>🧾 Payslips</h1>
@@ -209,6 +238,71 @@
 </div>
 
 <script>
+
+  let emailPayslipData = null;
+
+  function openEmailModal(btn) {
+    const ein = btn.dataset.ein;
+    const name = btn.dataset.name;
+    const month = btn.dataset.month;
+    const year = btn.dataset.year;
+    const empEmail = '';
+    emailPayslipData = { ein, name, month, year };
+    document.getElementById('emailEmpName').textContent = name + ' (' + ein + ')';
+    document.getElementById('emailMonth').textContent = 'Salary Slip for ' + month + ' ' + year;
+    document.getElementById('emailTo').value = empEmail || '';
+    document.getElementById('emailSubject').value = 'Salary Slip — ' + month + ' ' + year;
+    document.getElementById('emailAlert').style.display = 'none';
+    document.getElementById('emailOverlay').style.display = 'block';
+    document.getElementById('emailModal').style.display = 'block';
+    document.getElementById('emailTo').focus();
+  }
+
+  function closeEmailModal() {
+    document.getElementById('emailOverlay').style.display = 'none';
+    document.getElementById('emailModal').style.display = 'none';
+    emailPayslipData = null;
+  }
+
+  async function sendPayslipEmail() {
+    const to = document.getElementById('emailTo').value.trim();
+    const subject = document.getElementById('emailSubject').value.trim();
+    if (!to) { showEmailAlert('Please enter email address', 'error'); return; }
+    if (!emailPayslipData) return;
+    const slipEl = document.getElementById('slip-' + emailPayslipData.ein);
+    if (!slipEl) { showEmailAlert('Payslip not found', 'error'); return; }
+    const html = slipEl.outerHTML;
+    try {
+      showEmailAlert('Sending...', 'info');
+      const res = await fetch('/api/email/send-payslip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          to, subject, html,
+          employeeName: emailPayslipData.name,
+          month: emailPayslipData.month,
+          year: emailPayslipData.year
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showEmailAlert('✅ ' + data.message, 'success');
+        setTimeout(closeEmailModal, 2000);
+      } else {
+        showEmailAlert('❌ ' + data.message, 'error');
+      }
+    } catch(e) { showEmailAlert('Error: ' + e.message, 'error'); }
+  }
+
+  function showEmailAlert(msg, type) {
+    const el = document.getElementById('emailAlert');
+    el.textContent = msg;
+    el.style.display = 'block';
+    el.style.background = type === 'success' ? '#e6f4ea' : type === 'error' ? '#fce8e6' : '#e8f0fe';
+    el.style.color = type === 'success' ? '#34a853' : type === 'error' ? '#ea4335' : '#1a73e8';
+  }
+
   let currentUser = {};
   let currentPayroll = null;
   const MONTHS = ['January','February','March','April','May','June',
@@ -429,6 +523,12 @@
 
         // AMOUNT IN WORDS
         '<div class="ps-words"><strong>Amount in Words:</strong> ' + numberToWords(Math.round(r.netSalary||0)) + ' Rupees Only</div>' +
+
+        // EMAIL BUTTON
+        '<div class="no-print" style="text-align:right;margin-bottom:10px;">' +
+        '<button onclick="openEmailModal(this)" data-ein="' + r.ein + '" data-name="' + r.employeeName + '" data-month="' + month + '" data-year="' + year + '" ' +
+        'style="background:#1a73e8;color:white;border:none;padding:7px 16px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">📧 Send Email</button>' +
+        '</div>' +
 
         // FOOTER
         '<div class="ps-footer">' +

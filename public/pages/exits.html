@@ -50,7 +50,7 @@
       border-radius: 12px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.08);
       margin-bottom: 20px;
-      overflow: hidden;
+      overflow: visible;
     }
     .card-header {
       padding: 15px 20px;
@@ -301,7 +301,7 @@
       </div>
     </div>
 
-    <div class="card" id="exitFormCard" style="display:none;">
+    <div class="card" id="exitFormCard" style="display:none;overflow:visible;">
       <div class="card-header">📝 Exit Details</div>
       <div class="card-body">
         <input type="hidden" id="employeeId">
@@ -508,15 +508,14 @@
   let currentEmployeeData = null;
 
   window.onload = async () => {
+    attachEINSearch('einSearch', function(emp) {
+      document.getElementById('einSearch').value = emp.ein;
+      if (typeof searchEmployee === 'function') searchEmployee();
+    });
     // Attach search - will find EIN input automatically
     const einInput = document.querySelector('input[placeholder*="EIN"], input[id*="ein"], input[id*="EIN"]');
     if (einInput) {
-      attachEINSearch(einInput.id, function(emp) {
-        einInput.value = emp.ein;
-        // Trigger any existing search
-        const searchBtn = document.querySelector('button[onclick*="search"], button[onclick*="Search"]');
-        if (searchBtn) searchBtn.click();
-      });
+
     }
     await checkAuth();
     await loadExits();

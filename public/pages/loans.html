@@ -18,7 +18,7 @@
     .btn-secondary { background: #f0f2f5; color: #333; border: none; padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
     .btn-warning { background: #fbbc04; color: #333; border: none; padding: 5px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 600; }
     .btn-danger { background: #ea4335; color: white; border: none; padding: 5px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 600; }
-    .card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; margin-bottom: 20px; }
+    .card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: visible; margin-bottom: 20px; }
     .card-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
     .card-header h3 { font-size: 15px; color: #333; }
     .card-body { padding: 20px; }
@@ -181,7 +181,7 @@
 </div>
 
 <!-- ADD LOAN VIEW -->
-<div id="formView" class="view">
+<div id="formView" class="view" style="overflow:visible;">
   <div class="container">
     <div class="form-view-header">
       <button class="btn-back-list" onclick="showListView()">← Back to List</button>
@@ -191,7 +191,7 @@
     <div class="alert alert-error" id="formAlertError"></div>
 
     <div class="card">
-      <div class="card-header"><h3>🔍 Search Employee</h3></div>
+      <div class="card-header" style="overflow:visible;"><h3>🔍 Search Employee</h3></div>
       <div class="card-body">
         <div class="search-bar">
           <input type="text" id="empSearch" placeholder="Enter EIN or Employee Name"
@@ -209,7 +209,7 @@
       </div>
     </div>
 
-    <div class="card" id="loanFormCard" style="display:none;">
+    <div class="card" id="loanFormCard" style="display:none;overflow:visible;">
       <div class="card-header"><h3>Loan Details</h3></div>
       <div class="card-body">
         <input type="hidden" id="loanEIN">
@@ -435,6 +435,7 @@
   async function loadMonthlyEMI() {
     const month = document.getElementById('monthlyMonth').value;
     const year = document.getElementById('monthlyYear').value;
+    console.log('loadMonthlyEMI called:', month, year);
     if (!month || !year) { alert('Please select month and year'); return; }
     try {
       // Fetch all active loans
@@ -450,7 +451,7 @@
         const fullLoan = detailData.loan;
         if (!fullLoan.schedule) continue;
         const item = fullLoan.schedule.find(function(s) {
-          return s.month === month && s.year === parseInt(year) && s.status === 'Pending';
+          return s.month === month && s.year === parseInt(year);
         });
         if (item) {
           emiDue.push({

@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>School Info — Payroll System</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; }
+    .header { background: #1a73e8; color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+    .header h1 { font-size: 20px; }
+    .btn-back { background: white; color: #1a73e8; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+    .container { padding: 20px; max-width: 900px; margin: 0 auto; }
+    .btn-primary { background: #1a73e8; color: white; border: none; padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
+    .btn-secondary { background: #f0f2f5; color: #333; border: none; padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
+    .card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; margin-bottom: 20px; }
+    .card-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+    .card-header h3 { font-size: 15px; color: #333; }
+    .card-body { padding: 20px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group label { font-size: 13px; font-weight: 600; color: #555; }
+    .form-group input, .form-group textarea { padding: 9px 11px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; outline: none; }
+    .form-group input:focus, .form-group textarea:focus { border-color: #1a73e8; }
+    .form-group textarea { resize: vertical; min-height: 70px; }
+    .alert { padding: 10px 14px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; display: none; }
+    .alert-success { background: #e6f4ea; color: #34a853; }
+    .alert-error { background: #fce8e6; color: #ea4335; }
+    .tab { padding: 10px 25px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; background: white; color: #666; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .tab.active { background: #1a73e8; color: white; }
+    .tab-section { display: none; }
+    .tab-section.active { display: block; }
+    .logo-area { display: flex; gap: 20px; align-items: flex-start; margin-bottom: 15px; }
+    .logo-preview { width: 120px; height: 120px; border: 2px dashed #ddd; border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #f8f9fa; flex-shrink: 0; }
+    .logo-preview img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .logo-preview span { font-size: 12px; color: #999; text-align: center; }
+    .logo-upload-btn { display: inline-block; padding: 8px 16px; background: #e8f0fe; color: #1a73e8; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; border: 1px solid #1a73e8; }
+    .payslip-preview { border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-top: 15px; background: white; }
+    .preview-header { display: flex; align-items: center; gap: 15px; border-bottom: 2px solid #1a73e8; padding-bottom: 10px; margin-bottom: 10px; }
+    .preview-logo { width: 60px; height: 60px; object-fit: contain; }
+    .preview-school-name { font-size: 16px; font-weight: 800; color: #1a73e8; }
+    .preview-address { font-size: 11px; color: #666; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🏫 School Information</h1>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span id="headerUser" style="font-size:13px;"></span>
+    <button class="btn-back" onclick="window.location.href='/dashboard'">← Dashboard</button>
+  </div>
+</div>
+
+<div class="container">
+  <div class="alert alert-success" id="alertSuccess"></div>
+  <div class="alert alert-error" id="alertError"></div>
+
+  <div style="display:flex;gap:8px;margin-bottom:20px;">
+    <button class="tab active" id="tabXaviers" onclick="switchTab('Xaviers')">🏫 Xaviers School</button>
+    <button class="tab" id="tabGlobal" onclick="switchTab('Global')">🌐 Global School</button>
+  </div>
+
+  <!-- XAVIERS -->
+  <div class="tab-section active" id="sectionXaviers">
+    <div class="card">
+      <div class="card-header">
+        <h3>Xaviers School Information</h3>
+        <button class="btn-primary" onclick="saveSchool('xaviers')">💾 Save</button>
+      </div>
+      <div class="card-body">
+        <!-- LOGO -->
+        <div style="margin-bottom:20px;">
+          <label style="font-size:13px;font-weight:600;color:#555;display:block;margin-bottom:8px;">School Logo</label>
+          <div class="logo-area">
+            <div class="logo-preview" id="xLogoPreview">
+              <span>No logo uploaded</span>
+            </div>
+            <div>
+              <label class="logo-upload-btn" for="xLogoInput">📁 Upload Logo</label>
+              <input type="file" id="xLogoInput" accept="image/*" style="display:none;" onchange="previewLogo('x', this)">
+              <div style="font-size:11px;color:#999;margin-top:8px;">PNG or JPG, max 500KB<br>Recommended: 200x200px</div>
+              <button class="btn-secondary" style="margin-top:8px;padding:5px 12px;font-size:12px;" onclick="clearLogo('x')">✕ Remove Logo</button>
+            </div>
+          </div>
+          <input type="hidden" id="xLogoBase64">
+        </div>
+
+        <!-- DETAILS -->
+        <div class="form-grid">
+          <div class="form-group">
+            <label>School Name *</label>
+            <input type="text" id="xSchoolName" placeholder="e.g. St. Xavier's High School">
+          </div>
+          <div class="form-group">
+            <label>Affiliation / Board</label>
+            <input type="text" id="xAffiliation" placeholder="e.g. Maharashtra State Board (SSC)">
+          </div>
+          <div class="form-group" style="grid-column:1/-1;">
+            <label>Address</label>
+            <textarea id="xAddress" placeholder="Full address of the school"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Phone</label>
+            <input type="text" id="xPhone" placeholder="e.g. 022-XXXXXXXX">
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="text" id="xEmail" placeholder="e.g. info@xaviers.edu.in">
+          </div>
+        </div>
+
+        <!-- PREVIEW -->
+        <div style="margin-top:20px;">
+          <div style="font-size:13px;font-weight:600;color:#555;margin-bottom:8px;">Payslip Header Preview:</div>
+          <div class="payslip-preview">
+            <div class="preview-header">
+              <img id="xPreviewLogo" src="" style="display:none;" class="preview-logo">
+              <div id="xNoLogo" style="width:60px;height:60px;background:#e8f0fe;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:20px;">🏫</div>
+              <div>
+                <div class="preview-school-name" id="xPreviewName">Xaviers School</div>
+                <div class="preview-address" id="xPreviewAddr">Address, Phone, Email</div>
+                <div class="preview-address" id="xPreviewAff" style="color:#1a73e8;font-weight:600;"></div>
+              </div>
+            </div>
+            <div style="font-size:10px;color:#999;text-align:center;">— SALARY SLIP —</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GLOBAL -->
+  <div class="tab-section" id="sectionGlobal">
+    <div class="card">
+      <div class="card-header">
+        <h3>Global School Information</h3>
+        <button class="btn-primary" onclick="saveSchool('global')">💾 Save</button>
+      </div>
+      <div class="card-body">
+        <!-- LOGO -->
+        <div style="margin-bottom:20px;">
+          <label style="font-size:13px;font-weight:600;color:#555;display:block;margin-bottom:8px;">School Logo</label>
+          <div class="logo-area">
+            <div class="logo-preview" id="gLogoPreview">
+              <span>No logo uploaded</span>
+            </div>
+            <div>
+              <label class="logo-upload-btn" for="gLogoInput">📁 Upload Logo</label>
+              <input type="file" id="gLogoInput" accept="image/*" style="display:none;" onchange="previewLogo('g', this)">
+              <div style="font-size:11px;color:#999;margin-top:8px;">PNG or JPG, max 500KB<br>Recommended: 200x200px</div>
+              <button class="btn-secondary" style="margin-top:8px;padding:5px 12px;font-size:12px;" onclick="clearLogo('g')">✕ Remove Logo</button>
+            </div>
+          </div>
+          <input type="hidden" id="gLogoBase64">
+        </div>
+
+        <!-- DETAILS -->
+        <div class="form-grid">
+          <div class="form-group">
+            <label>School Name *</label>
+            <input type="text" id="gSchoolName" placeholder="e.g. Global International School">
+          </div>
+          <div class="form-group">
+            <label>Affiliation / Board</label>
+            <input type="text" id="gAffiliation" placeholder="e.g. CBSE Board">
+          </div>
+          <div class="form-group" style="grid-column:1/-1;">
+            <label>Address</label>
+            <textarea id="gAddress" placeholder="Full address of the school"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Phone</label>
+            <input type="text" id="gPhone" placeholder="e.g. 022-XXXXXXXX">
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="text" id="gEmail" placeholder="e.g. info@global.edu.in">
+          </div>
+        </div>
+
+        <!-- PREVIEW -->
+        <div style="margin-top:20px;">
+          <div style="font-size:13px;font-weight:600;color:#555;margin-bottom:8px;">Payslip Header Preview:</div>
+          <div class="payslip-preview">
+            <div class="preview-header">
+              <img id="gPreviewLogo" src="" style="display:none;" class="preview-logo">
+              <div id="gNoLogo" style="width:60px;height:60px;background:#e8f0fe;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:20px;">🌐</div>
+              <div>
+                <div class="preview-school-name" id="gPreviewName">Global School</div>
+                <div class="preview-address" id="gPreviewAddr">Address, Phone, Email</div>
+                <div class="preview-address" id="gPreviewAff" style="color:#1a73e8;font-weight:600;"></div>
+              </div>
+            </div>
+            <div style="font-size:10px;color:#999;text-align:center;">— SALARY SLIP —</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let currentUser = {};
+
+  window.onload = async () => {
+    await checkAuth();
+    await loadSchoolInfo();
+    setupLivePreview();
+  };
+
+  async function checkAuth() {
+    const res = await fetch('/api/auth/me');
+    const data = await res.json();
+    if (!data.success) { window.location.href = '/'; return; }
+    currentUser = data.user;
+    document.getElementById('headerUser').textContent = data.user.fullName;
+  }
+
+  async function loadSchoolInfo() {
+    try {
+      const res = await fetch('/api/schoolinfo');
+      const data = await res.json();
+      if (!data.success) return;
+      data.schools.forEach(s => {
+        const p = s.schoolType === 'xaviers' ? 'x' : 'g';
+        if (s.schoolName) document.getElementById(p + 'SchoolName').value = s.schoolName;
+        if (s.address) document.getElementById(p + 'Address').value = s.address;
+        if (s.phone) document.getElementById(p + 'Phone').value = s.phone;
+        if (s.email) document.getElementById(p + 'Email').value = s.email;
+        if (s.affiliation) document.getElementById(p + 'Affiliation').value = s.affiliation;
+        if (s.logo) {
+          document.getElementById(p + 'LogoBase64').value = s.logo;
+          const preview = document.getElementById(p + 'LogoPreview');
+          preview.innerHTML = '<img src="' + s.logo + '" style="max-width:100%;max-height:100%;object-fit:contain;">';
+          document.getElementById(p + 'PreviewLogo').src = s.logo;
+          document.getElementById(p + 'PreviewLogo').style.display = 'block';
+          document.getElementById(p + 'NoLogo').style.display = 'none';
+        }
+        updatePreview(p);
+      });
+    } catch(e) {}
+  }
+
+  function previewLogo(p, input) {
+    const file = input.files[0];
+    if (!file) return;
+    if (file.size > 500000) { alert('File too large. Max 500KB'); return; }
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const base64 = e.target.result;
+      document.getElementById(p + 'LogoBase64').value = base64;
+      const preview = document.getElementById(p + 'LogoPreview');
+      preview.innerHTML = '<img src="' + base64 + '" style="max-width:100%;max-height:100%;object-fit:contain;">';
+      document.getElementById(p + 'PreviewLogo').src = base64;
+      document.getElementById(p + 'PreviewLogo').style.display = 'block';
+      document.getElementById(p + 'NoLogo').style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function clearLogo(p) {
+    document.getElementById(p + 'LogoBase64').value = '';
+    document.getElementById(p + 'LogoPreview').innerHTML = '<span>No logo uploaded</span>';
+    document.getElementById(p + 'PreviewLogo').style.display = 'none';
+    document.getElementById(p + 'NoLogo').style.display = 'flex';
+  }
+
+  function setupLivePreview() {
+    ['x','g'].forEach(p => {
+      ['SchoolName','Address','Phone','Email','Affiliation'].forEach(field => {
+        const el = document.getElementById(p + field);
+        if (el) el.addEventListener('input', function() { updatePreview(p); });
+      });
+    });
+  }
+
+  function updatePreview(p) {
+    const name = document.getElementById(p + 'SchoolName').value || (p === 'x' ? 'Xaviers School' : 'Global School');
+    const addr = document.getElementById(p + 'Address').value || '';
+    const phone = document.getElementById(p + 'Phone').value || '';
+    const email = document.getElementById(p + 'Email').value || '';
+    const aff = document.getElementById(p + 'Affiliation').value || '';
+    document.getElementById(p + 'PreviewName').textContent = name;
+    const addrParts = [addr, phone, email].filter(Boolean).join(' | ');
+    document.getElementById(p + 'PreviewAddr').textContent = addrParts || 'Address, Phone, Email';
+    document.getElementById(p + 'PreviewAff').textContent = aff;
+  }
+
+  async function saveSchool(type) {
+    const p = type === 'xaviers' ? 'x' : 'g';
+    const schoolName = document.getElementById(p + 'SchoolName').value;
+    const address = document.getElementById(p + 'Address').value;
+    const phone = document.getElementById(p + 'Phone').value;
+    const email = document.getElementById(p + 'Email').value;
+    const affiliation = document.getElementById(p + 'Affiliation').value;
+    const logo = document.getElementById(p + 'LogoBase64').value;
+    if (!schoolName) { showAlert('alertError', 'Please enter school name'); return; }
+    try {
+      const res = await fetch('/api/schoolinfo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ schoolType: type, schoolName, address, phone, email, affiliation, logo })
+      });
+      const data = await res.json();
+      if (data.success) { showAlert('alertSuccess', '✅ ' + (type === 'xaviers' ? 'Xaviers' : 'Global') + ' school info saved!'); }
+      else { showAlert('alertError', data.message); }
+    } catch(e) { showAlert('alertError', 'Error: ' + e.message); }
+  }
+
+  function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
+    document.getElementById('tab' + tab).classList.add('active');
+    document.getElementById('section' + tab).classList.add('active');
+  }
+
+  function showAlert(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg; el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 4000);
+  }
+</script>
+</body>
+</html>
