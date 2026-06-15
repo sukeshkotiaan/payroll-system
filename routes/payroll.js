@@ -6,6 +6,8 @@ const Employee = require('../models/Employee');
 const Settings = require('../models/Settings');
 const { isLoggedIn, isAdmin } = require('../middleware/auth');
 const Arrear = require('../models/Arrear');
+const TDS = require('../models/TDS');
+const Loan = require('../models/Loan');
 
 const MONTHS = ['January','February','March','April','May','June',
   'July','August','September','October','November','December'];
@@ -146,7 +148,7 @@ router.post('/process', isLoggedIn, isAdmin, async (req, res) => {
     // Check attendance submitted
     const attendance = await Attendance.findOne({
       month, year: parseInt(year), location, section, profile,
-      status: { $in: ['Submitted', 'Locked'] }
+      status: { $in: ['Submitted', 'Locked', 'Pending', 'Approved'] }
     });
     if (!attendance) {
       return res.status(400).json({
@@ -233,17 +235,63 @@ router.post('/process', isLoggedIn, isAdmin, async (req, res) => {
         } else {
           record.remarks = type + ': ' + amt;
         }
-        record.totalDeductions = parseFloat(
-          (record.pfDeduction + record.ptDeduction +
-            record.esicDeduction + record.tdsDeduction + record.advance).toFixed(2)
-        );
-        record.netSalary = parseFloat(
-          (record.grossSalary - record.totalDeductions +
-            record.otAmount + record.arrear).toFixed(2)
-        );
-        totalNet = records.reduce((s, r) => s + (r.netSalary || 0), 0);
       }
     }
+
+    // Pull TDS for this group and month
+    const tdsRecords = await TDS.find({
+      location, section, profile,
+      month, year: parseInt(year)
+    });
+    for (const tds of tdsRecords) {
+      const record = records.find(r => r.ein === tds.ein);
+      if (record) {
+        record.tdsDeduction = parseFloat(tds.amount) || 0;
+        record.tdsType = 'manual';
+        if (record.remarks) {
+          record.remarks += ', TDS: ' + tds.amount;
+        } else {
+          record.remarks = 'TDS: ' + tds.amount;
+        }
+      }
+    }
+
+    // Pull Loan EMIs for this group and month
+    const activeLoans = await Loan.find({
+      location, section, profile,
+      status: 'Active'
+    });
+    const paidLoanIds = [];
+    for (const loan of activeLoans) {
+      const scheduleItem = loan.schedule ? loan.schedule.find(s =>
+        s.month === month && s.year === parseInt(year) && s.status === 'Pending'
+      ) : null;
+      if (!scheduleItem) continue;
+      const record = records.find(r => r.ein === loan.ein);
+      if (record) {
+        const emiAmt = parseFloat(scheduleItem.emiAmount) || 0;
+        record.advance = parseFloat((record.advance + emiAmt).toFixed(2));
+        if (record.remarks) {
+          record.remarks += ', Loan EMI: ' + emiAmt;
+        } else {
+          record.remarks = 'Loan EMI: ' + emiAmt;
+        }
+        paidLoanIds.push({ loanId: loan._id, emiAmount: emiAmt });
+      }
+    }
+
+    // Recalculate totals for all records
+    for (const record of records) {
+      record.totalDeductions = parseFloat(
+        (record.pfDeduction + record.ptDeduction +
+          record.esicDeduction + record.tdsDeduction + record.advance).toFixed(2)
+      );
+      record.netSalary = parseFloat(
+        (record.grossSalary - record.totalDeductions +
+          record.otAmount + record.arrear).toFixed(2)
+      );
+    }
+    totalNet = records.reduce((s, r) => s + (r.netSalary || 0), 0);
 
     const groupName = getGroupName(section, location, profile);
 
@@ -254,7 +302,7 @@ router.post('/process', isLoggedIn, isAdmin, async (req, res) => {
       payroll.totalPF = parseFloat(totalPF.toFixed(2));
       payroll.totalPT = parseFloat(totalPT.toFixed(2));
       payroll.totalESIC = parseFloat(totalESIC.toFixed(2));
-      payroll.totalTDS = parseFloat(totalTDS.toFixed(2));
+      payroll.totalTDS = parseFloat(records.reduce((s,r) => s+(r.tdsDeduction||0), 0).toFixed(2));
       payroll.totalNet = parseFloat(totalNet.toFixed(2));
       payroll.status = 'Draft';
       payroll.processedBy = req.session.user.username;
@@ -271,11 +319,35 @@ router.post('/process', isLoggedIn, isAdmin, async (req, res) => {
         totalPF: parseFloat(totalPF.toFixed(2)),
         totalPT: parseFloat(totalPT.toFixed(2)),
         totalESIC: parseFloat(totalESIC.toFixed(2)),
-        totalTDS: parseFloat(totalTDS.toFixed(2)),
+        totalTDS: parseFloat(records.reduce((s,r) => s+(r.tdsDeduction||0), 0).toFixed(2)),
         totalNet: parseFloat(totalNet.toFixed(2)),
         processedBy: req.session.user.username,
         processedAt: new Date()
       });
+    }
+
+    // Mark arrears as pulled
+    await Arrear.updateMany(
+      { location, section, profile, month, year: parseInt(year), pulledToPayroll: false },
+      { pulledToPayroll: true, payrollId: payroll._id }
+    );
+
+    // Mark loan EMIs as paid
+    for (const loan of activeLoans) {
+      const scheduleItem = loan.schedule ? loan.schedule.find(s =>
+        s.month === month && s.year === parseInt(year) && s.status === 'Pending'
+      ) : null;
+      if (!scheduleItem) continue;
+      const record = records.find(r => r.ein === loan.ein);
+      if (!record) continue;
+      scheduleItem.status = 'Paid';
+      scheduleItem.paidInPayrollId = payroll._id;
+      loan.totalPaid = parseFloat((loan.totalPaid + scheduleItem.emiAmount).toFixed(2));
+      loan.outstandingBalance = scheduleItem.balance;
+      if (scheduleItem.balance === 0) loan.status = 'Closed';
+      loan.updatedAt = new Date();
+      loan.markModified('schedule');
+      await loan.save();
     }
 
     return res.json({
@@ -480,17 +552,47 @@ router.post('/process-all', isLoggedIn, isAdmin, async (req, res) => {
             }
             record.remarks = record.remarks ?
               record.remarks + ', ' + type + ': ' + amt : type + ': ' + amt;
-            record.totalDeductions = parseFloat(
-              (record.pfDeduction + record.ptDeduction +
-                record.esicDeduction + record.tdsDeduction + record.advance).toFixed(2)
-            );
-            record.netSalary = parseFloat(
-              (record.grossSalary - record.totalDeductions +
-                record.otAmount + record.arrear).toFixed(2)
-            );
-            totalNet = records.reduce((s, r) => s + (r.netSalary || 0), 0);
           }
         }
+
+        // Pull TDS
+        const tdsRecs = await TDS.find({ location, section, profile, month, year: parseInt(year) });
+        for (const tds of tdsRecs) {
+          const record = records.find(r => r.ein === tds.ein);
+          if (record) {
+            record.tdsDeduction = parseFloat(tds.amount) || 0;
+            record.tdsType = 'manual';
+            record.remarks = record.remarks ? record.remarks + ', TDS: ' + tds.amount : 'TDS: ' + tds.amount;
+          }
+        }
+
+        // Pull Loan EMIs
+        const loans = await Loan.find({ location, section, profile, status: 'Active' });
+        for (const loan of loans) {
+          const sItem = loan.schedule ? loan.schedule.find(s =>
+            s.month === month && s.year === parseInt(year) && s.status === 'Pending'
+          ) : null;
+          if (!sItem) continue;
+          const record = records.find(r => r.ein === loan.ein);
+          if (record) {
+            const emiAmt = parseFloat(sItem.emiAmount) || 0;
+            record.advance = parseFloat((record.advance + emiAmt).toFixed(2));
+            record.remarks = record.remarks ? record.remarks + ', Loan EMI: ' + emiAmt : 'Loan EMI: ' + emiAmt;
+          }
+        }
+
+        // Recalculate totals
+        for (const record of records) {
+          record.totalDeductions = parseFloat(
+            (record.pfDeduction + record.ptDeduction +
+              record.esicDeduction + record.tdsDeduction + record.advance).toFixed(2)
+          );
+          record.netSalary = parseFloat(
+            (record.grossSalary - record.totalDeductions +
+              record.otAmount + record.arrear).toFixed(2)
+          );
+        }
+        totalNet = records.reduce((s, r) => s + (r.netSalary || 0), 0);
 
         const groupName = getGroupName(section, location, profile);
         const payrollData = {
