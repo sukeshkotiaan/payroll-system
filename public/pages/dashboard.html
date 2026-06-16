@@ -1,4 +1,6 @@
-<!DOCTYPE html>
+
+
+  <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -68,15 +70,63 @@
     </div>
   </div>
 
+  
+
   <div class="container">
     <div class="welcome">
       <h2 id="welcomeMsg">Welcome!</h2>
       <p id="roleMsg">Loading...</p>
     </div>
+
+
+
+  <!-- STATS BAR -->
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:15px;margin-bottom:25px;">
+    <div style="background:white;border-radius:10px;padding:15px 10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);text-align:center;border-top:3px solid #1a73e8;">
+      <div style="font-size:10px;color:#666;font-weight:600;margin-bottom:5px;">TOTAL EMPLOYEES</div>
+      <div id="statEmp" style="font-size:28px;font-weight:800;color:#1a73e8;">—</div>
+    </div>
+    <div style="background:white;border-radius:10px;padding:15px 10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);text-align:center;border-top:3px solid #34a853;">
+      <div style="font-size:10px;color:#666;font-weight:600;margin-bottom:5px;">PAYROLL GROUPS</div>
+      <div id="statPayroll" style="font-size:28px;font-weight:800;color:#34a853;">—</div>
+    </div>
+    <div style="background:white;border-radius:10px;padding:15px 10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);text-align:center;border-top:3px solid #fbbc04;">
+      <div style="font-size:10px;color:#666;font-weight:600;margin-bottom:5px;">PENDING APPROVALS</div>
+      <div id="statPending" style="font-size:28px;font-weight:800;color:#fbbc04;">—</div>
+    </div>
+    <div style="background:white;border-radius:10px;padding:15px 10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);text-align:center;border-top:3px solid #ea4335;">
+      <div style="font-size:10px;color:#666;font-weight:600;margin-bottom:5px;">ACTIVE LOANS</div>
+      <div id="statLoans" style="font-size:28px;font-weight:800;color:#ea4335;">—</div>
+    </div>
+    <div style="background:white;border-radius:10px;padding:15px 10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);text-align:center;border-top:3px solid #9c27b0;">
+      <div style="font-size:10px;color:#666;font-weight:600;margin-bottom:5px;">PAYROLL PROCESSED</div>
+      <div id="statProcessed" style="font-size:18px;font-weight:800;color:#9c27b0;">—</div>
+    </div>
+  </div>
+
     <div class="cards" id="menuCards"></div>
   </div>
 
   <script>
+
+  async function loadDashboardStats() {
+    try {
+      const res = await fetch('/api/dashboard/stats');
+      const data = await res.json();
+      if (!data.success) return;
+      const s = data.stats;
+      const empEl = document.getElementById('statEmp');
+      const payEl = document.getElementById('statPayroll');
+      const penEl = document.getElementById('statPending');
+      const loanEl = document.getElementById('statLoans');
+      const procEl = document.getElementById('statProcessed');
+      if (empEl) empEl.textContent = s.totalEmployees.toLocaleString('en-IN');
+      if (payEl) payEl.textContent = s.payrollGroups;
+      if (penEl) penEl.textContent = s.pendingAttendance;
+      if (loanEl) loanEl.textContent = s.activeLoans;
+      if (procEl) procEl.textContent = s.processedGroups + '/' + s.payrollGroups + ' groups';
+    } catch(e) { console.error('Stats error:', e); }
+  }
     const ALL_MENUS = [
       { key: 'dashboard', icon: '📊', title: 'Dashboard', desc: 'System overview', url: '/dashboard' },
       { key: 'employees', icon: '👥', title: 'Employees', desc: 'Manage employee master data', url: '/employees' },
@@ -99,6 +149,7 @@
     ];
 
     window.onload = async () => {
+    await loadDashboardStats();
       const res = await fetch('/api/auth/me');
       const data = await res.json();
       if (!data.success) { window.location.href = '/'; return; }
@@ -136,6 +187,10 @@
       container.innerHTML = visibleMenus.map(menu => `
         <div class="card" onclick="window.location.href='${menu.url}'">
           <div class="icon">${menu.icon}</div>
+
+
+
+
           <h3>${menu.title}</h3>
           <p>${menu.desc}</p>
         </div>

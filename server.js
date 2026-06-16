@@ -46,6 +46,7 @@ app.use('/api/arrears', require('./routes/arrears'));
 app.use('/api/tds', require('./routes/tds'));
 app.use('/api/schoolinfo', require('./routes/schoolinfo'));
 app.use('/api/email', require('./routes/email'));
+app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/loans', require('./routes/loans'));
 
 // Page Routes

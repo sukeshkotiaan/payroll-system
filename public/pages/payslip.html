@@ -304,11 +304,24 @@
   }
 
   let currentUser = {};
+  let schoolInfo = { xaviers: null, global: null };
+
+  async function loadSchoolInfo() {
+    try {
+      const res = await fetch('/api/schoolinfo');
+      const data = await res.json();
+      if (!data.success) return;
+      data.schools.forEach(s => {
+        schoolInfo[s.schoolType] = s;
+      });
+    } catch(e) {}
+  }
   let currentPayroll = null;
   const MONTHS = ['January','February','March','April','May','June',
     'July','August','September','October','November','December'];
 
   window.onload = async () => {
+    await loadSchoolInfo();
     attachEINSearch('empEIN', function(emp) {
       document.getElementById('empEIN').value = emp.ein;
     });
@@ -471,10 +484,15 @@
 
     container.innerHTML = records.map(function(r) {
       const isGlobal = r.section === 'Global' || section === 'Global';
-      const logo = isGlobal ? GLOBAL_LOGO : STATE_LOGO;
-      const schoolName = isGlobal ? "St. Xavier's Global Academy" : "St. Xaviers' English High School & Jr. College";
+      const schoolType = isGlobal ? 'global' : 'xaviers';
+      const info = schoolInfo[schoolType];
+      // Use DB info if available, else fallback to defaults
+      const logo = (info && info.logo) ? info.logo : (isGlobal ? GLOBAL_LOGO : STATE_LOGO);
+      const schoolName = (info && info.schoolName) ? info.schoolName : (isGlobal ? "St. Xavier's Global Academy" : "St. Xaviers' English High School & Jr. College");
       const society = isGlobal ? '' : "Rammurti Education Society's";
-      const address = isGlobal ? 'Panvel, Maharashtra' : 'Rai Master Campus, Chitalsar Manpada, Thane (W)';
+      const address = (info && info.address) ? info.address : (isGlobal ? 'Panvel, Maharashtra' : 'Rai Master Campus, Chitalsar Manpada, Thane (W)');
+      const phone = (info && info.phone) ? info.phone : '';
+      const affiliation = (info && info.affiliation) ? info.affiliation : '';
 
       return '<div class="payslip-page" id="slip-' + r.ein + '">' +
         '<div class="ps-header">' +
