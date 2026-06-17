@@ -3,6 +3,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const { isLoggedIn } = require('../middleware/auth');
+const Employee = require('../models/Employee');
 
 // Seed default admin on first run
 const seedAdmin = async () => {
@@ -42,13 +43,27 @@ router.post('/login', async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({ success: false, message: 'Invalid username or password' });
     }
-    req.session.user = {
+    const sessionUser = {
       id: user._id,
       username: user.username,
       fullName: user.fullName,
       role: user.role,
-      branch: user.branch
+      branch: user.branch,
+      branches: user.branches || []
     };
+
+    if (user.role === 'supervisor') {
+      const emp = await Employee.findOne({ employeeName: user.fullName, isActive: true });
+      if (emp) {
+        sessionUser.supervisorEIN = emp.ein;
+        sessionUser.supervisorEmployeeId = emp._id;
+        sessionUser.location = emp.location;
+        sessionUser.section = emp.section;
+        sessionUser.profile = emp.profile;
+      }
+    }
+
+    req.session.user = sessionUser;
     return res.json({
       success: true,
       message: 'Login successful',

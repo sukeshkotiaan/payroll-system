@@ -426,16 +426,188 @@
     }
   }
 
+  let supervisorViewMode = 'current'; // 'current' or 'previous'
+
   function setupSupervisorView() {
-    // Hide filter fields for supervisor - they only see their group
-    const selLocation = document.getElementById('selLocation');
-    const selSection = document.getElementById('selSection');
-    const selProfile = document.getElementById('selProfile');
-    if (selLocation) selLocation.parentElement.style.display = 'none';
-    if (selSection) selSection.parentElement.style.display = 'none';
-    if (selProfile) selProfile.parentElement.style.display = 'none';
-    // Auto-init with current month
-    setTimeout(function() { initAttendance(); }, 500);
+    switchView('newView');
+
+    const backBtn = document.querySelector('.btn-back-list');
+    if (backBtn) backBtn.style.display = 'none';
+
+    const heading = document.querySelector('.form-view-header h2');
+
+    const now = new Date();
+    const todayDate = now.getDate();
+    const selMonthEl = document.getElementById('selMonth');
+    const selYearEl = document.getElementById('selYear');
+
+    // Days 1-3 of the month: show PREVIOUS month for final submission to accountant
+    // Otherwise: show CURRENT month for daily marking
+    if (todayDate >= 1 && todayDate <= 3) {
+      supervisorViewMode = 'previous';
+      let prevMonthIdx = now.getMonth() - 1;
+      let prevYear = now.getFullYear();
+      if (prevMonthIdx < 0) { prevMonthIdx = 11; prevYear -= 1; }
+      if (selMonthEl) selMonthEl.value = MONTHS[prevMonthIdx];
+      if (selYearEl) selYearEl.value = prevYear;
+      if (heading) heading.textContent = 'Submit Attendance - ' + MONTHS[prevMonthIdx] + ' ' + prevYear;
+    } else {
+      supervisorViewMode = 'current';
+      if (selMonthEl) selMonthEl.value = MONTHS[now.getMonth()];
+      if (selYearEl) selYearEl.value = now.getFullYear();
+      if (heading) heading.textContent = 'Mark Attendance - ' + MONTHS[now.getMonth()] + ' ' + now.getFullYear();
+    }
+
+    const periodCard = selMonthEl ? selMonthEl.closest('.card') : null;
+    if (periodCard) periodCard.style.display = 'none';
+
+    setTimeout(function() { initSupervisorAttendance(); }, 300);
+  }
+
+  async function initSupervisorAttendance() {
+    const month = document.getElementById('selMonth').value;
+    const year = document.getElementById('selYear').value;
+    if (!month || !year) { showAlert('newAlertError', 'Please select Month and Year'); return; }
+    currentMonth = month;
+    currentYear = year;
+    activeMode = 'new';
+
+    try {
+      showAlert('newAlertSuccess', 'Loading your team...');
+      // Supervisor: fetch by supervisorId only - no location/section/profile filter needed
+      const empData = await (await fetch('/api/attendance/template/employees?month=' +
+        encodeURIComponent(month) + '&year=' + year)).json();
+
+      if (!empData.success || !empData.employees.length) {
+        showAlert('newAlertError', 'No employees mapped to you. Contact admin to set up your team.');
+        return;
+      }
+
+      const days = empData.daysInMonth;
+      const today = new Date().getDate();
+      const isCurrentMonth = (new Date().getMonth() === MONTHS.indexOf(month)) &&
+        (new Date().getFullYear() === parseInt(year));
+
+      // Group employees by their actual location/section/profile (team may span groups)
+      const groupMap = {};
+      empData.employees.forEach(function(emp) {
+        const sname = emp.section === 'State' ? 'Xaviers' : 'Global';
+        const gname = sname + ' ' + emp.location + ' ' + emp.profile;
+        if (!groupMap[gname]) {
+          groupMap[gname] = { name: gname, location: emp.location, section: emp.section, profile: emp.profile, count: 0, daysInMonth: days };
+        }
+        groupMap[gname].count++;
+      });
+      allGroups = Object.values(groupMap);
+      currentDaysInMonth = days;
+      attendanceRecords = [];
+
+      empData.employees.forEach(function(emp) {
+        const sname = emp.section === 'State' ? 'Xaviers' : 'Global';
+        const gname = sname + ' ' + emp.location + ' ' + emp.profile;
+        attendanceRecords.push({
+          ein: emp.ein, employeeId: emp._id, employeeName: emp.employeeName,
+          designation: emp.designation || '', location: emp.location, section: emp.section, profile: emp.profile,
+          groupName: gname, daysInMonth: days,
+          days: Array.from({ length: days }, function(_, i) {
+            const day = i + 1;
+            const status = (isCurrentMonth && day <= today) ? 'P' : '';
+            return { day: day, status: status, otHours: 0 };
+          }),
+          presentDays: isCurrentMonth ? Math.min(today, days) : 0,
+          cl: 0, sl: 0, pl: 0, spL: 0,
+          absent: 0, halfDays: 0, weekOff: 0, holidays: 0, otHours: 0, lopDays: 0,
+          payableDays: isCurrentMonth ? Math.min(today, days) : 0
+        });
+      });
+
+      // Load existing attendance for each location/section/profile group present
+      for (const g of allGroups) {
+        try {
+          const attRes = await (await fetch('/api/attendance?location=' + encodeURIComponent(g.location) +
+            '&section=' + encodeURIComponent(g.section) + '&profile=' + encodeURIComponent(g.profile) +
+            '&month=' + encodeURIComponent(month) + '&year=' + year)).json();
+          if (attRes.success && attRes.records && attRes.records.length > 0) {
+            const existing = attRes.records[0];
+            if (existing.records && existing.records.length > 0) {
+              existing.records.forEach(function(er) {
+                const idx = attendanceRecords.findIndex(r => r.ein === er.ein);
+                if (idx >= 0) {
+                  attendanceRecords[idx].days = er.days;
+                  attendanceRecords[idx].presentDays = er.presentDays || 0;
+                  attendanceRecords[idx].cl = er.cl || 0;
+                  attendanceRecords[idx].sl = er.sl || 0;
+                  attendanceRecords[idx].absent = er.absent || 0;
+                  attendanceRecords[idx].lopDays = er.lopDays || 0;
+                }
+              });
+            }
+          }
+        } catch(ex) {}
+      }
+
+      displayRecords = attendanceRecords;
+      renderNewGrid();
+      document.getElementById('inputMethodSection').style.display = 'block';
+      hideSupervisorExtras();
+      showAlert('newAlertSuccess', 'Showing attendance for ' + empData.employees.length + ' employees - ' + month + ' ' + year);
+    } catch(e) { showAlert('newAlertError', 'Error: ' + e.message); }
+  }
+
+  function hideSupervisorExtras() {
+    const inputTabsBar = document.querySelector('.input-tabs');
+    if (inputTabsBar) inputTabsBar.style.display = 'none';
+
+    const groupDropdown = document.getElementById('groupDropdown');
+    if (groupDropdown && groupDropdown.parentElement) groupDropdown.parentElement.style.display = 'none';
+
+    document.querySelectorAll('.btn-success').forEach(function(btn) {
+      const label = btn.textContent.trim();
+      if (label.indexOf('Send for Approval') >= 0) {
+        if (supervisorViewMode === 'previous') {
+          // Submission window (1st-3rd of month) - show Send to Accountant
+          btn.textContent = '\ud83d\udce8 Send to Accountant';
+          btn.setAttribute('onclick', "saveGrid('Submit')");
+          btn.style.display = 'inline-block';
+        } else {
+          // Current month in progress - hide this button entirely
+          btn.style.display = 'none';
+        }
+        btn.dataset.supExtra = 'true';
+      } else if (label.indexOf('Save') >= 0 && label.indexOf('Draft') < 0 && !btn.dataset.supExtra) {
+        btn.textContent = '\ud83d\udcbe Save';
+        btn.setAttribute('onclick', "saveGrid('Draft')");
+        btn.dataset.supExtra = 'true';
+      }
+    });
+
+    // removed: no longer hiding the Save button
+
+    // Show an info banner explaining the current mode
+    let banner = document.getElementById('supModeBanner');
+    if (!banner) {
+      banner = document.createElement('div');
+      banner.id = 'supModeBanner';
+      banner.style.cssText = 'padding:10px 15px;border-radius:8px;margin-bottom:15px;font-size:13px;font-weight:600;';
+      const periodCard = document.getElementById('selMonth') ? document.getElementById('selMonth').closest('.card') : null;
+      const insertBefore = periodCard ? periodCard.nextSibling : document.getElementById('inputMethodSection');
+      if (insertBefore && insertBefore.parentElement) {
+        insertBefore.parentElement.insertBefore(banner, insertBefore);
+      }
+    }
+    if (supervisorViewMode === 'previous') {
+      banner.style.background = '#fef3c7';
+      banner.style.color = '#92400e';
+      banner.textContent = '\u23f3 Submission window open: please review and send last month\'s attendance to the accountant by the 3rd of this month.';
+    } else {
+      banner.style.background = '#e8f0fe';
+      banner.style.color = '#1a73e8';
+      banner.textContent = '\ud83d\udcdd Mark daily attendance for this month. You can save anytime - the Send to Accountant option will appear on the 1st-3rd of next month.';
+    }
+  }
+
+  function showSaveSuccess() {
+    showAlert('newAlertSuccess', '\u2705 Attendance saved successfully');
   }
 
   async function loadMasterData() {
@@ -865,9 +1037,13 @@
         }
       }
       if (action === 'Submit') {
-        alert('✅ Attendance sent for approval successfully!');
+        alert('✅ Attendance sent to accountant successfully!');
         hideUnsavedBanner();
-        showListView();
+        if (currentUser.role === 'supervisor') {
+          setupSupervisorView();
+        } else {
+          showListView();
+        }
       } else {
         alert('✅ Attendance saved successfully!');
         hideUnsavedBanner();

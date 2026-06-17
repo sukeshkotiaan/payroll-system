@@ -81,7 +81,7 @@
 
 
   <!-- STATS BAR -->
-  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:15px;margin-bottom:25px;">
+  <div id="statsBar" style="display:grid;grid-template-columns:repeat(5,1fr);gap:15px;margin-bottom:25px;">
     <div style="background:white;border-radius:10px;padding:15px 10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);text-align:center;border-top:3px solid #1a73e8;">
       <div style="font-size:10px;color:#666;font-weight:600;margin-bottom:5px;">TOTAL EMPLOYEES</div>
       <div id="statEmp" style="font-size:28px;font-weight:800;color:#1a73e8;">—</div>
@@ -109,7 +109,12 @@
 
   <script>
 
-  async function loadDashboardStats() {
+  async function loadDashboardStats(user) {
+    const statsBar = document.getElementById('statsBar');
+    if (user.role !== 'admin' && user.role !== 'management') {
+      if (statsBar) statsBar.style.display = 'none';
+      return;
+    }
     try {
       const res = await fetch('/api/dashboard/stats');
       const data = await res.json();
@@ -149,7 +154,6 @@
     ];
 
     window.onload = async () => {
-    await loadDashboardStats();
       const res = await fetch('/api/auth/me');
       const data = await res.json();
       if (!data.success) { window.location.href = '/'; return; }
@@ -160,6 +164,7 @@
         'Role: ' + user.role.toUpperCase() +
         ' | Branch: ' + (user.branches ? user.branches.join(', ').toUpperCase() : 'ALL');
       await renderMenus(user);
+      await loadDashboardStats(user);
     };
 
     async function renderMenus(user) {

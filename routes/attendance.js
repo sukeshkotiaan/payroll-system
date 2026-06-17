@@ -77,14 +77,25 @@ router.get('/', isLoggedIn, async (req, res) => {
 router.get('/template/employees', isLoggedIn, async (req, res) => {
   try {
     const { location, section, profile, month, year } = req.query;
-    if (!location || !section || !profile || !month || !year) {
-      return res.status(400).json({ success: false, message: 'All fields required' });
+    if (!month || !year) {
+      return res.status(400).json({ success: false, message: 'Month and year required' });
     }
     const user = req.session.user;
-    let filter = { location, section, profile, isActive: true };
+    let filter = { isActive: true };
+
     if (user.role === 'supervisor') {
+      // Supervisor's team can span any location/section/profile - filter ONLY by supervisorId
       filter.supervisorId = user.id;
+    } else {
+      // Admin/accountant must specify exact group
+      if (!location || !section || !profile) {
+        return res.status(400).json({ success: false, message: 'Location, section, profile required' });
+      }
+      filter.location = location;
+      filter.section = section;
+      filter.profile = profile;
     }
+
     const employees = await Employee.find(filter).sort({ ein: 1 });
     const daysInMonth = getDaysInMonth(month, year);
     return res.json({ success: true, employees, daysInMonth });
