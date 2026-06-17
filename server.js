@@ -95,6 +95,10 @@ app.get('/loans', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'pages', 'loans.html'));
 });
 
+app.get('/reports', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'pages', 'reports.html'));
+});
+
 app.get('/school-info', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'pages', 'school-info.html'));
 });

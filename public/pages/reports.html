@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reports — Payroll System</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; }
+    .header { background: #1a73e8; color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+    .header h1 { font-size: 20px; }
+    .btn-back { background: white; color: #1a73e8; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+    .container { padding: 20px; max-width: 1300px; margin: 0 auto; }
+    .tab { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; background: white; color: #666; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .tab.active { background: #1a73e8; color: white; }
+    .tab-section { display: none; }
+    .tab-section.active { display: block; }
+    .card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; margin-bottom: 20px; }
+    .card-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+    .card-header h3 { font-size: 15px; color: #333; }
+    .card-body { padding: 20px; }
+    .btn-primary { background: #1a73e8; color: white; border: none; padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
+    .btn-success { background: #34a853; color: white; border: none; padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group label { font-size: 13px; font-weight: 600; color: #555; }
+    .form-group select { padding: 9px 11px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; outline: none; }
+    .form-group select:focus { border-color: #1a73e8; }
+    .empty-state { text-align: center; padding: 40px; color: #999; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: #1a73e8; color: white; padding: 10px 12px; text-align: left; font-weight: 600; white-space: nowrap; }
+    th.right { text-align: right; }
+    td { padding: 10px 12px; border-bottom: 1px solid #f5f5f5; color: #333; }
+    td.right { text-align: right; }
+    tr:hover td { background: #f8f9ff; }
+    .total-row td { background: #e8f0fe !important; font-weight: 700; color: #1a73e8; border-top: 2px solid #1a73e8; }
+    .summary-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 15px; margin-bottom: 20px; }
+    .summary-card { background: white; border-radius: 10px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center; }
+    .summary-card label { font-size: 11px; color: #666; display: block; margin-bottom: 5px; font-weight: 600; }
+    .summary-card span { font-size: 18px; font-weight: 700; color: #1a73e8; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📈 Reports</h1>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span id="headerUser" style="font-size:13px;"></span>
+    <button class="btn-back" onclick="window.location.href='/dashboard'">← Dashboard</button>
+  </div>
+</div>
+
+<div class="container">
+  <!-- TABS -->
+  <div style="display:flex;gap:8px;margin-bottom:20px;">
+    <button class="tab active" id="tabSummary" onclick="switchTab('Summary')">📊 Monthly Summary</button>
+    <button class="tab" id="tabEmployee" onclick="switchTab('Employee')">👤 Employee-wise</button>
+    <button class="tab" id="tabStatutory" onclick="switchTab('Statutory')">📋 Statutory</button>
+  </div>
+
+  <!-- TAB 1: MONTHLY SUMMARY -->
+  <div class="tab-section active" id="sectionSummary">
+    <div class="card">
+      <div class="card-body">
+        <div style="display:flex;gap:15px;flex-wrap:wrap;align-items:end;">
+          <div class="form-group">
+            <label>Month *</label>
+            <select id="sumMonth">
+              <option value="">Select Month</option>
+              <option>January</option><option>February</option><option>March</option>
+              <option>April</option><option>May</option><option>June</option>
+              <option>July</option><option>August</option><option>September</option>
+              <option>October</option><option>November</option><option>December</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Year *</label>
+            <select id="sumYear"></select>
+          </div>
+          <div class="form-group" style="align-self:end;">
+            <button class="btn-primary" onclick="loadSummary()">📋 Generate</button>
+          </div>
+          <div class="form-group" style="align-self:end;">
+            <button class="btn-success" onclick="exportSummary()" id="exportSumBtn" style="display:none;">⬇️ Export Excel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="summaryStats" style="display:none;" class="summary-grid">
+      <div class="summary-card"><label>Total Groups</label><span id="sumStatGroups">0</span></div>
+      <div class="summary-card"><label>Total Employees</label><span id="sumStatEmps">0</span></div>
+      <div class="summary-card"><label>Total Gross</label><span id="sumStatGross" style="font-size:14px;">₹0</span></div>
+      <div class="summary-card"><label>Total Deductions</label><span id="sumStatDed" style="font-size:14px;color:#ea4335;">₹0</span></div>
+      <div class="summary-card"><label>Total Net</label><span id="sumStatNet" style="font-size:14px;color:#34a853;">₹0</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3 id="summaryTitle">Monthly Summary</h3>
+      </div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Group</th><th class="right">Employees</th>
+              <th class="right">Gross</th><th class="right">PF</th>
+              <th class="right">PT</th><th class="right">ESIC</th>
+              <th class="right">TDS</th><th class="right">Other Ded.</th>
+              <th class="right">Total Ded.</th><th class="right">Net Pay</th>
+            </tr>
+          </thead>
+          <tbody id="summaryTable">
+            <tr><td colspan="10"><div class="empty-state">Select month and year then click Generate</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2: EMPLOYEE-WISE -->
+  <div class="tab-section" id="sectionEmployee">
+    <div class="card">
+      <div class="card-body">
+        <div style="display:flex;gap:15px;flex-wrap:wrap;align-items:end;">
+          <div class="form-group">
+            <label>Month *</label>
+            <select id="empRepMonth">
+              <option value="">Select Month</option>
+              <option>January</option><option>February</option><option>March</option>
+              <option>April</option><option>May</option><option>June</option>
+              <option>July</option><option>August</option><option>September</option>
+              <option>October</option><option>November</option><option>December</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Year *</label>
+            <select id="empRepYear"></select>
+          </div>
+          <div class="form-group">
+            <label>Location</label>
+            <select id="empRepLocation">
+              <option value="">All Locations</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Section</label>
+            <select id="empRepSection">
+              <option value="">All Sections</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Profile</label>
+            <select id="empRepProfile">
+              <option value="">All Profiles</option>
+            </select>
+          </div>
+          <div class="form-group" style="align-self:end;">
+            <button class="btn-primary" onclick="loadEmpReport()">📋 Generate</button>
+          </div>
+          <div class="form-group" style="align-self:end;">
+            <button class="btn-success" onclick="exportEmpReport()" id="exportEmpBtn" style="display:none;">⬇️ Export Excel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3 id="empRepTitle">Employee-wise Report</h3>
+        <span id="empRepCount" style="font-size:13px;color:#666;"></span>
+      </div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>EIN</th><th>Name</th><th>Designation</th>
+              <th class="right">Monthly Salary</th>
+              <th class="right">Present Days</th>
+              <th class="right">LOP Days</th>
+              <th class="right">Gross</th>
+              <th class="right">PF</th><th class="right">PT</th>
+              <th class="right">ESIC</th><th class="right">TDS</th>
+              <th class="right">Loan EMI</th>
+              <th class="right">Total Ded.</th>
+              <th class="right">Net Pay</th>
+            </tr>
+          </thead>
+          <tbody id="empRepTable">
+            <tr><td colspan="14"><div class="empty-state">Select filters and click Generate</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 3: STATUTORY -->
+  <div class="tab-section" id="sectionStatutory">
+    <div class="card">
+      <div class="card-body">
+        <div style="display:flex;gap:15px;flex-wrap:wrap;align-items:end;">
+          <div class="form-group">
+            <label>Month *</label>
+            <select id="statMonth">
+              <option value="">Select Month</option>
+              <option>January</option><option>February</option><option>March</option>
+              <option>April</option><option>May</option><option>June</option>
+              <option>July</option><option>August</option><option>September</option>
+              <option>October</option><option>November</option><option>December</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Year *</label>
+            <select id="statYear"></select>
+          </div>
+          <div class="form-group">
+            <label>Report Type</label>
+            <select id="statType">
+              <option value="pf">PF Report</option>
+              <option value="pt">PT Report</option>
+              <option value="esic">ESIC Report</option>
+            </select>
+          </div>
+          <div class="form-group" style="align-self:end;">
+            <button class="btn-primary" onclick="loadStatutory()">📋 Generate</button>
+          </div>
+          <div class="form-group" style="align-self:end;">
+            <button class="btn-success" onclick="exportStatutory()" id="exportStatBtn" style="display:none;">⬇️ Export Excel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3 id="statTitle">Statutory Report</h3>
+        <span id="statCount" style="font-size:13px;color:#666;"></span>
+      </div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead id="statHead"></thead>
+          <tbody id="statTable">
+            <tr><td colspan="6"><div class="empty-state">Select filters and click Generate</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let currentUser = {};
+  let summaryData = [];
+  let empRepData = [];
+  let statData = [];
+
+  const MONTHS = ['January','February','March','April','May','June',
+    'July','August','September','October','November','December'];
+
+  window.onload = async () => {
+    await checkAuth();
+    await loadMasters();
+    populateYears();
+    setDefaults();
+  };
+
+  async function checkAuth() {
+    const res = await fetch('/api/auth/me');
+    const data = await res.json();
+    if (!data.success) { window.location.href = '/'; return; }
+    currentUser = data.user;
+    document.getElementById('headerUser').textContent = data.user.fullName;
+  }
+
+  async function loadMasters() {
+    try {
+      const [locRes, secRes, proRes] = await Promise.all([
+        fetch('/api/masters/location'), fetch('/api/masters/section'), fetch('/api/masters/profile')
+      ]);
+      const [locData, secData, proData] = await Promise.all([locRes.json(), secRes.json(), proRes.json()]);
+      if (locData.success) {
+        const el = document.getElementById('empRepLocation');
+        locData.masters.forEach(m => { el.innerHTML += '<option value="' + m.value + '">' + m.value + '</option>'; });
+      }
+      if (secData.success) {
+        const el = document.getElementById('empRepSection');
+        secData.masters.forEach(m => { el.innerHTML += '<option value="' + m.value + '">' + m.value + '</option>'; });
+      }
+      if (proData.success) {
+        const el = document.getElementById('empRepProfile');
+        proData.masters.forEach(m => { el.innerHTML += '<option value="' + m.value + '">' + m.value + '</option>'; });
+      }
+    } catch(e) {}
+  }
+
+  function populateYears() {
+    const now = new Date().getFullYear();
+    ['sumYear','empRepYear','statYear'].forEach(id => {
+      const el = document.getElementById(id);
+      el.innerHTML = '<option value="">Select Year</option>';
+      for (let y = now + 1; y >= now - 3; y--) {
+        el.innerHTML += '<option value="' + y + '"' + (y === now ? ' selected' : '') + '>' + y + '</option>';
+      }
+    });
+  }
+
+  function setDefaults() {
+    const now = new Date();
+    ['sumMonth','empRepMonth','statMonth'].forEach(id => {
+      document.getElementById(id).value = MONTHS[now.getMonth()];
+    });
+  }
+
+  function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
+    document.getElementById('tab' + tab).classList.add('active');
+    document.getElementById('section' + tab).classList.add('active');
+  }
+
+  // ── TAB 1: MONTHLY SUMMARY ──────────────────────────────
+  async function loadSummary() {
+    const month = document.getElementById('sumMonth').value;
+    const year = document.getElementById('sumYear').value;
+    if (!month || !year) { alert('Please select month and year'); return; }
+    try {
+      const res = await fetch('/api/payroll?month=' + month + '&year=' + year);
+      const data = await res.json();
+      if (!data.success) return;
+      summaryData = data.records;
+      document.getElementById('summaryTitle').textContent = 'Monthly Summary — ' + month + ' ' + year;
+      renderSummary(summaryData);
+      document.getElementById('exportSumBtn').style.display = 'inline-block';
+    } catch(e) { console.error(e); }
+  }
+
+  function renderSummary(records) {
+    const tbody = document.getElementById('summaryTable');
+    if (!records.length) {
+      tbody.innerHTML = '<tr><td colspan="10"><div class="empty-state">No payroll records found</div></td></tr>';
+      document.getElementById('summaryStats').style.display = 'none';
+      return;
+    }
+
+    let totEmp=0, totGross=0, totPF=0, totPT=0, totESIC=0, totTDS=0, totOther=0, totDed=0, totNet=0;
+
+    tbody.innerHTML = records.map(r => {
+      const emp = r.records ? r.records.length : 0;
+      const gross = r.totalGross || 0;
+      const pf = r.totalPF || 0;
+      const pt = r.totalPT || 0;
+      const esic = r.totalESIC || 0;
+      const tds = r.totalTDS || 0;
+      const other = (r.records || []).reduce((s,e) => s + (e.advance||0), 0);
+      const ded = pf + pt + esic + tds + other;
+      const net = r.totalNet || 0;
+      totEmp+=emp; totGross+=gross; totPF+=pf; totPT+=pt;
+      totESIC+=esic; totTDS+=tds; totOther+=other; totDed+=ded; totNet+=net;
+      return '<tr>' +
+        '<td><strong>' + (r.groupName||r.section+' '+r.location) + '</strong></td>' +
+        '<td class="right">' + emp + '</td>' +
+        '<td class="right">₹' + fmt(gross) + '</td>' +
+        '<td class="right">₹' + fmt(pf) + '</td>' +
+        '<td class="right">₹' + fmt(pt) + '</td>' +
+        '<td class="right">₹' + fmt(esic) + '</td>' +
+        '<td class="right">₹' + fmt(tds) + '</td>' +
+        '<td class="right">₹' + fmt(other) + '</td>' +
+        '<td class="right">₹' + fmt(ded) + '</td>' +
+        '<td class="right"><strong style="color:#34a853;">₹' + fmt(net) + '</strong></td>' +
+        '</tr>';
+    }).join('') +
+    '<tr class="total-row">' +
+      '<td><strong>TOTAL</strong></td>' +
+      '<td class="right">' + totEmp + '</td>' +
+      '<td class="right">₹' + fmt(totGross) + '</td>' +
+      '<td class="right">₹' + fmt(totPF) + '</td>' +
+      '<td class="right">₹' + fmt(totPT) + '</td>' +
+      '<td class="right">₹' + fmt(totESIC) + '</td>' +
+      '<td class="right">₹' + fmt(totTDS) + '</td>' +
+      '<td class="right">₹' + fmt(totOther) + '</td>' +
+      '<td class="right">₹' + fmt(totDed) + '</td>' +
+      '<td class="right">₹' + fmt(totNet) + '</td>' +
+    '</tr>';
+
+    document.getElementById('sumStatGroups').textContent = records.length;
+    document.getElementById('sumStatEmps').textContent = totEmp;
+    document.getElementById('sumStatGross').textContent = '₹' + fmt(totGross);
+    document.getElementById('sumStatDed').textContent = '₹' + fmt(totDed);
+    document.getElementById('sumStatNet').textContent = '₹' + fmt(totNet);
+    document.getElementById('summaryStats').style.display = 'grid';
+  }
+
+  // ── TAB 2: EMPLOYEE-WISE ────────────────────────────────
+  async function loadEmpReport() {
+    const month = document.getElementById('empRepMonth').value;
+    const year = document.getElementById('empRepYear').value;
+    const location = document.getElementById('empRepLocation').value;
+    const section = document.getElementById('empRepSection').value;
+    const profile = document.getElementById('empRepProfile').value;
+    if (!month || !year) { alert('Please select month and year'); return; }
+    try {
+      let url = '/api/payroll?month=' + month + '&year=' + year;
+      if (location) url += '&location=' + location;
+      if (section) url += '&section=' + section;
+      if (profile) url += '&profile=' + profile;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (!data.success) return;
+
+      // Collect all employee records
+      empRepData = [];
+      for (const p of data.records) {
+        const detail = await fetch('/api/payroll/' + p._id);
+        const dData = await detail.json();
+        if (dData.success && dData.payroll.records) {
+          dData.payroll.records.forEach(r => {
+            empRepData.push({ ...r, groupName: dData.payroll.groupName });
+          });
+        }
+      }
+
+      document.getElementById('empRepTitle').textContent = 'Employee Report — ' + month + ' ' + year;
+      document.getElementById('empRepCount').textContent = empRepData.length + ' employees';
+      renderEmpReport(empRepData);
+      document.getElementById('exportEmpBtn').style.display = 'inline-block';
+    } catch(e) { console.error(e); }
+  }
+
+  function renderEmpReport(records) {
+    const tbody = document.getElementById('empRepTable');
+    if (!records.length) {
+      tbody.innerHTML = '<tr><td colspan="14"><div class="empty-state">No records found</div></td></tr>';
+      return;
+    }
+    let totGross=0, totPF=0, totPT=0, totESIC=0, totTDS=0, totAdv=0, totDed=0, totNet=0;
+
+    tbody.innerHTML = records.map(r => {
+      totGross += r.grossSalary||0; totPF += r.pfDeduction||0; totPT += r.ptDeduction||0;
+      totESIC += r.esicDeduction||0; totTDS += r.tdsDeduction||0; totAdv += r.advance||0;
+      totDed += r.totalDeductions||0; totNet += r.netSalary||0;
+      return '<tr>' +
+        '<td><strong>' + (r.ein||'—') + '</strong></td>' +
+        '<td>' + r.employeeName + '</td>' +
+        '<td>' + (r.designation||'—') + '</td>' +
+        '<td class="right">₹' + fmt(r.monthlySalary) + '</td>' +
+        '<td class="right">' + (r.presentDays||0) + '</td>' +
+        '<td class="right">' + (r.lopDays||0) + '</td>' +
+        '<td class="right">₹' + fmt(r.grossSalary) + '</td>' +
+        '<td class="right">₹' + fmt(r.pfDeduction) + '</td>' +
+        '<td class="right">₹' + fmt(r.ptDeduction) + '</td>' +
+        '<td class="right">₹' + fmt(r.esicDeduction) + '</td>' +
+        '<td class="right">₹' + fmt(r.tdsDeduction) + '</td>' +
+        '<td class="right">₹' + fmt(r.advance) + '</td>' +
+        '<td class="right">₹' + fmt(r.totalDeductions) + '</td>' +
+        '<td class="right"><strong style="color:#34a853;">₹' + fmt(r.netSalary) + '</strong></td>' +
+        '</tr>';
+    }).join('') +
+    '<tr class="total-row">' +
+      '<td colspan="6"><strong>TOTAL (' + records.length + ' employees)</strong></td>' +
+      '<td class="right">₹' + fmt(totGross) + '</td>' +
+      '<td class="right">₹' + fmt(totPF) + '</td>' +
+      '<td class="right">₹' + fmt(totPT) + '</td>' +
+      '<td class="right">₹' + fmt(totESIC) + '</td>' +
+      '<td class="right">₹' + fmt(totTDS) + '</td>' +
+      '<td class="right">₹' + fmt(totAdv) + '</td>' +
+      '<td class="right">₹' + fmt(totDed) + '</td>' +
+      '<td class="right">₹' + fmt(totNet) + '</td>' +
+    '</tr>';
+  }
+
+  // ── TAB 3: STATUTORY ────────────────────────────────────
+  async function loadStatutory() {
+    const month = document.getElementById('statMonth').value;
+    const year = document.getElementById('statYear').value;
+    const type = document.getElementById('statType').value;
+    if (!month || !year) { alert('Please select month and year'); return; }
+    try {
+      const res = await fetch('/api/payroll?month=' + month + '&year=' + year);
+      const data = await res.json();
+      if (!data.success) return;
+      statData = [];
+      for (const p of data.records) {
+        const detail = await fetch('/api/payroll/' + p._id);
+        const dData = await detail.json();
+        if (dData.success && dData.payroll.records) {
+          dData.payroll.records.forEach(r => statData.push(r));
+        }
+      }
+      const typeNames = { pf: 'PF Report', pt: 'PT Report', esic: 'ESIC Report' };
+      document.getElementById('statTitle').textContent = typeNames[type] + ' — ' + month + ' ' + year;
+      document.getElementById('statCount').textContent = statData.length + ' employees';
+      renderStatutory(statData, type);
+      document.getElementById('exportStatBtn').style.display = 'inline-block';
+    } catch(e) { console.error(e); }
+  }
+
+  function renderStatutory(records, type) {
+    const head = document.getElementById('statHead');
+    const tbody = document.getElementById('statTable');
+    let headers = '', total = 0;
+
+    if (type === 'pf') {
+      headers = '<tr><th>EIN</th><th>Name</th><th class="right">Monthly Salary</th><th class="right">Basic</th><th class="right">PF (12%)</th><th class="right">Employer PF</th></tr>';
+      tbody.innerHTML = records.filter(r => r.pfDeduction > 0).map(r => {
+        total += r.pfDeduction||0;
+        return '<tr><td><strong>' + r.ein + '</strong></td><td>' + r.employeeName + '</td>' +
+          '<td class="right">₹' + fmt(r.monthlySalary) + '</td>' +
+          '<td class="right">₹' + fmt(r.basic) + '</td>' +
+          '<td class="right">₹' + fmt(r.pfDeduction) + '</td>' +
+          '<td class="right">₹' + fmt(r.pfDeduction) + '</td></tr>';
+      }).join('') +
+      '<tr class="total-row"><td colspan="4"><strong>TOTAL</strong></td><td class="right">₹' + fmt(total) + '</td><td class="right">₹' + fmt(total) + '</td></tr>';
+    } else if (type === 'pt') {
+      headers = '<tr><th>EIN</th><th>Name</th><th>Gender</th><th class="right">Monthly Salary</th><th class="right">PT Amount</th></tr>';
+      tbody.innerHTML = records.filter(r => r.ptDeduction > 0).map(r => {
+        total += r.ptDeduction||0;
+        return '<tr><td><strong>' + r.ein + '</strong></td><td>' + r.employeeName + '</td>' +
+          '<td>—</td><td class="right">₹' + fmt(r.monthlySalary) + '</td>' +
+          '<td class="right">₹' + fmt(r.ptDeduction) + '</td></tr>';
+      }).join('') +
+      '<tr class="total-row"><td colspan="4"><strong>TOTAL</strong></td><td class="right">₹' + fmt(total) + '</td></tr>';
+    } else if (type === 'esic') {
+      headers = '<tr><th>EIN</th><th>Name</th><th class="right">Monthly Salary</th><th class="right">ESIC (0.75%)</th></tr>';
+      tbody.innerHTML = records.filter(r => r.esicDeduction > 0).map(r => {
+        total += r.esicDeduction||0;
+        return '<tr><td><strong>' + r.ein + '</strong></td><td>' + r.employeeName + '</td>' +
+          '<td class="right">₹' + fmt(r.monthlySalary) + '</td>' +
+          '<td class="right">₹' + fmt(r.esicDeduction) + '</td></tr>';
+      }).join('') +
+      '<tr class="total-row"><td colspan="3"><strong>TOTAL</strong></td><td class="right">₹' + fmt(total) + '</td></tr>';
+    }
+    head.innerHTML = headers;
+  }
+
+  // ── EXPORT TO EXCEL ─────────────────────────────────────
+  function exportSummary() {
+    const month = document.getElementById('sumMonth').value;
+    const year = document.getElementById('sumYear').value;
+    let csv = 'Group,Employees,Gross,PF,PT,ESIC,TDS,Other Deductions,Total Deductions,Net Pay\n';
+    summaryData.forEach(r => {
+      const emp = r.records ? r.records.length : 0;
+      const other = (r.records||[]).reduce((s,e) => s+(e.advance||0), 0);
+      const ded = (r.totalPF||0)+(r.totalPT||0)+(r.totalESIC||0)+(r.totalTDS||0)+other;
+      csv += [r.groupName||r.section+' '+r.location, emp, r.totalGross||0,
+        r.totalPF||0, r.totalPT||0, r.totalESIC||0, r.totalTDS||0,
+        other, ded, r.totalNet||0].join(',') + '\n';
+    });
+    downloadCSV(csv, 'Payroll_Summary_' + month + '_' + year + '.csv');
+  }
+
+  function exportEmpReport() {
+    const month = document.getElementById('empRepMonth').value;
+    const year = document.getElementById('empRepYear').value;
+    let csv = 'EIN,Name,Designation,Monthly Salary,Present Days,LOP Days,Gross,PF,PT,ESIC,TDS,Loan EMI,Total Deductions,Net Pay\n';
+    empRepData.forEach(r => {
+      csv += [r.ein, '"'+r.employeeName+'"', '"'+(r.designation||'')+'"',
+        r.monthlySalary||0, r.presentDays||0, r.lopDays||0,
+        r.grossSalary||0, r.pfDeduction||0, r.ptDeduction||0,
+        r.esicDeduction||0, r.tdsDeduction||0, r.advance||0,
+        r.totalDeductions||0, r.netSalary||0].join(',') + '\n';
+    });
+    downloadCSV(csv, 'Employee_Report_' + month + '_' + year + '.csv');
+  }
+
+  function exportStatutory() {
+    const month = document.getElementById('statMonth').value;
+    const year = document.getElementById('statYear').value;
+    const type = document.getElementById('statType').value;
+    let csv = 'EIN,Name,Monthly Salary,Amount\n';
+    statData.forEach(r => {
+      const amt = type === 'pf' ? r.pfDeduction : type === 'pt' ? r.ptDeduction : r.esicDeduction;
+      if (amt > 0) csv += [r.ein, '"'+r.employeeName+'"', r.monthlySalary||0, amt||0].join(',') + '\n';
+    });
+    downloadCSV(csv, type.toUpperCase() + '_Report_' + month + '_' + year + '.csv');
+  }
+
+  function downloadCSV(csv, filename) {
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function fmt(n) {
+    if (!n && n !== 0) return '0';
+    return parseFloat(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+</script>
+</body>
+</html>
