@@ -28,7 +28,7 @@ router.get('/:id', isLoggedIn, isAdmin, async (req, res) => {
 // CREATE user
 router.post('/', isLoggedIn, isAdmin, async (req, res) => {
   try {
-    const { username, password, fullName, role, branches } = req.body;
+    const { username, password, fullName, role, branches, managementLevel, linkedEmployeeId, ein } = req.body;
     if (!username || !password || !fullName || !role) {
       return res.status(400).json({ success: false, message: 'All fields required' });
     }
@@ -45,6 +45,9 @@ router.post('/', isLoggedIn, isAdmin, async (req, res) => {
       password: hashedPassword,
       fullName,
       role,
+      managementLevel: managementLevel || null,
+      employeeId: linkedEmployeeId || null,
+      ein: ein || null,
       branches: branches || ['all']
     });
     return res.json({
@@ -60,7 +63,7 @@ router.post('/', isLoggedIn, isAdmin, async (req, res) => {
 // UPDATE user
 router.put('/:id', isLoggedIn, isAdmin, async (req, res) => {
   try {
-    const { fullName, role, branches, isActive } = req.body;
+    const { fullName, role, branches, isActive, managementLevel, linkedEmployeeId, ein } = req.body;
     const currentUser = req.session.user;
     if (req.params.id === currentUser.id && isActive === false) {
       return res.status(400).json({
@@ -70,7 +73,7 @@ router.put('/:id', isLoggedIn, isAdmin, async (req, res) => {
     }
     const user = await User.findByIdAndUpdate(
       req.params.id,
-      { fullName, role, branches, isActive },
+      { fullName, role, branches, isActive, managementLevel: managementLevel || null, employeeId: linkedEmployeeId || null, ein: ein || null },
       { new: true, select: '-password' }
     );
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });

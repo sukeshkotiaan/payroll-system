@@ -324,7 +324,10 @@
           <select id="role" onchange="onRoleChange()">
             <option value="">Select Role</option>
             <option value="admin">Admin</option>
-            <option value="management">Management</option>
+            <option value="management" disabled style="color:#999;">── Management ──</option>
+            <option value="management_l1">Management L1 (Super Boss)</option>
+            <option value="management_l2">Management L2 (Branch Head)</option>
+            <option value="management_l3">Management L3 (Dept Head)</option>
             <option value="accountant">Accountant</option>
             <option value="supervisor">Supervisor</option>
           </select>
@@ -534,14 +537,41 @@
   function onRoleChange() {
     const role = document.getElementById('role').value;
     const supSection = document.getElementById('supervisorEmpSection');
-    if (supSection) supSection.style.display = role === 'supervisor' ? 'block' : 'none';
+    const mgmtInfo = document.getElementById('mgmtLevelInfo');
+    const mgmtText = document.getElementById('mgmtLevelText');
+
+    // Show EIN search for all non-admin roles
+    if (supSection) {
+      supSection.style.display = (role && role !== 'admin') ? 'block' : 'none';
+      const supLabel = document.querySelector('#supervisorEmpSection .section-title');
+      if (supLabel) supLabel.textContent = role === 'supervisor' ? 
+        '\ud83d\udd0d Step 2 — Link to Employee (Supervisor)' : 
+        '\ud83d\udd0d Step 2 — Link to Employee';
+    }
+
+    // Show management level info
+    if (mgmtInfo && mgmtText) {
+      if (role === 'management_l1') {
+        mgmtInfo.style.display = 'block';
+        mgmtText.textContent = 'L1: Super Boss — Full system access, final payroll approver, auto-attendance';
+      } else if (role === 'management_l2') {
+        mgmtInfo.style.display = 'block';
+        mgmtText.textContent = 'L2: Branch Head — Branch level access, payroll approval, auto-attendance';
+      } else if (role === 'management_l3') {
+        mgmtInfo.style.display = 'block';
+        mgmtText.textContent = 'L3: Dept Head — Reports and payslip view only, auto-attendance';
+      } else {
+        mgmtInfo.style.display = 'none';
+      }
+    }
+
     const hint = document.getElementById('branchHint');
-    if (role === 'admin' || role === 'management') {
+    if (role === 'admin' || role.startsWith('management')) {
       renderBranchOptions(['all']);
       hint.textContent = 'Admin and Management have access to all branches by default';
     } else {
       renderBranchOptions([]);
-      hint.textContent = 'Select one or more branches for this accountant';
+      hint.textContent = 'Select one or more branches';
     }
   }
 
@@ -656,7 +686,13 @@
     }
 
     const linkedEmployeeId = document.getElementById('linkedEmployeeId').value;
-    const payload = { fullName, role, branches };
+    // Extract management level from role string
+    let actualRole = role;
+    let managementLevel = null;
+    if (role === 'management_l1') { actualRole = 'management'; managementLevel = 1; }
+    else if (role === 'management_l2') { actualRole = 'management'; managementLevel = 2; }
+    else if (role === 'management_l3') { actualRole = 'management'; managementLevel = 3; }
+    const payload = { fullName, role: actualRole, managementLevel, branches };
     if (!editMode) { payload.username = username; payload.password = password; }
     if (linkedEmployeeId) payload.linkedEmployeeId = linkedEmployeeId;
 
@@ -672,6 +708,7 @@
       const data = await res.json();
       if (data.success) {
         showAlert('alertSuccess', data.message);
+        clearEINSearch();
         await loadUsers();
         setTimeout(showListView, 1500);
       } else {

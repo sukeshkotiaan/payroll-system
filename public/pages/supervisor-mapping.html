@@ -223,7 +223,19 @@
       const res = await fetch('/api/users');
       const data = await res.json();
       if (!data.success) return;
-      supervisors = data.users.filter(u => u.role === 'supervisor' && u.isActive);
+      const role = currentUser.role;
+      const level = currentUser.managementLevel;
+      supervisors = data.users.filter(u => {
+        if (!u.isActive) return false;
+        if (role === 'admin' || (role === 'management' && level === 1)) {
+          return u.role !== 'admin';
+        } else if (role === 'management' && level === 2) {
+          return u.role === 'supervisor' || u.role === 'accountant' || (u.role === 'management' && u.managementLevel === 3);
+        } else if (role === 'accountant') {
+          return u.role === 'supervisor';
+        }
+        return u.role === 'supervisor';
+      });
 
       const empRes = await fetch('/api/employees');
       const empData = await empRes.json();

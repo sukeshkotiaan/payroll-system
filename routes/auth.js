@@ -48,6 +48,7 @@ router.post('/login', async (req, res) => {
       username: user.username,
       fullName: user.fullName,
       role: user.role,
+      managementLevel: user.managementLevel || null,
       branch: user.branch,
       branches: user.branches || []
     };
