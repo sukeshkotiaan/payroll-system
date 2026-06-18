@@ -113,12 +113,6 @@
   <div class="status-option status-CL" onclick="setStatus('CL')">CL<br><span style="font-size:9px;">Casual</span></div>
   <div class="status-option status-SL" onclick="setStatus('SL')">SL<br><span style="font-size:9px;">Sick</span></div>
   <div class="status-option status-PL" onclick="setStatus('PL')">PL<br><span style="font-size:9px;">Paid</span></div>
-  <div class="status-option status-SpL" onclick="setStatus('SpL')">SpL<br><span style="font-size:9px;">Special</span></div>
-  <div class="status-option status-OT" onclick="showOTInput()">OT<br><span style="font-size:9px;">Overtime</span></div>
-  <div class="ot-input-row" id="otInputRow">
-    <input type="number" id="otHoursInput" placeholder="OT Hours" min="0" step="0.5">
-    <button onclick="setStatus('OT')">✓</button>
-  </div>
 </div>
 
 <!-- LIST VIEW -->
@@ -246,8 +240,6 @@
               <span style="padding:3px 8px;border-radius:4px;" class="status-CL">CL=Casual</span>
               <span style="padding:3px 8px;border-radius:4px;" class="status-SL">SL=Sick</span>
               <span style="padding:3px 8px;border-radius:4px;" class="status-PL">PL=Paid</span>
-              <span style="padding:3px 8px;border-radius:4px;" class="status-SpL">SpL=Special</span>
-              <span style="padding:3px 8px;border-radius:4px;" class="status-OT">OT=Overtime</span>
             </div>
             <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
               <strong style="font-size:12px;color:#666;">Bulk Mark:</strong>
@@ -897,8 +889,7 @@
     event.stopPropagation();
     pickerEin = ein;
     pickerDay = day;
-    document.getElementById('otInputRow').style.display = 'none';
-    document.getElementById('otHoursInput').value = '';
+    // OT removed
     const picker = document.getElementById('statusPicker');
     picker.style.display = 'grid';
     const rect = event.target.getBoundingClientRect();
@@ -913,12 +904,12 @@
     picker.style.zIndex = '99999';
   }
 
-  function showOTInput() { document.getElementById('otInputRow').style.display = 'flex'; }
+  function showOTInput() { /* OT removed */ }
 
   function setStatus(status) {
     if (!pickerEin || !pickerDay) return;
     showUnsavedBanner();
-    const otH = status === 'OT' ? (parseFloat(document.getElementById('otHoursInput').value) || 0) : 0;
+    const otH = 0;
     // Update in main attendanceRecords
     const empIdx = attendanceRecords.findIndex(r => r.ein === pickerEin);
     if (empIdx >= 0) {
