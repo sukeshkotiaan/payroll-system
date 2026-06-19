@@ -54,14 +54,17 @@ router.post('/login', async (req, res) => {
       branches: user.branches || []
     };
 
-    if (user.role === 'supervisor') {
-      const emp = await Employee.findOne({ employeeName: user.fullName, isActive: true });
-      if (emp) {
+    // Link ALL roles to their employee record (gives location/section/profile/EIN)
+    const emp = await Employee.findOne({ employeeName: user.fullName, isActive: true });
+    if (emp) {
+      sessionUser.employeeId = emp._id;
+      sessionUser.ein = emp.ein;
+      sessionUser.location = emp.location;
+      sessionUser.section = emp.section;
+      sessionUser.profile = emp.profile;
+      if (user.role === 'supervisor') {
         sessionUser.supervisorEIN = emp.ein;
         sessionUser.supervisorEmployeeId = emp._id;
-        sessionUser.location = emp.location;
-        sessionUser.section = emp.section;
-        sessionUser.profile = emp.profile;
       }
     }
 

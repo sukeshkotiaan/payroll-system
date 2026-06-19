@@ -1,4 +1,12 @@
 require('dotenv').config();
+process.on('unhandledRejection', (reason, promise) => {
+  console.log('UNHANDLED REJECTION:', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.log('UNCAUGHT EXCEPTION:', err.message);
+  console.log(err.stack);
+});
+
 const express = require('express');
 const mongoose = require('mongoose');
 const session = require('express-session');
