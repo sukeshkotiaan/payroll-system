@@ -66,6 +66,12 @@ router.post('/login', async (req, res) => {
         sessionUser.supervisorEIN = emp.ein;
         sessionUser.supervisorEmployeeId = emp._id;
       }
+      // Self-heal: persist the link to the User record if it was missing
+      if (!user.ein || !user.employeeId) {
+        user.ein = emp.ein;
+        user.employeeId = emp._id;
+        await user.save();
+      }
     }
 
     req.session.user = sessionUser;

@@ -71,9 +71,18 @@ router.put('/:id', isLoggedIn, isAdmin, async (req, res) => {
         message: 'You cannot deactivate your own account'
       });
     }
+    // Don't wipe existing employee link if no new one was provided in this update
+    const existingUser = await User.findById(req.params.id);
+    const updateData = {
+      fullName, role, branches, isActive,
+      managementLevel: managementLevel || null,
+      employeeId: linkedEmployeeId || (existingUser ? existingUser.employeeId : null),
+      ein: ein || (existingUser ? existingUser.ein : null)
+    };
+
     const user = await User.findByIdAndUpdate(
       req.params.id,
-      { fullName, role, branches, isActive, managementLevel: managementLevel || null, employeeId: linkedEmployeeId || null, ein: ein || null },
+      updateData,
       { new: true, select: '-password' }
     );
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });

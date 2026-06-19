@@ -222,7 +222,6 @@
     await checkAuth();
     await loadMasterData();
     await loadSupervisors();
-    await loadAccountants();
     await loadEmployeesForMapping();
   };
 
@@ -365,7 +364,19 @@
       const res = await fetch(url);
       const data = await res.json();
       if (!data.success) return;
-      allEmployees = data.employees.filter(e => e.isActive);
+
+      // Get staff EINs (supervisor/accountant/management) to mark or exclude
+      const usersRes = await fetch('/api/users');
+      const usersData = await usersRes.json();
+      const staffEINs = usersData.success ?
+        usersData.users.filter(u => u.role !== 'admin' && u.ein).map(u => u.ein) : [];
+
+      const isAdmin = currentUser.role === 'admin';
+      // Admin sees everyone (marked with Staff badge); others have staff excluded entirely
+      allEmployees = data.employees
+        .filter(e => e.isActive)
+        .filter(e => isAdmin || !staffEINs.includes(e.ein))
+        .map(e => ({ ...e, isStaff: staffEINs.includes(e.ein) }));
       filteredEmployees = [...allEmployees];
       renderMappingTable(filteredEmployees);
     } catch(e) { console.error(e); }
