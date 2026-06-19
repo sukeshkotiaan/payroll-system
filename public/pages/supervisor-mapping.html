@@ -1,3 +1,41 @@
+
+  <!-- TAB 3: ACCOUNTANT MAPPING -->
+  <div class="tab-section" id="sectionAccountant">
+    <div class="card">
+      <div class="card-header">
+        <h3>Accountant → Supervisor Mapping</h3>
+        <span style="font-size:13px;color:#666;">Map each accountant to their supervisors</span>
+      </div>
+      <div class="card-body">
+        <div style="display:flex;gap:15px;flex-wrap:wrap;align-items:end;margin-bottom:15px;">
+          <div style="flex:1;min-width:200px;">
+            <label style="font-size:13px;font-weight:600;color:#555;display:block;margin-bottom:5px;">Select Accountant</label>
+            <select id="accSelect" onchange="loadAccountantMapping()" style="width:100%;padding:9px;border:1px solid #ddd;border-radius:6px;font-size:13px;">
+              <option value="">-- Select Accountant --</option>
+            </select>
+          </div>
+        </div>
+        <div id="accMappingSection" style="display:none;">
+          <div style="background:#e8f0fe;border-radius:8px;padding:10px 15px;margin-bottom:15px;font-size:13px;">
+            <strong id="accMappingTitle"></strong>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th style="width:50px;">Map</th>
+                <th>EIN</th><th>Name</th><th>Role</th><th>Location</th><th>Mapped Employees</th>
+              </tr>
+            </thead>
+            <tbody id="accMappingTable"></tbody>
+          </table>
+          <div style="margin-top:15px;text-align:right;">
+            <button class="btn-primary" onclick="saveAccountantMapping()">💾 Save Mapping</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -80,6 +118,7 @@
   <div style="display:flex;gap:8px;margin-bottom:20px;">
     <button class="tab active" id="tabSupervisors" onclick="switchTab('Supervisors')">👥 Supervisor List</button>
     <button class="tab" id="tabMapping" onclick="switchTab('Mapping')">🔗 Employee Mapping</button>
+    <button class="tab" id="tabAccountant" onclick="switchTab('Accountant')">🧾 Accountant Mapping</button>
   </div>
 
   <!-- TAB 1: SUPERVISOR LIST -->
@@ -183,6 +222,7 @@
     await checkAuth();
     await loadMasterData();
     await loadSupervisors();
+    await loadAccountants();
     await loadEmployeesForMapping();
   };
 

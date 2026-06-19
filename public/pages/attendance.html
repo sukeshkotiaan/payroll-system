@@ -412,10 +412,30 @@
     if (!data.success) { window.location.href = '/'; return; }
     currentUser = data.user;
     document.getElementById('headerUser').textContent = data.user.fullName;
-    // If supervisor - auto load attendance
+
     if (data.user.role === 'supervisor') {
       setupSupervisorView();
+    } else if (data.user.role === 'accountant') {
+      setupAccountantView();
+    } else if (data.user.role === 'management' && data.user.managementLevel && data.user.managementLevel !== 1) {
+      setupAccountantView();
     }
+  }
+
+  function setupAccountantView() {
+    // Branch access comes from currentUser.branches (assigned by Admin/Management L1)
+    // Default to Pending status; branch filtering happens client-side in renderAttendanceList
+    setTimeout(function() {
+      const filterStat = document.getElementById('filterStatus');
+      if (filterStat) filterStat.value = 'Pending';
+      loadAttendanceList();
+    }, 400);
+  }
+
+  function hasAccessToLocation(location) {
+    if (!currentUser.branches || !currentUser.branches.length) return true;
+    if (currentUser.branches.includes('all')) return true;
+    return currentUser.branches.includes(location);
   }
 
   let supervisorViewMode = 'current'; // 'current' or 'previous'
@@ -647,7 +667,16 @@
       if (status) url += 'status=' + status + '&';
       const res = await fetch(url);
       const data = await res.json();
-      if (data.success) renderAttendanceList(data.records);
+      if (data.success) {
+        let records = data.records;
+        // Restrict to assigned branches for accountant / management L2/L3
+        const isFullAccess = currentUser.role === 'admin' ||
+          (currentUser.role === 'management' && currentUser.managementLevel === 1);
+        if (!isFullAccess && (currentUser.role === 'accountant' || currentUser.role === 'management')) {
+          records = records.filter(r => hasAccessToLocation(r.location));
+        }
+        renderAttendanceList(records);
+      }
     } catch(e) {}
   }
 
