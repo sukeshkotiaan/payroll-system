@@ -218,12 +218,15 @@
           <button class="input-tab" id="tabUpload" onclick="switchInputTab('Upload')">📤 Upload Excel</button>
           <button class="input-tab" id="tabSupervisor" onclick="switchInputTab('Supervisor')">👤 Pull from Supervisor</button>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
           <label style="font-size:13px;font-weight:600;color:#555;">Group:</label>
           <select id="groupDropdown" onchange="filterByGroup()"
             style="padding:8px 14px;border:1px solid #1a73e8;border-radius:6px;font-size:13px;outline:none;min-width:220px;">
             <option value="">All Groups</option>
           </select>
+          <input type="text" id="empGridSearch" placeholder="Search EIN or Name..."
+            oninput="searchEmpInGrid()"
+            style="padding:8px 14px;border:1px solid #ddd;border-radius:6px;font-size:13px;outline:none;min-width:220px;">
         </div>
       </div>
 
@@ -800,8 +803,24 @@
   function filterByGroup() {
     activeGroupFilter = document.getElementById('groupDropdown').value;
     displayRecords = activeGroupFilter ? attendanceRecords.filter(r => r.groupName === activeGroupFilter) : attendanceRecords;
+    const searchBox = document.getElementById('empGridSearch');
+    if (searchBox) searchBox.value = '';
     renderNewGrid();
     if (document.getElementById('sectionSupervisor').classList.contains('active')) loadSupervisorSubmissions();
+  }
+
+  function searchEmpInGrid() {
+    const q = document.getElementById('empGridSearch').value.trim().toLowerCase();
+    const base = activeGroupFilter ? attendanceRecords.filter(r => r.groupName === activeGroupFilter) : attendanceRecords;
+    if (!q) {
+      displayRecords = base;
+    } else {
+      displayRecords = base.filter(function(r) {
+        return (r.ein && r.ein.toLowerCase().indexOf(q) >= 0) ||
+               (r.employeeName && r.employeeName.toLowerCase().indexOf(q) >= 0);
+      });
+    }
+    renderNewGrid();
   }
 
   function switchInputTab(tab) {
