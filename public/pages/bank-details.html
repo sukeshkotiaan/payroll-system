@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bank Details — Payroll System</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; }
+    .header { background: #1a73e8; color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+    .header h1 { font-size: 20px; }
+    .btn-back { background: white; color: #1a73e8; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+    .container { padding: 20px; max-width: 1100px; margin: 0 auto; }
+    .tab { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; background: white; color: #666; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .tab.active { background: #1a73e8; color: white; }
+    .tab-section { display: none; }
+    .tab-section.active { display: block; }
+    .card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; margin-bottom: 15px; }
+    .card-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+    .card-header h3 { font-size: 15px; color: #333; }
+    .emp-row { padding: 15px 20px; border-bottom: 1px solid #f0f0f0; }
+    .emp-row-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px; }
+    .emp-info strong { font-size: 14px; color: #333; display: block; }
+    .emp-info span { font-size: 12px; color: #666; }
+    .emp-row-actions { display: flex; align-items: center; gap: 12px; }
+    .bank-fields { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .bank-fields input { padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; outline: none; width: 100%; }
+    .bank-fields input:focus { border-color: #1a73e8; }
+    .badge { padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+    .badge-notfilled { background: #f0f0f0; color: #888; }
+    .badge-pending { background: #fef3c7; color: #d97706; }
+    .badge-verified { background: #e6f4ea; color: #34a853; }
+    .btn-save { background: #1a73e8; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; white-space: nowrap; }
+    .btn-save:hover { background: #1557b0; }
+    .verify-check { display: flex; align-items: center; gap: 5px; font-size: 12px; white-space: nowrap; }
+    .empty-state { text-align: center; padding: 40px; color: #999; }
+    .alert { padding: 10px 14px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; display: none; }
+    .alert-success { background: #e6f4ea; color: #34a853; }
+    .alert-error { background: #fce8e6; color: #ea4335; }
+    .search-box { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; outline: none; min-width: 220px; }
+    .search-box:focus { border-color: #1a73e8; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🏦 Bank Details</h1>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span id="headerUser" style="font-size:13px;"></span>
+    <button class="btn-back" onclick="window.location.href='/dashboard'">← Dashboard</button>
+  </div>
+</div>
+
+<div class="container">
+  <div class="alert alert-success" id="alertSuccess"></div>
+  <div class="alert alert-error" id="alertError"></div>
+
+  <!-- TABS -->
+  <div style="display:flex;gap:8px;margin-bottom:20px;">
+    <button class="tab active" id="tabNotFilled" onclick="switchTab('NotFilled')">📝 Not Filled <span id="countNotFilled"></span></button>
+    <button class="tab" id="tabPending" onclick="switchTab('Pending')">⏳ Pending Approval <span id="countPending"></span></button>
+  </div>
+
+  <!-- TAB 1: NOT FILLED -->
+  <div class="tab-section active" id="sectionNotFilled">
+    <div class="card">
+      <div class="card-header">
+        <h3>Bank Details Not Filled</h3>
+        <input type="text" class="search-box" id="searchNotFilled" placeholder="Search EIN or Name..." oninput="filterTab('NotFilled')">
+      </div>
+      <div id="listNotFilled"><div class="empty-state">Loading...</div></div>
+    </div>
+  </div>
+
+  <!-- TAB 2: PENDING APPROVAL -->
+  <div class="tab-section" id="sectionPending">
+    <div class="card">
+      <div class="card-header">
+        <h3>Pending Verification</h3>
+        <input type="text" class="search-box" id="searchPending" placeholder="Search EIN or Name..." oninput="filterTab('Pending')">
+      </div>
+      <div id="listPending"><div class="empty-state">Loading...</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let currentUser = {};
+  let employees = [];
+
+  window.onload = async () => {
+    await checkAuth();
+    await loadTeam();
+  };
+
+  async function checkAuth() {
+    const res = await fetch('/api/auth/me');
+    const data = await res.json();
+    if (!data.success) { window.location.href = '/'; return; }
+    currentUser = data.user;
+    document.getElementById('headerUser').textContent = data.user.fullName;
+  }
+
+  async function loadTeam() {
+    try {
+      const res = await fetch('/api/employees/my-team-bank');
+      const data = await res.json();
+      if (!data.success) return;
+      employees = data.employees;
+      renderTab('NotFilled');
+      renderTab('Pending');
+    } catch(e) { console.error(e); }
+  }
+
+  function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
+    document.getElementById('tab' + tab).classList.add('active');
+    document.getElementById('section' + tab).classList.add('active');
+  }
+
+  function filterTab(tab) {
+    renderTab(tab);
+  }
+
+  function renderTab(tab) {
+    const statusMap = { NotFilled: 'Not Filled', Pending: 'Pending' };
+    const targetStatus = statusMap[tab];
+    const searchEl = document.getElementById('search' + tab);
+    const search = searchEl ? searchEl.value.trim().toLowerCase() : '';
+
+    let list = employees.filter(e => e.bankVerificationStatus === targetStatus);
+    if (search) {
+      list = list.filter(e =>
+        (e.ein && e.ein.toLowerCase().indexOf(search) >= 0) ||
+        (e.employeeName && e.employeeName.toLowerCase().indexOf(search) >= 0)
+      );
+    }
+
+    document.getElementById('count' + tab).textContent = '(' + list.length + ')';
+    const container = document.getElementById('list' + tab);
+
+    if (!list.length) {
+      container.innerHTML = '<div class="empty-state">' +
+        (tab === 'NotFilled' ? 'Everyone has filled their bank details' : 'No pending verifications') +
+        '</div>';
+      return;
+    }
+
+    const canVerify = currentUser.role === 'admin' || currentUser.role === 'management' || currentUser.role === 'accountant';
+
+    container.innerHTML = list.map(function(e) {
+      const statusClass = e.bankVerificationStatus === 'Verified' ? 'badge-verified' :
+        e.bankVerificationStatus === 'Pending' ? 'badge-pending' : 'badge-notfilled';
+      return '<div class="emp-row">' +
+        '<div class="emp-row-top">' +
+        '<div class="emp-info"><strong>' + e.employeeName + '</strong><span>' + e.ein + ' — ' + (e.designation||'') + '</span></div>' +
+        '<div class="emp-row-actions">' +
+        '<span class="badge ' + statusClass + '">' + e.bankVerificationStatus + '</span>' +
+        (canVerify ? '<label class="verify-check"><input type="checkbox" id="verify-' + e._id + '"> Verify</label>' : '') +
+        '<button class="btn-save" data-id="' + e._id + '" onclick="saveBank(this.dataset.id)">💾 Save</button>' +
+        '</div>' +
+        '</div>' +
+        '<div class="bank-fields">' +
+        '<input type="text" placeholder="Bank Name" id="bank-' + e._id + '" value="' + (e.bankName||'') + '">' +
+        '<input type="text" placeholder="Account Number" id="acc-' + e._id + '" value="' + (e.accountNumber||'') + '">' +
+        '<input type="text" placeholder="IFSC Code" id="ifsc-' + e._id + '" value="' + (e.ifscCode||'') + '" style="text-transform:uppercase;">' +
+        '<input type="text" placeholder="Account Holder Name" id="holder-' + e._id + '" value="' + (e.accountHolderName||'') + '">' +
+        '</div>' +
+        '</div>';
+    }).join('');
+  }
+
+  async function saveBank(id) {
+    const bankName = document.getElementById('bank-' + id).value.trim();
+    const accountNumber = document.getElementById('acc-' + id).value.trim();
+    const ifscCode = document.getElementById('ifsc-' + id).value.trim();
+    const accountHolderName = document.getElementById('holder-' + id).value.trim();
+    const verifyEl = document.getElementById('verify-' + id);
+    const verify = verifyEl ? verifyEl.checked : false;
+
+    try {
+      const res = await fetch('/api/employees/' + id + '/bank-details', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ bankName, accountNumber, ifscCode, accountHolderName, verify: verify ? 'true' : 'false' })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showAlert('alertSuccess', '✅ Bank details saved');
+        await loadTeam();
+      } else {
+        showAlert('alertError', data.message);
+      }
+    } catch(e) { showAlert('alertError', 'Error: ' + e.message); }
+  }
+
+  function showAlert(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg; el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 4000);
+  }
+</script>
+</body>
+</html>

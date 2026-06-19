@@ -111,6 +111,10 @@ app.get('/school-info', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'pages', 'school-info.html'));
 });
 
+app.get('/bank-details', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'pages', 'bank-details.html'));
+});
+
 app.get('/supervisor-mapping', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'pages', 'supervisor-mapping.html'));
 });

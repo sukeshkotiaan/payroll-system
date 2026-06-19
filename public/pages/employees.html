@@ -282,6 +282,34 @@
         </div>
       </div>
 
+      <div class="section-title">🏦 Bank Details <span id="bankStatusBadge" style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;margin-left:8px;"></span></div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Bank Name</label>
+          <input type="text" id="bankName" placeholder="e.g. HDFC Bank">
+        </div>
+        <div class="form-group">
+          <label>Account Number</label>
+          <input type="text" id="accountNumber" placeholder="e.g. 50100123456789" onblur="checkDuplicateAccount()">
+          <div id="duplicateAccountWarning" style="display:none;font-size:11px;color:#d97706;background:#fef3c7;padding:4px 8px;border-radius:4px;margin-top:4px;"></div>
+        </div>
+        <div class="form-group">
+          <label>IFSC Code</label>
+          <input type="text" id="ifscCode" placeholder="e.g. HDFC0001234" style="text-transform:uppercase;">
+        </div>
+        <div class="form-group">
+          <label>Account Holder Name</label>
+          <input type="text" id="accountHolderName" placeholder="As per bank records">
+        </div>
+      </div>
+      <div id="bankVerifySection" style="display:none;margin-top:10px;padding:10px 15px;background:#f8f9fa;border-radius:8px;">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
+          <input type="checkbox" id="bankVerifyCheckbox" onchange="toggleBankVerify()">
+          <span>Mark bank details as Verified</span>
+        </label>
+        <div id="bankVerifyInfo" style="font-size:12px;color:#666;margin-top:5px;"></div>
+      </div>
+
       <div class="section-title">🎓 Education Qualifications</div>
       <div class="qual-headers">
         <div class="qual-header-label">Degree / Certificate</div>
@@ -675,6 +703,8 @@
   }
 
   function resetForm() {
+    window.currentBankStatus = 'Not Filled';
+    setTimeout(function() { renderBankStatusBadge('Not Filled'); }, 0);
     const ids = ['empId','location','section','profile','department','title','gender',
       'designationSelect','designationCustom','designation','employeeName',
       'dateOfBirth','dateOfJoining','panNumber','aadhaarNumber',
@@ -734,6 +764,13 @@
       document.getElementById('ein').value = emp.ein || '';
       document.getElementById('einBox').style.display = 'flex';
       document.getElementById('generateEINBtn').style.display = 'none';
+      document.getElementById('bankName').value = emp.bankName || '';
+      document.getElementById('accountNumber').value = emp.accountNumber || '';
+      document.getElementById('ifscCode').value = emp.ifscCode || '';
+      document.getElementById('accountHolderName').value = emp.accountHolderName || '';
+      window.currentBankStatus = emp.bankVerificationStatus || 'Not Filled';
+      renderBankStatusBadge(window.currentBankStatus, emp.bankVerifiedBy, emp.bankVerifiedAt);
+
       if (emp.qualifications && emp.qualifications.length > 0) {
         emp.qualifications.forEach(q => addQualification(q));
       }
@@ -743,8 +780,79 @@
     } catch(err) { console.error(err); }
   }
 
+  function renderBankStatusBadge(status, verifiedBy, verifiedAt) {
+    const badge = document.getElementById('bankStatusBadge');
+    const verifySection = document.getElementById('bankVerifySection');
+    const checkbox = document.getElementById('bankVerifyCheckbox');
+    const info = document.getElementById('bankVerifyInfo');
+    if (!badge) return;
+
+    const colors = {
+      'Not Filled': { bg: '#f0f0f0', color: '#888' },
+      'Pending': { bg: '#fef3c7', color: '#d97706' },
+      'Verified': { bg: '#e6f4ea', color: '#34a853' }
+    };
+    const c = colors[status] || colors['Not Filled'];
+    badge.style.background = c.bg;
+    badge.style.color = c.color;
+    badge.textContent = status;
+
+    const canVerify = currentUser.role === 'admin' || currentUser.role === 'management' || currentUser.role === 'accountant';
+    if (verifySection) {
+      verifySection.style.display = (canVerify && status !== 'Not Filled') ? 'block' : 'none';
+    }
+    if (checkbox) checkbox.checked = (status === 'Verified');
+    if (info) {
+      info.textContent = (status === 'Verified' && verifiedBy) ?
+        'Verified by ' + verifiedBy + (verifiedAt ? ' on ' + new Date(verifiedAt).toLocaleDateString('en-IN') : '') :
+        'Not yet verified';
+    }
+  }
+
+  async function checkDuplicateAccount() {
+    const accNum = document.getElementById('accountNumber').value.trim();
+    const warning = document.getElementById('duplicateAccountWarning');
+    if (!accNum) { warning.style.display = 'none'; return; }
+    const empId = document.getElementById('empId').value;
+    try {
+      let url = '/api/employees/check-account/' + encodeURIComponent(accNum);
+      if (empId) url += '?excludeId=' + empId;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.success && data.duplicates && data.duplicates.length > 0) {
+        const names = data.duplicates.map(d => d.employeeName + ' (' + d.ein + ')').join(', ');
+        warning.textContent = '⚠️ This account number is already used by: ' + names;
+        warning.style.display = 'block';
+      } else {
+        warning.style.display = 'none';
+      }
+    } catch(e) {}
+  }
+
+  function toggleBankVerify() {
+    const checked = document.getElementById('bankVerifyCheckbox').checked;
+    window.currentBankStatus = checked ? 'Verified' : 'Pending';
+    renderBankStatusBadge(window.currentBankStatus, currentUser.fullName, new Date());
+  }
+
   async function saveEmployee() {
     const id = document.getElementById('empId').value;
+
+    // HARD BLOCK: cannot save if account number is a duplicate
+    const accNumVal = document.getElementById('accountNumber').value.trim();
+    if (accNumVal) {
+      try {
+        let checkUrl = '/api/employees/check-account/' + encodeURIComponent(accNumVal);
+        if (id) checkUrl += '?excludeId=' + id;
+        const checkRes = await fetch(checkUrl);
+        const checkData = await checkRes.json();
+        if (checkData.success && checkData.duplicates && checkData.duplicates.length > 0) {
+          const names = checkData.duplicates.map(d => d.employeeName + ' (' + d.ein + ')').join(', ');
+          showAlert('alertError', 'Cannot save: this account number is already used by ' + names + '. Please use a unique account number.');
+          return;
+        }
+      } catch(e) {}
+    }
     const designationVal = customDesignationMode ? document.getElementById('designationCustom').value.trim() : document.getElementById('designationSelect').value;
     document.getElementById('designation').value = designationVal;
     const required = [
@@ -764,8 +872,28 @@
     const fields = ['location','section','profile','department','title','gender','designation',
       'employeeName','dateOfBirth','dateOfJoining','panNumber','aadhaarNumber',
       'phoneNumber','email','address','uanNumber','monthlySalary','ctcAnnual',
-      'ctcMonthly','basic','hraAllowance','pf','pt','ein'];
+      'ctcMonthly','basic','hraAllowance','pf','pt','ein',
+      'bankName','accountNumber','ifscCode','accountHolderName'];
     fields.forEach(f => { const el = document.getElementById(f); if (el) formData.append(f, el.value); });
+
+    // Bank verification status logic
+    const bankHasData = document.getElementById('bankName').value.trim() ||
+      document.getElementById('accountNumber').value.trim() ||
+      document.getElementById('ifscCode').value.trim();
+    let bankStatus = 'Not Filled';
+    if (bankHasData) {
+      bankStatus = window.currentBankStatus || 'Pending';
+      // Supervisor edits always reset to Pending - they cannot verify
+      if (currentUser.role === 'supervisor') bankStatus = 'Pending';
+    }
+    formData.append('bankVerificationStatus', bankStatus);
+    if (bankStatus === 'Verified') {
+      formData.append('bankVerifiedBy', currentUser.fullName);
+      formData.append('bankVerifiedAt', new Date().toISOString());
+    } else {
+      formData.append('bankVerifiedBy', '');
+      formData.append('bankVerifiedAt', '');
+    }
     formData.append('pfApplicable', document.getElementById('pfApplicable').checked);
     formData.append('esicApplicable', document.getElementById('esicApplicable').checked);
     formData.append('ptApplicable', document.getElementById('ptApplicable').checked);

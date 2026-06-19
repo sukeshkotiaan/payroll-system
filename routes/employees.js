@@ -51,6 +51,81 @@ router.post('/generate-ein', isLoggedIn, async (req, res) => {
   }
 });
 
+// CHECK for duplicate bank account number
+router.get('/check-account/:accountNumber', isLoggedIn, async (req, res) => {
+  try {
+    const { accountNumber } = req.params;
+    const excludeId = req.query.excludeId;
+    if (!accountNumber) return res.json({ success: true, duplicates: [] });
+    const filter = { accountNumber, isActive: true };
+    if (excludeId) filter._id = { $ne: excludeId };
+    const duplicates = await Employee.find(filter).select('ein employeeName');
+    return res.json({ success: true, duplicates });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// GET team bank details (narrow scope - no salary/sensitive fields)
+router.get('/my-team-bank', isLoggedIn, async (req, res) => {
+  try {
+    const role = req.session.user.role;
+    let filter = { isActive: true };
+    if (role === 'supervisor') {
+      filter.supervisorId = req.session.user.id;
+    }
+    const employees = await Employee.find(filter)
+      .select('ein employeeName designation location bankName accountNumber ifscCode accountHolderName bankVerificationStatus bankVerifiedBy bankVerifiedAt')
+      .sort({ ein: 1 });
+    return res.json({ success: true, employees });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// UPDATE bank details only (used by My Team Bank Details page)
+router.patch('/:id/bank-details', isLoggedIn, async (req, res) => {
+  try {
+    const { bankName, accountNumber, ifscCode, accountHolderName } = req.body;
+    const role = req.session.user.role;
+
+    const employee = await Employee.findById(req.params.id);
+    if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
+
+    if (role === 'supervisor' && (!employee.supervisorId || employee.supervisorId.toString() !== req.session.user.id.toString())) {
+      return res.status(403).json({ success: false, message: 'You can only update bank details for your own team' });
+    }
+
+    if (accountNumber) {
+      const dup = await Employee.findOne({ accountNumber, isActive: true, _id: { $ne: req.params.id } });
+      if (dup) {
+        return res.status(400).json({ success: false, message: 'This account number is already used by ' + dup.employeeName + ' (' + dup.ein + ')' });
+      }
+    }
+
+    employee.bankName = bankName || '';
+    employee.accountNumber = accountNumber || '';
+    employee.ifscCode = (ifscCode || '').toUpperCase();
+    employee.accountHolderName = accountHolderName || '';
+
+    const canVerify = role === 'admin' || role === 'management' || role === 'accountant';
+    if (canVerify && req.body.verify === 'true') {
+      employee.bankVerificationStatus = 'Verified';
+      employee.bankVerifiedBy = req.session.user.fullName;
+      employee.bankVerifiedAt = new Date();
+    } else {
+      employee.bankVerificationStatus = (bankName || accountNumber || ifscCode) ? 'Pending' : 'Not Filled';
+      employee.bankVerifiedBy = '';
+      employee.bankVerifiedAt = null;
+    }
+
+    await employee.save();
+    return res.json({ success: true, message: 'Bank details updated', employee });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 router.get('/', isLoggedIn, async (req, res) => {
   try {
     const user = req.session.user;
@@ -113,6 +188,10 @@ router.get('/:id', isLoggedIn, async (req, res) => {
 router.post('/', isLoggedIn, upload.single('photo'), async (req, res) => {
   try {
     const data = req.body;
+    if (typeof data.qualifications === 'string') {
+      try { data.qualifications = JSON.parse(data.qualifications); }
+      catch(e) { data.qualifications = []; }
+    }
     console.log('Creating employee:', data.employeeName);
     if (data.ein) {
       const existing = await Employee.findOne({ ein: data.ein });
@@ -164,9 +243,14 @@ router.put('/:id', isLoggedIn, upload.single('photo'), async (req, res) => {
     const data = req.body;
     if (req.file) data.photo = '/uploads/' + req.file.filename;
     data.updatedAt = Date.now();
+    if (typeof data.qualifications === 'string') {
+      try { data.qualifications = JSON.parse(data.qualifications); }
+      catch(e) { data.qualifications = []; }
+    }
     if (data.monthlySalary) {
       data.ctcAnnual = parseFloat(data.monthlySalary) * 12;
     }
+    if (data.bankVerifiedAt === '') data.bankVerifiedAt = null;
     const employee = await Employee.findByIdAndUpdate(req.params.id, { $set: data }, { new: true });
     if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
     return res.json({ success: true, message: 'Employee updated successfully', employee });
