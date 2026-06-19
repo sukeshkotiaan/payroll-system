@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Exit = require('../models/Exit');
 const Employee = require('../models/Employee');
-const { isLoggedIn, isAdmin } = require('../middleware/auth');
+const { isLoggedIn, isAdmin, hasRole } = require('../middleware/auth');
 
 router.get('/find-employee/:ein', isLoggedIn, async (req, res) => {
   try {
@@ -43,6 +43,19 @@ router.post('/', isLoggedIn, async (req, res) => {
     if (!employee) {
       return res.status(404).json({ success: false, message: 'Employee not found' });
     }
+
+    // Supervisors can only raise exit requests for their own mapped team
+    const sessionRole = req.session.user.role;
+    if (sessionRole === 'supervisor') {
+      const isOwnTeam = employee.supervisorId &&
+        employee.supervisorId.toString() === req.session.user.id.toString();
+      if (!isOwnTeam) {
+        return res.status(403).json({
+          success: false,
+          message: 'You can only raise exit requests for your own team members'
+        });
+      }
+    }
     const existing = await Exit.findOne({
       employeeId: data.employeeId,
       status: { $in: ['Pending', 'Approved'] }
@@ -68,7 +81,7 @@ router.post('/', isLoggedIn, async (req, res) => {
   }
 });
 
-router.patch('/:id/approve', isLoggedIn, isAdmin, async (req, res) => {
+router.patch('/:id/approve', isLoggedIn, hasRole('admin', 'management', 'accountant'), async (req, res) => {
   try {
     const exit = await Exit.findById(req.params.id);
     if (!exit) return res.status(404).json({ success: false, message: 'Exit not found' });
@@ -89,7 +102,7 @@ router.patch('/:id/approve', isLoggedIn, isAdmin, async (req, res) => {
   }
 });
 
-router.patch('/:id/reject', isLoggedIn, isAdmin, async (req, res) => {
+router.patch('/:id/reject', isLoggedIn, hasRole('admin', 'management', 'accountant'), async (req, res) => {
   try {
     const exit = await Exit.findById(req.params.id);
     if (!exit) return res.status(404).json({ success: false, message: 'Exit not found' });

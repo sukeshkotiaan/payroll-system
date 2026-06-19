@@ -77,13 +77,22 @@ router.get('/search', isLoggedIn, async (req, res) => {
   try {
     const q = req.query.q || '';
     if (!q || q.length < 2) return res.json({ success: true, employees: [] });
-    const employees = await Employee.find({
-      isActive: true,
+    const includeInactive = req.query.includeInactive === 'true';
+    const filter = {
       $or: [
         { ein: { $regex: '^' + q, $options: 'i' } },
         { employeeName: { $regex: q, $options: 'i' } }
       ]
-    }).select('ein employeeName designation location section profile monthlySalary').limit(10);
+    };
+    if (!includeInactive) filter.isActive = true;
+
+    // Supervisors only ever search within their own mapped team
+    if (req.session.user.role === 'supervisor') {
+      filter.supervisorId = req.session.user.id;
+    }
+    const employees = await Employee.find(filter)
+      .select('ein employeeName designation location section profile monthlySalary isActive dateOfExit')
+      .limit(10);
     return res.json({ success: true, employees });
   } catch (err) {
     console.error('Search error:', err.message, err.stack);

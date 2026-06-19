@@ -686,7 +686,7 @@
         <td><span class="badge badge-${e.status.toLowerCase()}">${e.status}</span></td>
         <td>
           ${e.status === 'Pending' &&
-            (currentUser.role === 'admin' || currentUser.role === 'management') ? `
+            (currentUser.role === 'admin' || currentUser.role === 'management' || currentUser.role === 'accountant') ? `
             <button class="btn-success" style="font-size:11px;padding:5px 10px;"
               onclick="openApproveModal('${e._id}', ${JSON.stringify(e).replace(/"/g, '&quot;')})">
               Approve
