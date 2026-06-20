@@ -324,7 +324,7 @@
     await loadSchoolInfo();
     attachEINSearch('empEIN', function(emp) {
       document.getElementById('empEIN').value = emp.ein;
-    });
+    }, true);
     await checkAuth();
     await loadLocations();
     populateYears();

@@ -1,4 +1,4 @@
-function attachEINSearch(inputId, onSelect) {
+function attachEINSearch(inputId, onSelect, includeInactive) {
   const input = document.getElementById(inputId);
   if (!input) return;
 
@@ -40,7 +40,9 @@ function attachEINSearch(inputId, onSelect) {
 
   async function fetchSuggestions(q) {
     try {
-      const res = await fetch('/api/employees/search?q=' + encodeURIComponent(q), { credentials: 'include' });
+      let url = '/api/employees/search?q=' + encodeURIComponent(q);
+      if (includeInactive) url += '&includeInactive=true';
+      const res = await fetch(url, { credentials: 'include' });
       const data = await res.json();
       if (!data.success || !data.employees.length) { dropdown.style.display = 'none'; return; }
       dropdown.innerHTML = '';
@@ -48,8 +50,9 @@ function attachEINSearch(inputId, onSelect) {
         const item = document.createElement('div');
         item.className = 'emp-item';
         item.style.cssText = 'padding:10px 14px;cursor:pointer;border-bottom:1px solid #f0f0f0;background:white;';
+        const inactiveBadge = emp.isActive === false ? ' <span style="color:#ea4335;font-weight:600;">(Inactive)</span>' : '';
         item.innerHTML =
-          '<div style="font-weight:700;font-size:13px;color:#1a73e8;">' + (emp.ein||'—') + '</div>' +
+          '<div style="font-weight:700;font-size:13px;color:#1a73e8;">' + (emp.ein||'—') + inactiveBadge + '</div>' +
           '<div style="font-size:12px;color:#333;margin-top:2px;">' + emp.employeeName + '</div>' +
           '<div style="font-size:11px;color:#888;margin-top:1px;">' + (emp.designation||'—') + ' | ' + emp.location + '</div>';
         item.addEventListener('mouseenter', function() { this.style.background = '#f0f7ff'; });

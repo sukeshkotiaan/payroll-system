@@ -24,6 +24,7 @@ const ruleVersionSchema = new mongoose.Schema({
   ptApplicable: { type: String, default: 'Yes' },
   ptSlabs: { type: [ptSlabSchema], default: [] },
   februaryPT: { type: Number, default: 300 },
+  otRate: { type: Number, default: 0 },
   tdsType: { type: String, default: 'manual' },
   tdsRate: { type: Number, default: 10 },
   einSeparator: { type: String, default: '-' },

@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Appraisals — Payroll System</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; }
+    .header { background: #1a73e8; color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+    .header h1 { font-size: 20px; }
+    .btn-back { background: white; color: #1a73e8; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+    .container { padding: 20px; max-width: 1400px; margin: 0 auto; }
+    .btn-primary { background: #1a73e8; color: white; border: none; padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
+    .btn-secondary { background: #f0f2f5; color: #333; border: none; padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
+    .btn-success { background: #34a853; color: white; border: none; padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
+    .btn-danger { background: #ea4335; color: white; border: none; padding: 5px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 600; }
+    .card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; margin-bottom: 20px; }
+    .card-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+    .card-header h3 { font-size: 15px; color: #333; }
+    .card-body { padding: 20px; }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group label { font-size: 13px; font-weight: 600; color: #555; }
+    .form-group select, .form-group input { padding: 9px 11px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; outline: none; }
+    .form-group select:focus, .form-group input:focus { border-color: #1a73e8; }
+    .alert { padding: 10px 14px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; display: none; }
+    .alert-success { background: #e6f4ea; color: #34a853; }
+    .alert-error { background: #fce8e6; color: #ea4335; }
+    .empty-state { text-align: center; padding: 40px; color: #999; }
+    .tab { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; background: white; color: #666; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .tab.active { background: #1a73e8; color: white; }
+    .tab-section { display: none; }
+    .tab-section.active { display: block; }
+    .ap-grid-wrapper { overflow-x: auto; }
+    .ap-grid { border-collapse: collapse; font-size: 12px; white-space: nowrap; width: 100%; }
+    .ap-grid th { background: #1a73e8; color: white; padding: 10px 12px; text-align: center; font-weight: 600; position: sticky; top: 0; z-index: 10; }
+    .ap-grid th.emp-col { min-width: 80px; position: sticky; left: 0; z-index: 20; background: #1a73e8; text-align: left; }
+    .ap-grid th.name-col { min-width: 160px; position: sticky; left: 80px; z-index: 20; background: #1a73e8; text-align: left; }
+    .ap-grid th.loc-col { min-width: 80px; position: sticky; left: 240px; z-index: 20; background: #1a73e8; }
+    .ap-grid td { padding: 8px 10px; border-bottom: 1px solid #f0f0f0; border-right: 1px solid #f0f0f0; text-align: center; }
+    .ap-grid td.emp-col { position: sticky; left: 0; background: white; z-index: 5; text-align: left; font-weight: 700; font-size: 11px; border-right: 2px solid #ddd; }
+    .ap-grid td.name-col { position: sticky; left: 80px; background: white; z-index: 5; text-align: left; font-size: 11px; border-right: 1px solid #ddd; }
+    .ap-grid td.loc-col { position: sticky; left: 240px; background: white; z-index: 5; font-size: 11px; color: #666; border-right: 2px solid #ddd; }
+    .ap-grid tr:hover td { background: #f8f9ff; }
+    .ap-grid tr:hover td.emp-col, .ap-grid tr:hover td.name-col, .ap-grid tr:hover td.loc-col { background: #e8f0fe; }
+    .fy-cell { cursor: pointer; border-radius: 4px; padding: 4px 8px; font-size: 11px; display: inline-block; min-width: 70px; }
+    .fy-cell.has-data { background: #e8f0fe; color: #1a73e8; font-weight: 700; }
+    .fy-cell.has-data:hover { background: #1a73e8; color: white; }
+    .fy-cell.empty { color: #ccc; }
+    .fy-cell.empty:hover { background: #f0f2f5; color: #666; }
+    .popup-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 1000; }
+    .popup { background: white; border-radius: 12px; padding: 25px; width: 420px; position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); z-index: 1001; box-shadow: 0 8px 30px rgba(0,0,0,0.2); }
+    .popup h3 { font-size: 16px; color: #333; margin-bottom: 4px; }
+    .popup .sub { font-size: 12px; color: #666; margin-bottom: 20px; }
+    .popup-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+    .btn-close { background: none; border: none; font-size: 22px; cursor: pointer; color: #666; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: #f8f9fa; padding: 12px 15px; text-align: left; font-weight: 600; color: #555; border-bottom: 1px solid #eee; }
+    td { padding: 12px 15px; border-bottom: 1px solid #f5f5f5; color: #333; }
+    tr:hover { background: #f8f9ff; }
+    .import-box { border: 2px dashed #ddd; border-radius: 10px; padding: 30px; text-align: center; }
+    .import-box.dragover { border-color: #1a73e8; background: #f0f6ff; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📈 Appraisals — Salary History</h1>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span id="headerUser" style="font-size:13px;"></span>
+    <button class="btn-back" onclick="window.location.href='/dashboard'">← Dashboard</button>
+  </div>
+</div>
+
+<!-- POPUP -->
+<div class="popup-overlay" id="popupOverlay" onclick="closePopup()"></div>
+<div class="popup" id="editPopup" style="display:none;">
+  <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:5px;">
+    <h3 id="popupTitle">Edit Salary Record</h3>
+    <button class="btn-close" onclick="closePopup()">×</button>
+  </div>
+  <div class="sub" id="popupSub"></div>
+  <input type="hidden" id="popupEIN">
+  <input type="hidden" id="popupFY">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:15px;">
+    <div class="form-group">
+      <label>Monthly Salary (₹)</label>
+      <input type="number" id="popupMonthly" placeholder="e.g. 35000" min="0" oninput="syncCTC('monthly')">
+    </div>
+    <div class="form-group">
+      <label>CTC Annual (₹)</label>
+      <input type="number" id="popupCTC" placeholder="e.g. 420000" min="0" oninput="syncCTC('ctc')">
+    </div>
+  </div>
+  <div class="form-group">
+    <label>Remarks (optional)</label>
+    <input type="text" id="popupRemarks" placeholder="e.g. Annual increment"
+      onkeypress="if(event.key==='Enter') savePopup()">
+  </div>
+  <div class="popup-actions">
+    <button class="btn-secondary" onclick="closePopup()">Cancel</button>
+    <button class="btn-primary" onclick="savePopup()">💾 Save</button>
+  </div>
+</div>
+
+<div class="container">
+  <div class="alert alert-success" id="alertSuccess"></div>
+  <div class="alert alert-error" id="alertError"></div>
+
+  <!-- TABS -->
+  <div style="display:flex;gap:8px;margin-bottom:20px;">
+    <button class="tab active" id="tabGrid" onclick="switchTab('Grid')">📊 Salary History Grid</button>
+    <button class="tab" id="tabImport" onclick="switchTab('Import')">📥 Import Historical Data</button>
+  </div>
+
+  <!-- TAB 1: YEAR-WISE GRID -->
+  <div class="tab-section active" id="sectionGrid">
+    <div class="card">
+      <div class="card-body">
+        <div style="display:flex;gap:15px;flex-wrap:wrap;align-items:end;">
+          <div class="form-group">
+            <label>Location</label>
+            <select id="filterLocation" onchange="loadApGrid()">
+              <option value="">All Locations</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Search EIN / Name</label>
+            <input type="text" id="filterSearch" placeholder="Type to filter..." oninput="filterGrid()">
+          </div>
+          <div class="form-group" style="align-self:end;">
+            <button class="btn-primary" onclick="loadApGrid()">🔄 Refresh</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <h3 id="gridTitle">Salary History — Monthly Salary by Financial Year</h3>
+        <span id="gridInfo" style="font-size:13px;color:#666;"></span>
+      </div>
+      <div class="ap-grid-wrapper">
+        <table class="ap-grid">
+          <thead id="gridHead"></thead>
+          <tbody id="gridBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2: IMPORT -->
+  <div class="tab-section" id="sectionImport">
+    <div class="card">
+      <div class="card-header">
+        <h3>Import Historical Appraisal Data</h3>
+      </div>
+      <div class="card-body">
+        <p style="font-size:13px;color:#666;margin-bottom:15px;">
+          Upload a CSV file with columns: <strong>EIN, Financial Year, Monthly Salary, CTC Annual, Remarks</strong><br>
+          Financial Year format example: <strong>2022-23</strong>
+        </p>
+        <button class="btn-secondary" onclick="downloadTemplate()" style="margin-bottom:20px;">⬇️ Download CSV Template</button>
+        <div class="import-box" id="importBox">
+          <input type="file" id="importFile" accept=".csv" style="display:none;" onchange="handleFileSelect(event)">
+          <p style="margin-bottom:10px;color:#666;">Drag and drop your CSV file here, or</p>
+          <button class="btn-primary" onclick="document.getElementById('importFile').click()">Choose File</button>
+          <p id="fileName" style="margin-top:10px;font-size:13px;color:#1a73e8;font-weight:600;"></p>
+        </div>
+        <div id="previewSection" style="display:none;margin-top:20px;">
+          <h3 style="font-size:14px;margin-bottom:10px;">Preview (<span id="previewCount"></span> records)</h3>
+          <div style="max-height:300px;overflow-y:auto;border:1px solid #eee;border-radius:8px;">
+            <table>
+              <thead><tr><th>EIN</th><th>FY</th><th>Monthly Salary</th><th>CTC Annual</th><th>Remarks</th></tr></thead>
+              <tbody id="previewBody"></tbody>
+            </table>
+          </div>
+          <div style="margin-top:15px;text-align:right;">
+            <button class="btn-success" onclick="confirmImport()">✅ Confirm Import</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let currentUser = {};
+  let allApprisals = [];
+  let allEmployees = [];
+  let allFYs = [];
+  let parsedRecords = [];
+
+  window.onload = async () => {
+    await checkAuth();
+    await loadLocations();
+    await loadApGrid();
+  };
+
+  async function checkAuth() {
+    const res = await fetch('/api/auth/me');
+    const data = await res.json();
+    if (!data.success) { window.location.href = '/'; return; }
+    currentUser = data.user;
+    document.getElementById('headerUser').textContent = data.user.fullName;
+  }
+
+  async function loadLocations() {
+    try {
+      const res = await fetch('/api/masters/location');
+      const data = await res.json();
+      if (data.success) {
+        const el = document.getElementById('filterLocation');
+        el.innerHTML = '<option value="">All Locations</option>';
+        data.masters.forEach(m => { el.innerHTML += '<option value="' + m.value + '">' + m.value + '</option>'; });
+      }
+    } catch(e) {}
+  }
+
+  function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
+    document.getElementById('tab' + tab).classList.add('active');
+    document.getElementById('section' + tab).classList.add('active');
+  }
+
+  function getFYList() {
+    // Generate financial years: current FY and 5 years back, plus 1 ahead
+    const now = new Date();
+    const currentCalYear = now.getFullYear();
+    const currentFYStart = now.getMonth() >= 3 ? currentCalYear : currentCalYear - 1;
+    const list = [];
+    for (let y = currentFYStart + 1; y >= currentFYStart - 5; y--) {
+      list.push(y + '-' + String(y + 1).slice(2));
+    }
+    return list;
+  }
+
+  async function loadApGrid() {
+    const location = document.getElementById('filterLocation').value;
+    try {
+      let url = '/api/appraisals?';
+      if (location) url += 'location=' + encodeURIComponent(location) + '&';
+      const apRes = await fetch(url);
+      const apData = await apRes.json();
+      if (!apData.success) return;
+      allApprisals = apData.records;
+
+      let empUrl = '/api/employees?';
+      if (location) empUrl += 'location=' + encodeURIComponent(location) + '&';
+      const empRes = await fetch(empUrl);
+      const empData = await empRes.json();
+      allEmployees = empData.success ? empData.employees.filter(e => e.isActive) : [];
+
+      allFYs = getFYList();
+      renderGrid();
+    } catch(e) { showAlert('alertError', 'Error: ' + e.message); }
+  }
+
+  function filterGrid() { renderGrid(); }
+
+  function renderGrid() {
+    let employees = allEmployees;
+    const apMap = {};
+    allApprisals.forEach(a => { apMap[a.ein + '-' + a.financialYear] = a; });
+    document.getElementById('gridInfo').textContent = employees.length + ' employees';
+
+    let head = '<tr><th class="emp-col">EIN</th><th class="name-col">Name</th><th class="loc-col">Loc</th>';
+    allFYs.forEach(fy => { head += '<th style="min-width:90px;">' + fy + '</th>'; });
+    document.getElementById('gridHead').innerHTML = head;
+
+    const search = document.getElementById('filterSearch').value.toLowerCase();
+    let filtered = search ? employees.filter(e =>
+      (e.ein && e.ein.toLowerCase().includes(search)) ||
+      (e.employeeName && e.employeeName.toLowerCase().includes(search))
+    ) : employees;
+
+    if (!filtered.length) {
+      document.getElementById('gridBody').innerHTML =
+        '<tr><td colspan="12"><div class="empty-state">No employees found</div></td></tr>';
+      return;
+    }
+
+    let body = '';
+    filtered.forEach(emp => {
+      let row = '<tr>';
+      row += '<td class="emp-col">' + (emp.ein||'—') + '</td>';
+      row += '<td class="name-col">' + emp.employeeName + '</td>';
+      row += '<td class="loc-col">' + emp.location + '</td>';
+      allFYs.forEach(fy => {
+        const key = emp.ein + '-' + fy;
+        const rec = apMap[key];
+        if (rec) {
+          row += '<td><div class="fy-cell has-data" onclick="openPopup(\'' +
+            emp.ein + '\',\'' + fy + '\',\'' + emp.employeeName.replace(/'/g,'') + '\',' +
+            rec.monthlySalary + ',' + rec.ctcAnnual + ',\'' + (rec.remarks||'').replace(/'/g,'') + '\')">₹' +
+            rec.monthlySalary.toLocaleString('en-IN') + '</div></td>';
+        } else {
+          row += '<td><div class="fy-cell empty" onclick="openPopup(\'' +
+            emp.ein + '\',\'' + fy + '\',\'' + emp.employeeName.replace(/'/g,'') + '\',0,0,\'\')">+</div></td>';
+        }
+      });
+      row += '</tr>';
+      body += row;
+    });
+    document.getElementById('gridBody').innerHTML = body;
+  }
+
+  function openPopup(ein, fy, name, monthly, ctc, remarks) {
+    document.getElementById('popupTitle').textContent = monthly > 0 ? 'Edit Salary Record' : 'Add Salary Record';
+    document.getElementById('popupSub').textContent = name + ' | FY ' + fy;
+    document.getElementById('popupEIN').value = ein;
+    document.getElementById('popupFY').value = fy;
+    document.getElementById('popupMonthly').value = monthly > 0 ? monthly : '';
+    document.getElementById('popupCTC').value = ctc > 0 ? ctc : '';
+    document.getElementById('popupRemarks').value = remarks || '';
+    document.getElementById('popupOverlay').style.display = 'block';
+    document.getElementById('editPopup').style.display = 'block';
+    setTimeout(() => document.getElementById('popupMonthly').focus(), 100);
+  }
+
+  function syncCTC(source) {
+    const monthlyEl = document.getElementById('popupMonthly');
+    const ctcEl = document.getElementById('popupCTC');
+    if (source === 'monthly' && monthlyEl.value) {
+      ctcEl.value = Math.round(parseFloat(monthlyEl.value) * 12);
+    } else if (source === 'ctc' && ctcEl.value) {
+      monthlyEl.value = Math.round(parseFloat(ctcEl.value) / 12);
+    }
+  }
+
+  function closePopup() {
+    document.getElementById('popupOverlay').style.display = 'none';
+    document.getElementById('editPopup').style.display = 'none';
+  }
+
+  async function savePopup() {
+    const ein = document.getElementById('popupEIN').value;
+    const financialYear = document.getElementById('popupFY').value;
+    const monthlySalary = document.getElementById('popupMonthly').value;
+    const ctcAnnual = document.getElementById('popupCTC').value;
+    const remarks = document.getElementById('popupRemarks').value;
+    if (!monthlySalary || !ctcAnnual) { alert('Please enter both monthly salary and CTC'); return; }
+    try {
+      const res = await fetch('/api/appraisals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ ein, financialYear, monthlySalary: parseFloat(monthlySalary), ctcAnnual: parseFloat(ctcAnnual), remarks })
+      });
+      const data = await res.json();
+      if (data.success) {
+        closePopup();
+        showAlert('alertSuccess', '✅ Saved');
+        await loadApGrid();
+      } else { alert('Error: ' + data.message); }
+    } catch(e) { alert('Error: ' + e.message); }
+  }
+
+  // ===== IMPORT TAB =====
+  function downloadTemplate() {
+    const csv = 'EIN,Financial Year,Monthly Salary,CTC Annual,Remarks\nSTT-1001,2022-23,28000,336000,\nSTT-1001,2023-24,30000,360000,\n';
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'appraisal_import_template.csv'; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    document.getElementById('fileName').textContent = file.name;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      parseCSV(e.target.result);
+    };
+    reader.readAsText(file);
+  }
+
+  function parseCSV(text) {
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+    if (lines.length < 2) { showAlert('alertError', 'CSV file appears empty'); return; }
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+    parsedRecords = [];
+    for (let i = 1; i < lines.length; i++) {
+      const cols = lines[i].split(',');
+      if (cols.length < 4) continue;
+      parsedRecords.push({
+        ein: cols[0].trim(),
+        financialYear: cols[1].trim(),
+        monthlySalary: parseFloat(cols[2]) || 0,
+        ctcAnnual: parseFloat(cols[3]) || 0,
+        remarks: (cols[4] || '').trim()
+      });
+    }
+    renderPreview();
+  }
+
+  function renderPreview() {
+    document.getElementById('previewCount').textContent = parsedRecords.length;
+    document.getElementById('previewBody').innerHTML = parsedRecords.map(r =>
+      '<tr><td>' + r.ein + '</td><td>' + r.financialYear + '</td><td>₹' + r.monthlySalary.toLocaleString('en-IN') +
+      '</td><td>₹' + r.ctcAnnual.toLocaleString('en-IN') + '</td><td>' + (r.remarks||'—') + '</td></tr>'
+    ).join('');
+    document.getElementById('previewSection').style.display = 'block';
+  }
+
+  async function confirmImport() {
+    if (!parsedRecords.length) return;
+    if (!confirm('Import ' + parsedRecords.length + ' records? This will not change current employee salaries, only create/update historical records.')) return;
+    try {
+      const res = await fetch('/api/appraisals/bulk-import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ records: parsedRecords })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showAlert('alertSuccess', '✅ Imported ' + data.imported + ' records' + (data.skipped ? ', skipped ' + data.skipped : ''));
+        if (data.errors && data.errors.length) console.log('Import errors:', data.errors);
+        parsedRecords = [];
+        document.getElementById('previewSection').style.display = 'none';
+        document.getElementById('fileName').textContent = '';
+        document.getElementById('importFile').value = '';
+        switchTab('Grid');
+        await loadApGrid();
+      } else {
+        showAlert('alertError', data.message);
+      }
+    } catch(e) { showAlert('alertError', 'Error: ' + e.message); }
+  }
+
+  // Drag and drop
+  document.addEventListener('DOMContentLoaded', function() {
+    const box = document.getElementById('importBox');
+    if (!box) return;
+    box.addEventListener('dragover', function(e) { e.preventDefault(); box.classList.add('dragover'); });
+    box.addEventListener('dragleave', function() { box.classList.remove('dragover'); });
+    box.addEventListener('drop', function(e) {
+      e.preventDefault();
+      box.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file) {
+        document.getElementById('fileName').textContent = file.name;
+        const reader = new FileReader();
+        reader.onload = function(ev) { parseCSV(ev.target.result); };
+        reader.readAsText(file);
+      }
+    });
+  });
+
+  function showAlert(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg; el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 4000);
+  }
+</script>
+</body>
+</html>

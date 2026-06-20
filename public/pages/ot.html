@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Arrears & Advances — Payroll System</title>
+  <title>OT Management — Payroll System</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; }
@@ -31,23 +31,23 @@
     .tab.active { background: #1a73e8; color: white; }
     .tab-section { display: none; }
     .tab-section.active { display: block; }
-    .arr-grid-wrapper { overflow-x: auto; }
-    .arr-grid { border-collapse: collapse; font-size: 12px; white-space: nowrap; width: 100%; }
-    .arr-grid th { background: #1a73e8; color: white; padding: 10px 12px; text-align: center; font-weight: 600; position: sticky; top: 0; z-index: 10; }
-    .arr-grid th.emp-col { min-width: 80px; position: sticky; left: 0; z-index: 20; background: #1a73e8; text-align: left; }
-    .arr-grid th.name-col { min-width: 160px; position: sticky; left: 80px; z-index: 20; background: #1a73e8; text-align: left; }
-    .arr-grid th.loc-col { min-width: 80px; position: sticky; left: 240px; z-index: 20; background: #1a73e8; }
-    .arr-grid td { padding: 8px 10px; border-bottom: 1px solid #f0f0f0; border-right: 1px solid #f0f0f0; text-align: center; }
-    .arr-grid td.emp-col { position: sticky; left: 0; background: white; z-index: 5; text-align: left; font-weight: 700; font-size: 11px; border-right: 2px solid #ddd; }
-    .arr-grid td.name-col { position: sticky; left: 80px; background: white; z-index: 5; text-align: left; font-size: 11px; border-right: 1px solid #ddd; }
-    .arr-grid td.loc-col { position: sticky; left: 240px; background: white; z-index: 5; font-size: 11px; color: #666; border-right: 2px solid #ddd; }
-    .arr-grid td.total-col { background: #e8f0fe; font-weight: 700; color: #1a73e8; }
-    .arr-grid tr:hover td { background: #f8f9ff; }
-    .arr-grid tr:hover td.emp-col, .arr-grid tr:hover td.name-col, .arr-grid tr:hover td.loc-col { background: #e8f0fe; }
+    .ot-grid-wrapper { overflow-x: auto; }
+    .ot-grid { border-collapse: collapse; font-size: 12px; white-space: nowrap; width: 100%; }
+    .ot-grid th { background: #1a73e8; color: white; padding: 10px 12px; text-align: center; font-weight: 600; position: sticky; top: 0; z-index: 10; }
+    .ot-grid th.left { text-align: left; }
+    .ot-grid th.emp-col { min-width: 80px; position: sticky; left: 0; z-index: 20; background: #1a73e8; text-align: left; }
+    .ot-grid th.name-col { min-width: 160px; position: sticky; left: 80px; z-index: 20; background: #1a73e8; text-align: left; }
+    .ot-grid th.loc-col { min-width: 80px; position: sticky; left: 240px; z-index: 20; background: #1a73e8; }
+    .ot-grid td { padding: 8px 10px; border-bottom: 1px solid #f0f0f0; border-right: 1px solid #f0f0f0; text-align: center; }
+    .ot-grid td.emp-col { position: sticky; left: 0; background: white; z-index: 5; text-align: left; font-weight: 700; font-size: 11px; border-right: 2px solid #ddd; }
+    .ot-grid td.name-col { position: sticky; left: 80px; background: white; z-index: 5; text-align: left; font-size: 11px; border-right: 1px solid #ddd; }
+    .ot-grid td.loc-col { position: sticky; left: 240px; background: white; z-index: 5; font-size: 11px; color: #666; border-right: 2px solid #ddd; }
+    .ot-grid td.total-col { background: #e8f0fe; font-weight: 700; color: #1a73e8; }
+    .ot-grid tr:hover td { background: #f8f9ff; }
+    .ot-grid tr:hover td.emp-col, .ot-grid tr:hover td.name-col, .ot-grid tr:hover td.loc-col { background: #e8f0fe; }
     .month-cell { cursor: pointer; border-radius: 4px; padding: 4px 6px; font-size: 11px; display: inline-block; min-width: 55px; }
-    .month-cell.has-arr { background: #e8f0fe; color: #1a73e8; font-weight: 700; }
-    .month-cell.has-arr:hover { background: #1a73e8; color: white; }
-    .month-cell.pulled { background: #e6f4ea; color: #34a853; font-weight: 700; }
+    .month-cell.has-ot { background: #e8f0fe; color: #1a73e8; font-weight: 700; }
+    .month-cell.has-ot:hover { background: #1a73e8; color: white; }
     .month-cell.empty { color: #ccc; }
     .month-cell.empty:hover { background: #f0f2f5; color: #666; }
     .popup-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 1000; }
@@ -63,15 +63,12 @@
     th { background: #f8f9fa; padding: 12px 15px; text-align: left; font-weight: 600; color: #555; border-bottom: 1px solid #eee; }
     td { padding: 12px 15px; border-bottom: 1px solid #f5f5f5; color: #333; }
     tr:hover { background: #f8f9ff; }
-    .badge { padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
-    .badge-pending { background: #fef3c7; color: #d97706; }
-    .badge-pulled { background: #e6f4ea; color: #34a853; }
   </style>
 </head>
 <body>
 
 <div class="header">
-  <h1>📊 Arrears & Advances</h1>
+  <h1>⏱️ OT Management</h1>
   <div style="display:flex;align-items:center;gap:10px;">
     <span id="headerUser" style="font-size:13px;"></span>
     <button class="btn-back" onclick="window.location.href='/dashboard'">← Dashboard</button>
@@ -82,43 +79,42 @@
 <div class="popup-overlay" id="popupOverlay" onclick="closePopup()"></div>
 <div class="popup" id="editPopup" style="display:none;">
   <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:5px;">
-    <h3 id="popupTitle">Edit Arrear</h3>
+    <h3 id="popupTitle">Edit OT</h3>
     <button class="btn-close" onclick="closePopup()">×</button>
   </div>
   <div class="sub" id="popupSub"></div>
   <input type="hidden" id="popupEIN">
   <input type="hidden" id="popupMonth">
   <input type="hidden" id="popupYear">
-  <input type="hidden" id="popupArrId">
-  <div id="popupLockedNotice" style="display:none;background:#fef3c7;color:#92400e;padding:8px 12px;border-radius:6px;font-size:12px;margin-bottom:12px;">
-    🔒 This entry has been pulled to payroll and can no longer be edited.
+  <input type="hidden" id="popupOtId">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:15px;">
+    <div class="form-group">
+      <label>OT Hours</label>
+      <input type="number" id="popupHours" placeholder="e.g. 4" min="0" step="0.5"
+        style="font-size:16px;padding:10px;border:2px solid #1a73e8;border-radius:6px;outline:none;"
+        oninput="updatePopupAmount()">
+    </div>
+    <div class="form-group">
+      <label>Rate per Hour (₹)</label>
+      <input type="number" id="popupRate" placeholder="e.g. 150" min="0"
+        style="font-size:16px;padding:10px;border:2px solid #1a73e8;border-radius:6px;outline:none;"
+        oninput="updatePopupAmount()">
+    </div>
   </div>
-  <div class="form-group" style="margin-bottom:12px;">
-    <label>Type</label>
-    <select id="popupType">
-      <option>Arrear</option>
-      <option>Advance</option>
-      <option>Loan Deduction</option>
-      <option>Leave Encashment</option>
-      <option>Bonus</option>
-      <option>Other</option>
-    </select>
-  </div>
-  <div class="form-group" style="margin-bottom:15px;">
-    <label>Amount (₹)</label>
-    <input type="number" id="popupAmount" placeholder="Enter amount" min="0"
-      style="font-size:18px;padding:12px;border:2px solid #1a73e8;border-radius:6px;outline:none;"
-      onkeypress="if(event.key==='Enter') savePopup()">
+  <div style="background:#f8f9fa;border-radius:8px;padding:10px 15px;margin-bottom:15px;font-size:13px;display:flex;justify-content:space-between;">
+    <span style="color:#666;">OT Amount</span>
+    <strong id="popupAmountDisplay" style="color:#1a73e8;">₹0</strong>
   </div>
   <div class="form-group">
     <label>Remarks (optional)</label>
-    <input type="text" id="popupRemarks" placeholder="e.g. Diwali bonus"
-      style="padding:9px;border:1px solid #ddd;border-radius:6px;outline:none;font-size:13px;">
+    <input type="text" id="popupRemarks" placeholder="e.g. Extra hours for exam duty"
+      style="padding:9px;border:1px solid #ddd;border-radius:6px;outline:none;font-size:13px;"
+      onkeypress="if(event.key==='Enter') savePopup()">
   </div>
   <div class="popup-actions">
     <button class="btn-secondary" onclick="closePopup()">Cancel</button>
-    <button class="btn-danger" id="popupDeleteBtn" onclick="deleteArrFromPopup()" style="display:none;">Delete</button>
-    <button class="btn-primary" id="popupSaveBtn" onclick="savePopup()">💾 Save</button>
+    <button class="btn-danger" id="popupDeleteBtn" onclick="deleteOTFromPopup()" style="display:none;">Delete</button>
+    <button class="btn-primary" onclick="savePopup()">💾 Save</button>
   </div>
 </div>
 
@@ -154,18 +150,18 @@
             <input type="text" id="filterSearch" placeholder="Type to filter..." oninput="filterGrid()">
           </div>
           <div class="form-group" style="align-self:end;">
-            <button class="btn-primary" onclick="loadArrGrid()">📋 Load Grid</button>
+            <button class="btn-primary" onclick="loadOTGrid()">📋 Load Grid</button>
           </div>
         </div>
       </div>
     </div>
     <div class="card">
       <div class="card-header">
-        <h3 id="gridTitle">Arrears Grid</h3>
+        <h3 id="gridTitle">OT Grid</h3>
         <span id="gridInfo" style="font-size:13px;color:#666;"></span>
       </div>
-      <div class="arr-grid-wrapper">
-        <table class="arr-grid">
+      <div class="ot-grid-wrapper">
+        <table class="ot-grid">
           <thead id="gridHead"></thead>
           <tbody id="gridBody"></tbody>
         </table>
@@ -194,7 +190,7 @@
             <select id="monthlyYear"></select>
           </div>
           <div class="form-group" style="align-self:end;">
-            <button class="btn-primary" onclick="loadMonthlyArr()">📋 Load</button>
+            <button class="btn-primary" onclick="loadMonthlyOT()">📋 Load</button>
           </div>
         </div>
       </div>
@@ -203,7 +199,7 @@
     <!-- ADD FORM -->
     <div class="card" id="monthlyAddCard" style="display:none;overflow:visible;">
       <div class="card-header">
-        <h3>+ Add Arrear / Advance</h3>
+        <h3>+ Add OT Entry</h3>
         <button class="btn-secondary" onclick="hideMonthlyAddForm()">✕ Close</button>
       </div>
       <div class="card-body">
@@ -224,26 +220,25 @@
         <div id="monthlyAmtFields" style="display:none;">
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:15px;align-items:end;">
             <div class="form-group">
-              <label>Type *</label>
-              <select id="monthlyAddType">
-                <option>Arrear</option>
-                <option>Advance</option>
-                <option>Loan Deduction</option>
-                <option>Leave Encashment</option>
-                <option>Bonus</option>
-                <option>Other</option>
-              </select>
+              <label>OT Hours *</label>
+              <input type="number" id="monthlyAddHours" placeholder="e.g. 4" min="0" step="0.5"
+                oninput="updateMonthlyAmount()">
             </div>
             <div class="form-group">
-              <label>Amount (₹) *</label>
-              <input type="number" id="monthlyAddAmount" placeholder="e.g. 5000" min="0"
-                onkeypress="if(event.key==='Enter') saveMonthlyArr()">
+              <label>Rate per Hour (₹) *</label>
+              <input type="number" id="monthlyAddRate" placeholder="e.g. 150" min="0"
+                oninput="updateMonthlyAmount()">
             </div>
             <div class="form-group">
-              <label>Remarks</label>
-              <input type="text" id="monthlyAddRemarks" placeholder="e.g. Diwali bonus">
+              <label>Amount</label>
+              <input type="text" id="monthlyAddAmountDisplay" value="₹0" disabled style="background:#f8f9fa;font-weight:700;color:#1a73e8;">
             </div>
-            <button class="btn-primary" onclick="saveMonthlyArr()">💾 Save</button>
+            <button class="btn-primary" onclick="saveMonthlyOT()">💾 Save</button>
+          </div>
+          <div class="form-group" style="margin-top:12px;">
+            <label>Remarks</label>
+            <input type="text" id="monthlyAddRemarks" placeholder="e.g. Extra hours for exam duty"
+              onkeypress="if(event.key==='Enter') saveMonthlyOT()">
           </div>
         </div>
       </div>
@@ -252,17 +247,17 @@
     <!-- MONTHLY LIST -->
     <div class="card">
       <div class="card-header">
-        <h3 id="monthlyListTitle">Monthly Arrear Entries</h3>
+        <h3 id="monthlyListTitle">Monthly OT Entries</h3>
         <div style="display:flex;gap:8px;align-items:center;">
           <span id="monthlyListInfo" style="font-size:13px;color:#666;"></span>
-          <button class="btn-primary" id="monthlyAddBtn" onclick="showMonthlyAddForm()" style="display:none;">+ Add Entry</button>
+          <button class="btn-primary" id="monthlyAddBtn" onclick="showMonthlyAddForm()" style="display:none;">+ Add OT Entry</button>
         </div>
       </div>
       <table>
         <thead>
           <tr>
-            <th>EIN</th><th>Employee Name</th><th>Location</th><th>Type</th>
-            <th>Amount</th><th>Remarks</th><th>Status</th><th>Added By</th><th>Actions</th>
+            <th>EIN</th><th>Employee Name</th><th>Location</th>
+            <th>Hours</th><th>Rate</th><th>Amount</th><th>Remarks</th><th>Added By</th><th>Actions</th>
           </tr>
         </thead>
         <tbody id="monthlyList">
@@ -275,12 +270,13 @@
 
 <script>
   let currentUser = {};
-  let allArr = [];
+  let allOT = [];
   let allEmployees = [];
   let currentYear = new Date().getFullYear();
   let currentMonthlyEIN = '';
   let currentMonthlyMonth = '';
   let currentMonthlyYear = '';
+  let defaultOTRate = 0;
 
   const MONTHS = ['January','February','March','April','May','June',
     'July','August','September','October','November','December'];
@@ -295,11 +291,12 @@
       document.getElementById('mInfoSalary').textContent = '₹' + (emp.monthlySalary||0).toLocaleString('en-IN');
       document.getElementById('monthlyEmpInfo').style.display = 'block';
       document.getElementById('monthlyAmtFields').style.display = 'block';
+      loadDefaultRateFor(emp.location, 'monthlyAddRate');
     });
     await checkAuth();
     await loadLocations();
     populateYears();
-    await loadArrGrid();
+    await loadOTGrid();
   };
 
   async function checkAuth() {
@@ -318,6 +315,17 @@
         const el = document.getElementById('filterLocation');
         el.innerHTML = '<option value="">All Locations</option>';
         data.masters.forEach(m => { el.innerHTML += '<option value="' + m.value + '">' + m.value + '</option>'; });
+      }
+    } catch(e) {}
+  }
+
+  async function loadDefaultRateFor(location, targetInputId) {
+    try {
+      const res = await fetch('/api/ot/default-rate?location=' + encodeURIComponent(location));
+      const data = await res.json();
+      if (data.success && data.rate > 0) {
+        const el = document.getElementById(targetInputId);
+        if (el && !el.value) { el.value = data.rate; if (targetInputId === 'monthlyAddRate') updateMonthlyAmount(); }
       }
     } catch(e) {}
   }
@@ -343,21 +351,21 @@
     document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
     document.getElementById('tab' + tab).classList.add('active');
     document.getElementById('section' + tab).classList.add('active');
-    if (tab === 'Monthly') loadMonthlyArr();
+    if (tab === 'Monthly') loadMonthlyOT();
   }
 
-  async function loadArrGrid() {
+  async function loadOTGrid() {
     const year = document.getElementById('filterYear').value;
     const location = document.getElementById('filterLocation').value;
     if (!year) { showAlert('alertError', 'Please select a year'); return; }
     currentYear = parseInt(year);
     try {
-      let url = '/api/arrears?year=' + year;
+      let url = '/api/ot?year=' + year;
       if (location) url += '&location=' + encodeURIComponent(location);
-      const arrRes = await fetch(url);
-      const arrData = await arrRes.json();
-      if (!arrData.success) return;
-      allArr = arrData.arrears;
+      const otRes = await fetch(url);
+      const otData = await otRes.json();
+      if (!otData.success) return;
+      allOT = otData.records;
 
       let empUrl = '/api/employees?';
       if (location) empUrl += 'location=' + encodeURIComponent(location) + '&';
@@ -373,13 +381,9 @@
   function renderGrid() {
     const location = document.getElementById('filterLocation').value;
     let employees = location ? allEmployees.filter(e => e.location === location) : allEmployees;
-    const arrMap = {};
-    allArr.forEach(a => {
-      const key = a.ein + '-' + a.month;
-      if (!arrMap[key]) arrMap[key] = [];
-      arrMap[key].push(a);
-    });
-    document.getElementById('gridTitle').textContent = 'Arrears Grid — ' + currentYear;
+    const otMap = {};
+    allOT.forEach(t => { otMap[t.ein + '-' + t.month] = t; });
+    document.getElementById('gridTitle').textContent = 'OT Grid — ' + currentYear;
     document.getElementById('gridInfo').textContent = employees.length + ' employees';
 
     let head = '<tr><th class="emp-col">EIN</th><th class="name-col">Name</th><th class="loc-col">Loc</th>';
@@ -411,21 +415,19 @@
       row += '<td class="loc-col">' + emp.location + '</td>';
       MONTHS.forEach((month, mi) => {
         const key = emp.ein + '-' + month;
-        const recs = arrMap[key];
-        if (recs && recs.length) {
-          const monthTotal = recs.reduce((s,r) => s + r.amount, 0);
-          const anyPulled = recs.some(r => r.pulledToPayroll);
-          total += monthTotal;
-          monthTotals[mi] += monthTotal;
-          const cellClass = anyPulled ? 'pulled' : 'has-arr';
-          row += '<td><div class="month-cell ' + cellClass + '" onclick="openMonthCell(\'' +
+        const rec = otMap[key];
+        if (rec) {
+          total += rec.amount;
+          monthTotals[mi] += rec.amount;
+          row += '<td><div class="month-cell has-ot" onclick="openPopup(\'' +
             emp.ein + '\',\'' + month + '\',' + currentYear + ',\'' +
-            emp.employeeName.replace(/'/g,'') + '\')">₹' +
-            monthTotal.toLocaleString('en-IN') + '</div></td>';
+            emp.employeeName.replace(/'/g,'') + '\',' + rec.hours + ',' + rec.rate + ',\'' +
+            (rec.remarks||'').replace(/'/g,'') + '\',\'' + rec._id + '\')">₹' +
+            rec.amount.toLocaleString('en-IN') + '</div></td>';
         } else {
           row += '<td><div class="month-cell empty" onclick="openPopup(\'' +
             emp.ein + '\',\'' + month + '\',' + currentYear + ',\'' +
-            emp.employeeName.replace(/'/g,'') + '\',\'Arrear\',0,\'\',\'\',false)">+</div></td>';
+            emp.employeeName.replace(/'/g,'') + '\',0,0,\'\',\'\')">+</div></td>';
         }
       });
       grandTotal += total;
@@ -439,41 +441,33 @@
     document.getElementById('gridBody').innerHTML = body;
   }
 
-  function openMonthCell(ein, month, year, name) {
-    const key = ein + '-' + month;
-    const recs = allArr.filter(a => a.ein === ein && a.month === month && a.year === year);
-    if (recs.length === 1) {
-      const r = recs[0];
-      openPopup(ein, month, year, name, r.type, r.amount, r.remarks, r._id, r.pulledToPayroll);
-    } else if (recs.length > 1) {
-      // Multiple entries this month - just edit the first, rest visible in Monthly tab
-      const r = recs[0];
-      openPopup(ein, month, year, name, r.type, r.amount, r.remarks, r._id, r.pulledToPayroll);
-    }
-  }
-
-  function openPopup(ein, month, year, name, type, amount, remarks, arrId, isPulled) {
-    document.getElementById('popupTitle').textContent = arrId ? 'Edit Entry' : 'Add Entry';
+  function openPopup(ein, month, year, name, hours, rate, remarks, otId) {
+    document.getElementById('popupTitle').textContent = otId ? 'Edit OT' : 'Add OT';
     document.getElementById('popupSub').textContent = name + ' | ' + month + ' ' + year;
     document.getElementById('popupEIN').value = ein;
     document.getElementById('popupMonth').value = month;
     document.getElementById('popupYear').value = year;
-    document.getElementById('popupArrId').value = arrId || '';
-    document.getElementById('popupType').value = type || 'Arrear';
-    document.getElementById('popupAmount').value = amount > 0 ? amount : '';
+    document.getElementById('popupOtId').value = otId || '';
+    document.getElementById('popupHours').value = hours > 0 ? hours : '';
+    document.getElementById('popupRate').value = rate > 0 ? rate : '';
     document.getElementById('popupRemarks').value = remarks || '';
-    document.getElementById('popupDeleteBtn').style.display = (arrId && !isPulled) ? 'inline-block' : 'none';
-
-    const locked = !!isPulled;
-    document.getElementById('popupLockedNotice').style.display = locked ? 'block' : 'none';
-    document.getElementById('popupType').disabled = locked;
-    document.getElementById('popupAmount').disabled = locked;
-    document.getElementById('popupRemarks').disabled = locked;
-    document.getElementById('popupSaveBtn').style.display = locked ? 'none' : 'inline-block';
-
+    document.getElementById('popupDeleteBtn').style.display = otId ? 'inline-block' : 'none';
+    updatePopupAmount();
     document.getElementById('popupOverlay').style.display = 'block';
     document.getElementById('editPopup').style.display = 'block';
-    if (!locked) setTimeout(() => document.getElementById('popupAmount').focus(), 100);
+    setTimeout(() => document.getElementById('popupHours').focus(), 100);
+  }
+
+  function updatePopupAmount() {
+    const hours = parseFloat(document.getElementById('popupHours').value) || 0;
+    const rate = parseFloat(document.getElementById('popupRate').value) || 0;
+    document.getElementById('popupAmountDisplay').textContent = '₹' + (hours * rate).toLocaleString('en-IN');
+  }
+
+  function updateMonthlyAmount() {
+    const hours = parseFloat(document.getElementById('monthlyAddHours').value) || 0;
+    const rate = parseFloat(document.getElementById('monthlyAddRate').value) || 0;
+    document.getElementById('monthlyAddAmountDisplay').value = '₹' + (hours * rate).toLocaleString('en-IN');
   }
 
   function closePopup() {
@@ -485,66 +479,55 @@
     const ein = document.getElementById('popupEIN').value;
     const month = document.getElementById('popupMonth').value;
     const year = document.getElementById('popupYear').value;
-    const type = document.getElementById('popupType').value;
-    const amount = document.getElementById('popupAmount').value;
+    const hours = document.getElementById('popupHours').value;
+    const rate = document.getElementById('popupRate').value;
     const remarks = document.getElementById('popupRemarks').value;
-    const arrId = document.getElementById('popupArrId').value;
-    if (!amount) { alert('Please enter amount'); return; }
+    if (!hours || !rate) { alert('Please enter both hours and rate'); return; }
     try {
-      let res;
-      if (arrId) {
-        res = await fetch('/api/arrears/' + arrId, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ type, amount: parseFloat(amount), remarks, month, year: parseInt(year) })
-        });
-      } else {
-        res = await fetch('/api/arrears', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ ein, month, year: parseInt(year), type, amount: parseFloat(amount), remarks })
-        });
-      }
+      const res = await fetch('/api/ot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ ein, month, year: parseInt(year), hours: parseFloat(hours), rate: parseFloat(rate), remarks })
+      });
       const data = await res.json();
       if (data.success) {
         closePopup();
-        showAlert('alertSuccess', '✅ Saved');
-        await loadArrGrid();
-        if (currentMonthlyMonth) await loadMonthlyArr();
+        showAlert('alertSuccess', '✅ OT saved');
+        await loadOTGrid();
+        if (currentMonthlyMonth) await loadMonthlyOT();
       } else { alert('Error: ' + data.message); }
     } catch(e) { alert('Error: ' + e.message); }
   }
 
-  async function deleteArrFromPopup() {
-    const id = document.getElementById('popupArrId').value;
-    if (!id || !confirm('Delete this entry?')) return;
+  async function deleteOTFromPopup() {
+    const id = document.getElementById('popupOtId').value;
+    if (!id || !confirm('Delete this OT entry?')) return;
     try {
-      const res = await fetch('/api/arrears/' + id, { method: 'DELETE', credentials: 'include' });
+      const res = await fetch('/api/ot/' + id, { method: 'DELETE', credentials: 'include' });
       const data = await res.json();
       if (data.success) {
         closePopup();
         showAlert('alertSuccess', data.message);
-        await loadArrGrid();
-        if (currentMonthlyMonth) await loadMonthlyArr();
-      } else { alert(data.message); }
+        await loadOTGrid();
+        if (currentMonthlyMonth) await loadMonthlyOT();
+      }
     } catch(e) {}
   }
 
-  async function loadMonthlyArr() {
+  async function loadMonthlyOT() {
     const month = document.getElementById('monthlyMonth').value;
     const year = document.getElementById('monthlyYear').value;
     if (!month || !year) { alert('Please select month and year'); return; }
     currentMonthlyMonth = month;
     currentMonthlyYear = year;
     try {
-      const res = await fetch('/api/arrears?month=' + encodeURIComponent(month) + '&year=' + year);
+      const res = await fetch('/api/ot?month=' + encodeURIComponent(month) + '&year=' + year);
       const data = await res.json();
       if (!data.success) return;
-      const records = data.arrears;
+      const records = data.records;
       const total = records.reduce((s,r) => s + (r.amount||0), 0);
-      document.getElementById('monthlyListTitle').textContent = 'Entries — ' + month + ' ' + year;
+      document.getElementById('monthlyListTitle').textContent = 'OT Entries — ' + month + ' ' + year;
       document.getElementById('monthlyListInfo').textContent = records.length + ' entries | Total: ₹' + total.toLocaleString('en-IN');
       document.getElementById('monthlyAddBtn').style.display = 'inline-block';
       renderMonthlyList(records);
@@ -554,24 +537,22 @@
   function renderMonthlyList(records) {
     const tbody = document.getElementById('monthlyList');
     if (!records.length) {
-      tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state">No entries for this month. Click + Add Entry.</div></td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state">No OT entries for this month. Click + Add OT Entry.</div></td></tr>';
       return;
     }
     tbody.innerHTML = records.map(r => '<tr>' +
       '<td><strong>' + r.ein + '</strong></td>' +
       '<td>' + r.employeeName + '</td>' +
       '<td>' + r.location + '</td>' +
-      '<td>' + r.type + '</td>' +
+      '<td>' + r.hours + ' hrs</td>' +
+      '<td>₹' + r.rate + '/hr</td>' +
       '<td><strong style="color:#1a73e8;">₹' + (r.amount||0).toLocaleString('en-IN') + '</strong></td>' +
       '<td>' + (r.remarks||'—') + '</td>' +
-      '<td><span class="badge badge-' + (r.pulledToPayroll ? 'pulled' : 'pending') + '">' + (r.pulledToPayroll ? 'Pulled' : 'Pending') + '</span></td>' +
       '<td>' + (r.addedBy||'—') + '</td>' +
       '<td>' +
-        (!r.pulledToPayroll ?
-          '<button class="btn-warning" onclick="editMonthlyEntry(\'' + r._id + '\',\'' + r.ein + '\',\'' +
-          r.employeeName.replace(/'/g,'') + '\',\'' + r.type + '\',' + r.amount + ',\'' + (r.remarks||'').replace(/'/g,'') + '\')">Edit</button> ' +
-          '<button class="btn-danger" onclick="deleteMonthlyEntry(\'' + r._id + '\')">Delete</button>'
-          : '—') +
+        '<button class="btn-warning" onclick="editMonthlyEntry(\'' + r._id + '\',\'' + r.ein + '\',\'' +
+        r.employeeName.replace(/'/g,'') + '\',' + r.hours + ',' + r.rate + ',\'' + (r.remarks||'').replace(/'/g,'') + '\')">Edit</button> ' +
+        '<button class="btn-danger" onclick="deleteMonthlyEntry(\'' + r._id + '\')">Delete</button>' +
       '</td></tr>'
     ).join('');
   }
@@ -581,9 +562,10 @@
     document.getElementById('monthlyEmpSearch').value = '';
     document.getElementById('monthlyEmpInfo').style.display = 'none';
     document.getElementById('monthlyAmtFields').style.display = 'none';
-    document.getElementById('monthlyAddAmount').value = '';
+    document.getElementById('monthlyAddHours').value = '';
+    document.getElementById('monthlyAddRate').value = '';
+    document.getElementById('monthlyAddAmountDisplay').value = '₹0';
     document.getElementById('monthlyAddRemarks').value = '';
-    document.getElementById('monthlyAddType').value = 'Arrear';
     currentMonthlyEIN = '';
     document.getElementById('monthlyEmpSearch').focus();
   }
@@ -597,7 +579,7 @@
     const search = document.getElementById('monthlyEmpSearch').value.trim();
     if (!search) return;
     try {
-      const res = await fetch('/api/arrears/find-employee/' + encodeURIComponent(search));
+      const res = await fetch('/api/ot/find-employee/' + encodeURIComponent(search));
       const data = await res.json();
       if (data.success) {
         currentMonthlyEIN = data.employee.ein;
@@ -607,46 +589,46 @@
         document.getElementById('mInfoSalary').textContent = '₹' + (data.employee.monthlySalary||0).toLocaleString('en-IN');
         document.getElementById('monthlyEmpInfo').style.display = 'block';
         document.getElementById('monthlyAmtFields').style.display = 'block';
-        document.getElementById('monthlyAddAmount').focus();
+        loadDefaultRateFor(data.employee.location, 'monthlyAddRate');
+        document.getElementById('monthlyAddHours').focus();
       } else { alert(data.message); }
     } catch(e) {}
   }
 
-  async function saveMonthlyArr() {
+  async function saveMonthlyOT() {
     if (!currentMonthlyEIN) { alert('Please search employee first'); return; }
     if (!currentMonthlyMonth || !currentMonthlyYear) { alert('Please load month first'); return; }
-    const type = document.getElementById('monthlyAddType').value;
-    const amount = document.getElementById('monthlyAddAmount').value;
+    const hours = document.getElementById('monthlyAddHours').value;
+    const rate = document.getElementById('monthlyAddRate').value;
     const remarks = document.getElementById('monthlyAddRemarks').value;
-    if (!amount) { alert('Please enter amount'); return; }
+    if (!hours || !rate) { alert('Please enter both hours and rate'); return; }
     try {
-      const res = await fetch('/api/arrears', {
+      const res = await fetch('/api/ot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ ein: currentMonthlyEIN, month: currentMonthlyMonth,
-          year: parseInt(currentMonthlyYear), type, amount: parseFloat(amount), remarks })
+          year: parseInt(currentMonthlyYear), hours: parseFloat(hours), rate: parseFloat(rate), remarks })
       });
       const data = await res.json();
       if (data.success) {
-        showAlert('alertSuccess', '✅ Saved');
+        showAlert('alertSuccess', '✅ OT saved');
         hideMonthlyAddForm();
-        await loadMonthlyArr();
+        await loadMonthlyOT();
       } else { alert('Error: ' + data.message); }
     } catch(e) { alert('Error: ' + e.message); }
   }
 
-  function editMonthlyEntry(id, ein, name, type, amount, remarks) {
-    openPopup(ein, currentMonthlyMonth, parseInt(currentMonthlyYear), name, type, amount, remarks, id, false);
+  function editMonthlyEntry(id, ein, name, hours, rate, remarks) {
+    openPopup(ein, currentMonthlyMonth, parseInt(currentMonthlyYear), name, hours, rate, remarks, id);
   }
 
   async function deleteMonthlyEntry(id) {
-    if (!confirm('Delete this entry?')) return;
+    if (!confirm('Delete this OT entry?')) return;
     try {
-      const res = await fetch('/api/arrears/' + id, { method: 'DELETE', credentials: 'include' });
+      const res = await fetch('/api/ot/' + id, { method: 'DELETE', credentials: 'include' });
       const data = await res.json();
-      if (data.success) { showAlert('alertSuccess', data.message); await loadMonthlyArr(); }
-      else { alert(data.message); }
+      if (data.success) { showAlert('alertSuccess', data.message); await loadMonthlyOT(); }
     } catch(e) {}
   }
 

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Adjustments — Payroll System</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; }
+    .header { background: #1a73e8; color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+    .header h1 { font-size: 20px; }
+    .btn-back { background: white; color: #1a73e8; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+    .container { padding: 30px; max-width: 1100px; margin: 0 auto; }
+    .welcome { background: white; border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .welcome h2 { color: #333; margin-bottom: 5px; font-size: 20px; }
+    .welcome p { color: #666; font-size: 14px; }
+    .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
+    .card { background: white; border-radius: 12px; padding: 25px 20px; text-align: center; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.06); transition: transform 0.15s, box-shadow 0.15s; }
+    .card:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,0.12); }
+    .card .icon { font-size: 36px; margin-bottom: 12px; }
+    .card h3 { font-size: 15px; color: #333; margin-bottom: 6px; }
+    .card p { font-size: 12px; color: #888; }
+    .empty-state { text-align: center; padding: 60px; color: #999; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🧮 Adjustments</h1>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span id="headerUser" style="font-size:13px;"></span>
+    <button class="btn-back" onclick="window.location.href='/dashboard'">← Dashboard</button>
+  </div>
+</div>
+
+<div class="container">
+  <div class="welcome">
+    <h2>Payroll Adjustments</h2>
+    <p>Manage TDS, overtime, arrears, advances, and employee loans</p>
+  </div>
+  <div class="menu-grid" id="menuCards">
+    <div class="empty-state">Loading...</div>
+  </div>
+</div>
+
+<script>
+  const ALL_ADJ_MENUS = [
+    { key: 'tds', icon: '🧾', title: 'TDS Management', desc: 'Manage employee TDS deductions', url: '/tds' },
+    { key: 'ot', icon: '⏱️', title: 'OT Management', desc: 'Manage employee overtime', url: '/ot' },
+    { key: 'arrears', icon: '📊', title: 'Arrears & Advances', desc: 'Manage arrears and advances', url: '/arrears' },
+    { key: 'loans', icon: '💳', title: 'Loan Management', desc: 'Manage employee loans and EMI', url: '/loans' }
+  ];
+
+  window.onload = async () => {
+    const res = await fetch('/api/auth/me');
+    const data = await res.json();
+    if (!data.success) { window.location.href = '/'; return; }
+    const user = data.user;
+    document.getElementById('headerUser').textContent = user.fullName;
+    await renderMenus(user);
+  };
+
+  async function renderMenus(user) {
+    const container = document.getElementById('menuCards');
+    let allowedKeys = [];
+
+    if (user.role === 'admin') {
+      allowedKeys = ALL_ADJ_MENUS.map(m => m.key);
+    } else {
+      try {
+        const res = await fetch('/api/masters/role');
+        const data = await res.json();
+        if (data.success) {
+          const roleData = data.masters.find(
+            r => r.value.toLowerCase() === user.role.toLowerCase()
+          );
+          if (roleData) allowedKeys = roleData.permissions || [];
+        }
+      } catch(e) {
+        allowedKeys = [];
+      }
+    }
+
+    const visibleMenus = ALL_ADJ_MENUS.filter(m => allowedKeys.includes(m.key));
+
+    if (!visibleMenus.length) {
+      container.innerHTML = '<div class="empty-state">You do not have access to any adjustment modules. Contact admin.</div>';
+      return;
+    }
+
+    container.innerHTML = visibleMenus.map(menu => `
+      <div class="card" onclick="window.location.href='${menu.url}'">
+        <div class="icon">${menu.icon}</div>
+        <h3>${menu.title}</h3>
+        <p>${menu.desc}</p>
+      </div>
+    `).join('');
+  }
+</script>
+</body>
+</html>

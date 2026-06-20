@@ -52,6 +52,8 @@ app.use('/api/attendance-template', require('./routes/attendance-template'));
 app.use('/api/payroll', require('./routes/payroll'));
 app.use('/api/arrears', require('./routes/arrears'));
 app.use('/api/tds', require('./routes/tds'));
+app.use('/api/ot', require('./routes/ot'));
+app.use('/api/appraisals', require('./routes/appraisals'));
 app.use('/api/schoolinfo', require('./routes/schoolinfo'));
 app.use('/api/email', require('./routes/email'));
 app.use('/api/dashboard', require('./routes/dashboard'));
@@ -93,6 +95,18 @@ app.get('/payroll', (req, res) => {
 
 app.get('/arrears', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'pages', 'arrears.html'));
+});
+
+app.get('/appraisals', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'pages', 'appraisals.html'));
+});
+
+app.get('/adjustments', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'pages', 'adjustments.html'));
+});
+
+app.get('/ot', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'pages', 'ot.html'));
 });
 
 app.get('/tds', (req, res) => {
