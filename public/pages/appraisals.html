@@ -227,7 +227,7 @@
     // Generate financial years: current FY and 5 years back, plus 1 ahead
     const now = new Date();
     const currentCalYear = now.getFullYear();
-    const currentFYStart = now.getMonth() >= 3 ? currentCalYear : currentCalYear - 1;
+    const currentFYStart = now.getMonth() >= 5 ? currentCalYear : currentCalYear - 1;
     const list = [];
     for (let y = currentFYStart + 1; y >= currentFYStart - 5; y--) {
       list.push(y + '-' + String(y + 1).slice(2));
