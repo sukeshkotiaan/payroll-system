@@ -552,6 +552,7 @@
       '<td>' +
       '<button class="btn-edit" onclick="editEmployee(\'' + emp._id + '\')">Edit</button>' +
       '<button class="btn-secondary" style="margin-left:4px;padding:5px 10px;font-size:12px;" onclick="goToPayslip(\'' + emp.ein + '\')">Payslip</button>' +
+      (emp.isActive && currentUser.role !== 'supervisor' ? '<button class="btn-secondary" style="margin-left:4px;padding:5px 10px;font-size:12px;" onclick="goToOfferLetterPopup(\'' + emp._id + '\')">Offer Letter</button>' : '') +
       (!emp.isActive ? '<button class="btn-secondary" style="margin-left:4px;padding:5px 10px;font-size:12px;" onclick="goToExperienceLetterPopup(\'' + emp._id + '\')">Exp. Letter</button>' : '') +
       (emp.isActive && (currentUser.role === 'admin' || currentUser.role === 'management') ? '<button class="btn-danger" onclick="goToExit()" style="margin-left:4px;">Exit</button>' : '') +
       '</td>' +
@@ -1123,6 +1124,81 @@
     win.document.write('<html><head><title>Experience Letter</title></head><body style="padding:40px;">' + html + '</body></html>');
     win.document.close();
     setTimeout(function() { win.print(); }, 300);
+  }
+
+  async function goToOfferLetterPopup(employeeId) {
+    try {
+      const empRes = await fetch('/api/employees/' + employeeId);
+      const empData = await empRes.json();
+      if (!empData.success) { alert('Could not load employee data'); return; }
+      renderOfferLetter(empData.employee);
+    } catch(e) { alert('Error: ' + e.message); }
+  }
+
+  function numberToWordsOffer(num) {
+    if (!num || num === 0) return 'Zero';
+    const ones = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine',
+      'Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+    const tens = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+    let words = '';
+    if (Math.floor(num/100000) > 0) { words += numberToWordsOffer(Math.floor(num/100000)) + ' Lakh '; num %= 100000; }
+    if (Math.floor(num/1000) > 0) { words += numberToWordsOffer(Math.floor(num/1000)) + ' Thousand '; num %= 1000; }
+    if (Math.floor(num/100) > 0) { words += numberToWordsOffer(Math.floor(num/100)) + ' Hundred '; num %= 100; }
+    if (num > 0) { words += num < 20 ? ones[num] : tens[Math.floor(num/10)] + (num%10 ? ' '+ones[num%10] : ''); }
+    return words.trim();
+  }
+
+  function renderOfferLetter(emp) {
+    const now = new Date();
+    const ay = (now.getMonth() >= 5 ? now.getFullYear() : now.getFullYear() - 1) + '-' + String((now.getMonth() >= 5 ? now.getFullYear() + 1 : now.getFullYear())).slice(2);
+    const joinStr = emp.dateOfJoining ? new Date(emp.dateOfJoining).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '____________________';
+    const salary = emp.monthlySalary || 0;
+    const salaryWords = numberToWordsOffer(Math.round(salary)) + ' Rupees Only';
+    const schoolName = emp.section === 'Global' ? "St. Xavier's Global Academy" : "St Xaviers' English High School & Jr. College";
+
+    const html = '<div style="font-family:Georgia, serif;line-height:1.7;color:#1a1a1a;font-size:13.5px;">' +
+      '<div style="height:120px;"></div>' +
+      '<p style="margin-bottom:20px;">To,<br>' + emp.employeeName + '</p>' +
+      '<p style="margin-bottom:18px;">We are pleased to inform you about your selection and confirmation for the post of ' +
+      '<strong>' + (emp.designation || '____________') + '</strong> (<strong>' + (emp.section || '________') + '</strong> Section) at ' +
+      '<strong>' + schoolName + '</strong> with effect from <strong>' + joinStr + '</strong>. You will be drawing a salary Rs. ' +
+      '<strong>' + salary.toLocaleString('en-IN') + '</strong> (Rupees <strong>' + salaryWords + '</strong>) per month. ' +
+      'All the terms and conditions with other benefits are mentioned on the attached employment agreement form.</p>' +
+      '<p style="margin-bottom:30px;">We congratulate you and welcome you on behalf of all the teaching and administration staff of ' +
+      schoolName + '. We hope that we together will work very hard to achieve the goals of our school.</p>' +
+      '<p style="margin-bottom:50px;">Sincerely yours,</p>' +
+      '<div style="page-break-before:always;"></div>' +
+      '<h3 style="text-align:center;margin-bottom:18px;font-size:14px;">Service Terms &amp; Conditions AY-' + ay + '</h3>' +
+      '<ol style="padding-left:20px;">' +
+      '<li style="margin-bottom:8px;">The management expects you to discharge your duties sincerely and diligently to the maximum satisfaction.</li>' +
+      '<li style="margin-bottom:8px;">You are expected to behave and dress in a decent manner conducive to the environment of the School.</li>' +
+      '<li style="margin-bottom:8px;">You are supposed to work 6 days a week from Monday to Saturday. You may also be called on Sundays if needed for work.</li>' +
+      '<li style="margin-bottom:8px;">Your salary is extremely confidential please do not disclose it to others.</li>' +
+      '<li style="margin-bottom:8px;">Only Provident Fund (PF) and Professional Tax (PT) are applicable, and no gratuity is applicable, as it is a private institution.</li>' +
+      '<li style="margin-bottom:8px;">Punctuality is of utmost importance and you are not supposed to take leaves often and without prior intimation. Also, leaves cannot be taken in conjunction with long or short holidays (Sandwich holidays).</li>' +
+      '<li style="margin-bottom:8px;">Staff will now be entitled to only 8 casual leaves (CLs) annually, at the rate of 2 per month.</li>' +
+      '<li style="margin-bottom:8px;">New joinee will be on a probation period of 3 months, after which they will be granted 4 casual leaves (CLs) annually for that academic year.</li>' +
+      '<li style="margin-bottom:8px;">Teachers who arrive late to the school (after the defined reporting time) will be fined, with three late marks being equivalent to half of a casual leave (CL).</li>' +
+      '<li style="margin-bottom:8px;">3 early leaving concessions in a month will be equivalent to half of a casual leave (CL).</li>' +
+      '<li style="margin-bottom:8px;">Attendance on new session re-opening day and last day is compulsory. Attendance is compulsory on national festivals (Independence day, Republic day &amp; Maharashtra day) no excuse will be entertained.</li>' +
+      '<li style="margin-bottom:8px;">Any change in residence or telephone numbers has to be immediately informed to the management.</li>' +
+      '<li style="margin-bottom:8px;">Teachers are requested to keep their mobile phone on silent mode and in bags.</li>' +
+      '<li style="margin-bottom:8px;">Teachers shall be bound to perform election duty, census duty, and any other government-assigned statutory duties whenever appointed by the competent authority. No teacher shall refuse or abstain from such duties except with prior approval from the concerned government authority and the management.</li>' +
+      '<li style="margin-bottom:8px;">It is expected that you will not resign in between the academic session. However, if you have to resign due to any unavoidable circumstances, the reason for the same must be clearly stated in the notice.</li>' +
+      '<li style="margin-bottom:8px;">Three months notice period (which will not include any long or short leave) or three month\'s salary in lieu of notice is to be given at the time of resignation. In case, you resign without notice you are liable to pay two months\' salary. The current month\'s salary will also be not disbursed to you.</li>' +
+      '<li style="margin-bottom:8px;">Please note and understand the fact that \'unavoidable circumstances\' do not include joining any other academic institution (school/college) in the same academic year. If found doing so you will face stringent legal action from the management.</li>' +
+      '<li style="margin-bottom:8px;">Your services are liable to terminated without notice in case of disobedience, indiscipline, neglect of duty and irregular attendance.</li>' +
+      '<li style="margin-bottom:8px;">All the school property i.e. text books, library books, locker keys, mark sheets etc. have to be handed over to the in charge teachers/HM on the last working day.</li>' +
+      '<li style="margin-bottom:8px;">All meetings or appointments with the parents should be conducted in the presence of Supervisor and should be documented.</li>' +
+      '<li style="margin-bottom:8px;">Student\'s database should be treated as confidential and private property of the school. If for any reason, any employee found selling/trading/any misuse of database of the student\'s details, strict legal action would be taken.</li>' +
+      '<li style="margin-bottom:8px;">The school or management will not be responsible for any accident that happens to individual inside or outside the school premises.</li>' +
+      '<li style="margin-bottom:8px;">If any of the above mentioned conditions/rules found violated will result in termination without any prior intimation and without salary.</li>' +
+      '</ol>' +
+      '</div>';
+
+    document.getElementById('letterPreviewArea').innerHTML = html;
+    document.getElementById('letterOverlay').style.display = 'block';
+    document.getElementById('letterModal').style.display = 'flex';
   }
 </script>
 
