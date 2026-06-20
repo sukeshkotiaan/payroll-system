@@ -472,6 +472,9 @@
           <option value="No">No</option>
         </select>
       </div>
+    <div style="margin-top:10px;">
+      <button class="btn-secondary" type="button" onclick="generateExperienceLetter()">📄 Generate Experience Letter</button>
+    </div>
     </div>
     <div style="background:#fef3c7;border-radius:8px;padding:12px;margin:15px 0;font-size:13px;color:#d97706;">
       ⚠️ On approval, employee will be moved to <strong>Inactive</strong> status automatically.
@@ -484,6 +487,21 @@
 </div>
 
 <!-- REJECT MODAL -->
+<!-- EXPERIENCE LETTER MODAL -->
+<div class="modal-overlay" id="letterModal" style="display:none;">
+  <div class="modal" style="max-width:750px;">
+    <div class="modal-header">
+      <h3>📄 Experience Letter Preview</h3>
+      <button class="btn-close" onclick="closeLetterModal()">×</button>
+    </div>
+    <div id="letterPreviewArea" style="background:white;padding:40px;border:1px solid #ddd;border-radius:8px;max-height:60vh;overflow-y:auto;"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:15px;">
+      <button class="btn-secondary" onclick="closeLetterModal()">Close</button>
+      <button class="btn-success" onclick="printLetter()">🖨️ Print / Save as PDF</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="rejectModal">
   <div class="modal">
     <div class="modal-header">
@@ -506,6 +524,18 @@
 <script>
   let currentUser = {};
   let currentEmployeeData = null;
+  let currentApproveExitData = null;
+  let schoolInfoCache = { xaviers: null, global: null };
+
+  async function loadSchoolInfoForLetter() {
+    try {
+      const res = await fetch('/api/schoolinfo');
+      const data = await res.json();
+      if (data.success) {
+        data.schools.forEach(s => { schoolInfoCache[s.schoolType] = s; });
+      }
+    } catch(e) {}
+  }
 
   window.onload = async () => {
     attachEINSearch('einSearch', function(emp) {
@@ -518,6 +548,7 @@
 
     }
     await checkAuth();
+    await loadSchoolInfoForLetter();
     await loadExits();
   };
 
@@ -663,8 +694,26 @@
     try {
       const res = await fetch('/api/exits?status=' + status);
       const data = await res.json();
-      if (data.success) renderExits(data.exits);
+      if (data.success) {
+        renderExits(data.exits);
+        checkLetterParam(data.exits);
+      }
     } catch(e) {}
+  }
+
+  function checkLetterParam(exits) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const letterFor = urlParams.get('letterFor');
+    if (!letterFor) return;
+    const matched = exits.find(function(ex) {
+      return ex.employeeId === letterFor || (ex.employeeId && ex.employeeId._id === letterFor);
+    });
+    if (matched) {
+      currentApproveExitData = matched;
+      generateExperienceLetter();
+    } else {
+      alert('No exit record found for this employee. Experience letter is only available after an exit request exists.');
+    }
   }
 
   function renderExits(exits) {
@@ -701,7 +750,63 @@
     `).join('');
   }
 
+  async function generateExperienceLetter() {
+    if (!currentApproveExitData) { alert('No exit data available'); return; }
+    const ed = currentApproveExitData;
+
+    let dateOfJoining = null;
+    let gender = '';
+    try {
+      const empRes = await fetch('/api/employees/' + ed.employeeId);
+      const empData = await empRes.json();
+      if (empData.success) {
+        dateOfJoining = empData.employee.dateOfJoining;
+        gender = (empData.employee.gender || '').toLowerCase();
+      }
+    } catch(e) {}
+
+    const heShe = gender === 'female' ? 'she' : gender === 'male' ? 'he' : 'he/she';
+    const HeShe = gender === 'female' ? 'She' : gender === 'male' ? 'He' : 'He/She';
+    const hisHer = gender === 'female' ? 'her' : gender === 'male' ? 'his' : 'his/her';
+    const HisHer = gender === 'female' ? 'Her' : gender === 'male' ? 'His' : 'His/Her';
+    const himHer = gender === 'female' ? 'her' : gender === 'male' ? 'him' : 'him/her';
+
+    const joinStr = dateOfJoining ? new Date(dateOfJoining).toLocaleDateString('en-GB').replace(/\//g, ' / ') : '___ / ___ / ______';
+    const lwdStr = ed.lastWorkingDate ? new Date(ed.lastWorkingDate).toLocaleDateString('en-GB').replace(/\//g, ' / ') : '___ / ___ / ______';
+    const todayStr = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    const html = '<div style="font-family:Georgia, serif;line-height:1.8;color:#1a1a1a;">' +
+      '<div style="height:140px;"></div>' +
+      '<div style="text-align:right;font-size:13px;margin-bottom:25px;color:#555;">Date: ' + todayStr + '</div>' +
+      '<div style="text-align:center;font-weight:700;font-size:15px;margin-bottom:25px;letter-spacing:0.5px;">TO WHOMSOEVER IT MAY CONCERN</div>' +
+      '<p style="margin-bottom:18px;font-size:13.5px;">This is to certify that <strong>' + ed.employeeName + '</strong> was employed with our school as ' +
+      '<strong>' + (ed.designation || '____________________') + '</strong> from <strong>' + joinStr + '</strong> to <strong>' + lwdStr + '</strong>.</p>' +
+      '<p style="margin-bottom:18px;font-size:13.5px;">During the tenure of employment, ' + heShe + ' discharged ' + hisHer + ' duties sincerely, diligently, and efficiently. ' +
+      HeShe + ' consistently demonstrated professional competence, dedication to assigned responsibilities, and a positive attitude towards work.</p>' +
+      '<p style="margin-bottom:18px;font-size:13.5px;">' + HeShe + ' maintained cordial relationships with colleagues, students, parents, and other stakeholders and contributed positively ' +
+      'to the growth and development of the institution. Throughout the period of service, ' + hisHer + ' conduct and performance were found to be satisfactory.</p>' +
+      '<p style="margin-bottom:40px;font-size:13.5px;">We appreciate ' + hisHer + ' services and valuable contributions to our school. We wish ' + himHer + ' every success in all future endeavors.</p>' +
+      '<div style="margin-top:50px;font-size:13.5px;"><strong>Principal / Head of Institution</strong></div>' +
+      '</div>';
+
+    document.getElementById('letterPreviewArea').innerHTML = html;
+    document.getElementById('letterModal').style.display = 'flex';
+  }
+
+  function closeLetterModal() {
+    document.getElementById('letterModal').style.display = 'none';
+  }
+
+  function printLetter() {
+    const content = document.getElementById('letterPreviewArea').innerHTML;
+    const win = window.open('', '_blank');
+    win.document.write('<html><head><title>Experience Letter</title></head><body style="padding:40px;">' + content + '</body></html>');
+    win.document.close();
+    setTimeout(function() { win.print(); }, 300);
+  }
+
   function openApproveModal(id, exitData) {
+    currentApproveExitData = exitData;
     document.getElementById('approveExitId').value = id;
     document.getElementById('approveFnF').value = exitData.fnfSettlement || 'Pending';
     document.getElementById('approveRelieving').value = exitData.relievingLetter || 'Pending';

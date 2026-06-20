@@ -330,6 +330,20 @@
     populateYears();
     setDefaults();
     await loadPayrollList();
+
+    // Auto-fill EIN from URL param (e.g. when navigated from Employees page)
+    const urlParams = new URLSearchParams(window.location.search);
+    const einParam = urlParams.get('ein');
+    if (einParam) {
+      switchTab('Employee');
+      const empEINInput = document.getElementById('empEIN');
+      if (empEINInput) {
+        empEINInput.value = einParam;
+        setTimeout(function() {
+          if (typeof searchEmployeePayslip === 'function') searchEmployeePayslip();
+        }, 300);
+      }
+    }
   };
 
   async function checkAuth() {
