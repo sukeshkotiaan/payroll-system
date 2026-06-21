@@ -8,9 +8,18 @@ const { isLoggedIn, isAdmin } = require('../middleware/auth');
 const Arrear = require('../models/Arrear');
 const TDS = require('../models/TDS');
 const Loan = require('../models/Loan');
+const Appraisal = require('../models/Appraisal');
 
 const MONTHS = ['January','February','March','April','May','June',
   'July','August','September','October','November','December'];
+
+function getFYForMonth(month, year) {
+  const monthIdx = MONTHS.indexOf(month);
+  const y = parseInt(year);
+  // FY runs June (index 5) to May - if month is June or later, FY starts this year
+  const fyStart = monthIdx >= 5 ? y : y - 1;
+  return fyStart + '-' + String(fyStart + 1).slice(2);
+}
 
 function getGroupName(section, location, profile) {
   if (section === 'State') return 'Xaviers ' + location;
@@ -180,6 +189,39 @@ router.post('/process', isLoggedIn, isAdmin, async (req, res) => {
       });
     }
 
+    // Fetch Appraisal records for current FY for this group
+    const currentFY = getFYForMonth(month, year);
+    const appraisals = await Appraisal.find({
+      location, section, profile, financialYear: currentFY
+    });
+    const appraisalMap = {};
+    appraisals.forEach(a => { appraisalMap[a.ein] = a; });
+
+    // Check for employees missing a valid appraisal for current FY
+    const missingAppraisal = [];
+    for (const emp of employees) {
+      const ap = appraisalMap[emp.ein];
+      if (!ap || !ap.monthlySalary || ap.monthlySalary <= 0) {
+        missingAppraisal.push({
+          ein: emp.ein,
+          employeeId: emp._id,
+          employeeName: emp.employeeName,
+          designation: emp.designation,
+          currentSalary: emp.monthlySalary || 0
+        });
+      }
+    }
+
+    if (missingAppraisal.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot process payroll: ' + missingAppraisal.length + ' employee(s) missing appraisal for FY ' + currentFY,
+        appraisalMissing: true,
+        financialYear: currentFY,
+        missingList: missingAppraisal
+      });
+    }
+
     // Calculate payroll for each employee
     const records = [];
     let totalGross = 0, totalPF = 0, totalPT = 0,
@@ -189,7 +231,11 @@ router.post('/process', isLoggedIn, isAdmin, async (req, res) => {
       const attRecord = attendance.records.find(r => r.ein === emp.ein);
       if (!attRecord) continue;
 
-      const calc = calculatePayroll(emp, attRecord, rules, month);
+      // Use appraisal salary as the source of truth for current FY
+      const ap = appraisalMap[emp.ein];
+      const empForCalc = { ...emp.toObject(), monthlySalary: ap.monthlySalary };
+
+      const calc = calculatePayroll(empForCalc, attRecord, rules, month);
 
       records.push({
         ein: emp.ein,
@@ -479,7 +525,7 @@ router.post('/process-all', isLoggedIn, isAdmin, async (req, res) => {
 
     const attendances = await Attendance.find({
       month, year: parseInt(year),
-      status: { $in: ['Submitted', 'Locked'] }
+      status: { $in: ['Submitted', 'Locked', 'Pending', 'Approved'] }
     });
 
     if (attendances.length === 0) {
@@ -512,6 +558,28 @@ router.post('/process-all', isLoggedIn, isAdmin, async (req, res) => {
           continue;
         }
 
+        // Fetch Appraisal records for current FY for this group
+        const groupFY = getFYForMonth(month, year);
+        const groupAppraisals = await Appraisal.find({
+          location, section, profile, financialYear: groupFY
+        });
+        const groupAppraisalMap = {};
+        groupAppraisals.forEach(a => { groupAppraisalMap[a.ein] = a; });
+
+        const groupMissing = employees.filter(emp => {
+          const ap = groupAppraisalMap[emp.ein];
+          return !ap || !ap.monthlySalary || ap.monthlySalary <= 0;
+        });
+
+        if (groupMissing.length > 0) {
+          results.push({
+            group: getGroupName(section, location, profile),
+            status: 'Skipped - ' + groupMissing.length + ' employee(s) missing appraisal for FY ' + groupFY,
+            missingList: groupMissing.map(e => ({ ein: e.ein, employeeName: e.employeeName }))
+          });
+          continue;
+        }
+
         const records = [];
         let totalGross = 0, totalPF = 0, totalPT = 0,
           totalESIC = 0, totalTDS = 0, totalNet = 0;
@@ -519,7 +587,9 @@ router.post('/process-all', isLoggedIn, isAdmin, async (req, res) => {
         for (const emp of employees) {
           const attRecord = attendance.records.find(r => r.ein === emp.ein);
           if (!attRecord) continue;
-          const calc = calculatePayroll(emp, attRecord, rules, month);
+          const ap = groupAppraisalMap[emp.ein];
+          const empForCalc = { ...emp.toObject(), monthlySalary: ap.monthlySalary };
+          const calc = calculatePayroll(empForCalc, attRecord, rules, month);
           records.push({
             ein: emp.ein, employeeId: emp._id,
             employeeName: emp.employeeName, designation: emp.designation,

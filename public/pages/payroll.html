@@ -512,10 +512,22 @@
     const location = document.getElementById('processLocation').value;
     const section = document.getElementById('processSection').value;
     const profile = document.getElementById('processProfile').value;
-    if (!month || !year || !location || !section || !profile) {
-      showAlert('processAlertError', 'Please select all fields');
+    if (!month || !year) {
+      showAlert('processAlertError', 'Please select Month and Year');
       return;
     }
+
+    // If no Location/Section/Profile selected, process ALL groups at once
+    if (!location && !section && !profile) {
+      await processAllGroups(month, year);
+      return;
+    }
+
+    if (!location || !section || !profile) {
+      showAlert('processAlertError', 'Please select all of Location, Section and Profile - or leave all three blank to process every group at once');
+      return;
+    }
+
     showAlert('processAlertWarning', '⏳ Processing payroll...');
     try {
       const res = await fetch('/api/payroll/process', {
@@ -530,10 +542,180 @@
         setTimeout(() => {
           viewPayroll(data.payroll._id);
         }, 1000);
+      } else if (data.appraisalMissing) {
+        showMissingAppraisalPrompt(data.missingList, data.financialYear);
       } else {
         showAlert('processAlertError', data.message);
       }
     } catch(e) { showAlert('processAlertError', 'Error: ' + e.message); }
+  }
+
+  async function processAllGroups(month, year) {
+    showAlert('processAlertWarning', '⏳ Processing payroll for all groups - this may take a moment...');
+    try {
+      const res = await fetch('/api/payroll/process-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ month, year: parseInt(year) })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showAllGroupsResultPrompt(data.results, month, year);
+      } else {
+        showAlert('processAlertError', data.message);
+      }
+    } catch(e) { showAlert('processAlertError', 'Error: ' + e.message); }
+  }
+
+  let currentBulkResults = [];
+  let bulkExpandedIdx = null;
+
+  function showAllGroupsResultPrompt(results, month, year) {
+    currentBulkResults = results;
+    bulkExpandedIdx = null;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'allGroupsOverlay';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:3000;display:flex;align-items:center;justify-content:center;';
+
+    const box = document.createElement('div');
+    box.id = 'allGroupsBox';
+    box.style.cssText = 'background:white;border-radius:12px;padding:25px;width:90%;max-width:800px;max-height:85vh;box-shadow:0 8px 30px rgba(0,0,0,0.2);display:flex;flex-direction:column;';
+
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    renderBulkBox(month, year);
+  }
+
+  function renderBulkBox(month, year) {
+    const results = currentBulkResults;
+    const box = document.getElementById('allGroupsBox');
+    if (!box) return;
+
+    const processedCount = results.filter(r => r.status === 'Processed').length;
+    const skippedResults = results.filter(r => r.status !== 'Processed');
+    const totalMissing = results.reduce((sum, r) => sum + (r.missingList ? r.missingList.length : 0), 0);
+
+    let bodyRows = '';
+
+    results.forEach(function(r, idx) {
+      const isProcessed = r.status === 'Processed';
+      const isMissing = r.missingList && r.missingList.length > 0;
+      const isOpen = bulkExpandedIdx === idx;
+
+      let toggleIcon = isMissing ?
+        '<button onclick="toggleBulkGroup(' + idx + ', \'' + month + '\', ' + year + ')" style="background:#e8f0fe;color:#1a73e8;border:none;width:20px;height:20px;border-radius:4px;cursor:pointer;font-weight:700;font-size:13px;line-height:1;margin-right:8px;flex-shrink:0;">' +
+        (isOpen ? '\u2212' : '+') + '</button>' : '<span style="display:inline-block;width:20px;margin-right:8px;flex-shrink:0;"></span>';
+
+      let groupLabel = isProcessed ?
+        '<span style="color:#34a853;">(' + r.employees + ' processed)</span>' :
+        '<span style="color:#ea4335;">(' + (r.missingList ? r.missingList.length : 0) + ' missing)</span>';
+
+      bodyRows += '<tr style="background:#f8f9fa;">' +
+        '<td colspan="4" style="padding:8px 10px;border-bottom:1px solid #e8e8e8;">' +
+        '<div style="display:flex;align-items:center;">' + toggleIcon +
+        '<strong style="font-size:13px;">' + r.group + '</strong>' +
+        '<span style="margin-left:8px;font-size:12px;">' + groupLabel + '</span></div></td></tr>';
+
+      if (isMissing && isOpen) {
+        r.missingList.forEach(function(m) {
+          bodyRows += '<tr>' +
+            '<td style="padding:7px 10px 7px 38px;border-bottom:1px solid #f5f5f5;font-size:12px;"><strong>' + m.ein + '</strong></td>' +
+            '<td style="padding:7px 10px;border-bottom:1px solid #f5f5f5;font-size:12px;">' + m.employeeName + '</td>' +
+            '<td style="padding:7px 10px;border-bottom:1px solid #f5f5f5;font-size:12px;">' + (m.designation||'—') + '</td>' +
+            '<td style="padding:7px 10px;border-bottom:1px solid #f5f5f5;font-size:12px;">₹' + (m.currentSalary||0).toLocaleString('en-IN') + '</td></tr>';
+        });
+      }
+    });
+
+    box.innerHTML =
+      '<h3 style="font-size:16px;color:#333;margin-bottom:8px;">Payroll Processing Summary - ' + month + ' ' + year + '</h3>' +
+      '<p style="font-size:13px;color:#666;margin-bottom:15px;">' + processedCount + ' of ' + results.length + ' groups processed successfully' +
+      (totalMissing > 0 ? '. ' + totalMissing + ' employee(s) across ' + skippedResults.length + ' group(s) need an appraisal entry for the current FY.' : '.') + '</p>' +
+      '<div style="overflow-y:auto;max-height:50vh;margin-bottom:15px;border:1px solid #eee;border-radius:8px;">' +
+      '<table style="width:100%;border-collapse:collapse;">' +
+      '<thead><tr style="background:#1a73e8;color:white;position:sticky;top:0;">' +
+      '<th style="padding:8px 10px;text-align:left;font-size:12px;">EIN</th><th style="padding:8px 10px;text-align:left;font-size:12px;">Name</th>' +
+      '<th style="padding:8px 10px;text-align:left;font-size:12px;">Designation</th><th style="padding:8px 10px;text-align:left;font-size:12px;">Current Salary</th>' +
+      '</tr></thead><tbody>' + bodyRows + '</tbody></table></div>' +
+      '<div style="display:flex;gap:10px;justify-content:flex-end;">' +
+      '<button onclick="closeAllGroupsPrompt()" style="background:#f0f2f5;color:#333;border:none;padding:9px 18px;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;">Close</button>' +
+      (totalMissing > 0 ?
+        '<button onclick="window.location.href=\'/appraisals\'" style="background:#1a73e8;color:white;border:none;padding:9px 18px;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;">Go to Appraisals</button>' : '') +
+      '</div>';
+  }
+
+  function toggleBulkGroup(idx, month, year) {
+    bulkExpandedIdx = (bulkExpandedIdx === idx) ? null : idx;
+    renderBulkBox(month, year);
+  }
+
+  function closeAllGroupsPrompt() {
+    const overlay = document.getElementById('allGroupsOverlay');
+    if (overlay) overlay.remove();
+  }
+
+  function showMissingAppraisalPrompt(missingList, fy) {
+    const overlay = document.createElement('div');
+    overlay.id = 'missingAppraisalOverlay';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:3000;display:flex;align-items:center;justify-content:center;';
+
+    const box = document.createElement('div');
+    box.style.cssText = 'background:white;border-radius:12px;padding:25px;width:90%;max-width:800px;max-height:85vh;box-shadow:0 8px 30px rgba(0,0,0,0.2);display:flex;flex-direction:column;';
+
+    let rows = missingList.map(function(m) {
+      return '<tr>' +
+        '<td style="padding:8px 10px;border-bottom:1px solid #f0f0f0;"><strong>' + m.ein + '</strong></td>' +
+        '<td style="padding:8px 10px;border-bottom:1px solid #f0f0f0;">' + m.employeeName + '</td>' +
+        '<td style="padding:8px 10px;border-bottom:1px solid #f0f0f0;">' + (m.designation||'—') + '</td>' +
+        '<td style="padding:8px 10px;border-bottom:1px solid #f0f0f0;">₹' + (m.currentSalary||0).toLocaleString('en-IN') + '</td>' +
+        '<td style="padding:8px 10px;border-bottom:1px solid #f0f0f0;text-align:right;">' +
+        '<button onclick="markInactiveFromPrompt(\'' + m.employeeId + '\', \'' + m.employeeName.replace(/'/g,'') + '\')" style="background:#fce8e6;color:#ea4335;border:none;padding:5px 10px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;">Mark Inactive</button>' +
+        '</td></tr>';
+    }).join('');
+
+    box.innerHTML =
+      '<h3 style="font-size:16px;color:#333;margin-bottom:8px;">⚠️ Appraisal Missing for FY ' + fy + '</h3>' +
+      '<p style="font-size:13px;color:#666;margin-bottom:15px;">The following ' + missingList.length + ' active employee(s) do not have a salary entered in Appraisals for FY ' + fy + '. Payroll cannot be processed until this is resolved. If someone has actually left, mark them inactive instead.</p>' +
+      '<div style="overflow-y:auto;max-height:50vh;margin-bottom:15px;border:1px solid #eee;border-radius:8px;">' +
+      '<table style="width:100%;border-collapse:collapse;font-size:13px;">' +
+      '<thead><tr style="background:#f8f9fa;position:sticky;top:0;">' +
+      '<th style="padding:8px 10px;text-align:left;">EIN</th><th style="padding:8px 10px;text-align:left;">Name</th>' +
+      '<th style="padding:8px 10px;text-align:left;">Designation</th><th style="padding:8px 10px;text-align:left;">Current Salary</th>' +
+      '<th style="padding:8px 10px;"></th></tr></thead>' +
+      '<tbody id="missingApprTbody">' + rows + '</tbody></table></div>' +
+      '<div style="display:flex;gap:10px;justify-content:flex-end;">' +
+      '<button onclick="closeMissingAppraisalPrompt()" style="background:#f0f2f5;color:#333;border:none;padding:9px 18px;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;">Close</button>' +
+      '<button onclick="window.location.href=\'/appraisals\'" style="background:#1a73e8;color:white;border:none;padding:9px 18px;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;">Go to Appraisals</button>' +
+      '</div>';
+
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+  }
+
+  function closeMissingAppraisalPrompt() {
+    const overlay = document.getElementById('missingAppraisalOverlay');
+    if (overlay) overlay.remove();
+  }
+
+  async function markInactiveFromPrompt(employeeId, employeeName) {
+    if (!confirm('Mark ' + employeeName + ' as inactive? This should only be done if they have actually exited.')) return;
+    try {
+      const res = await fetch('/api/employees/' + employeeId + '/deactivate', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ dateOfExit: new Date().toISOString() })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showAlert('processAlertSuccess', employeeName + ' marked inactive. Please retry processing payroll.');
+        closeMissingAppraisalPrompt();
+      } else {
+        alert(data.message);
+      }
+    } catch(e) { alert('Error: ' + e.message); }
   }
 
   async function viewPayroll(id) {
