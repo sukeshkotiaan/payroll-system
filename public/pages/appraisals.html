@@ -131,6 +131,12 @@
           <div class="form-group" style="align-self:end;">
             <button class="btn-primary" onclick="loadApGrid()">🔄 Refresh</button>
           </div>
+          <div class="form-group" style="align-self:end;">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap;">
+              <input type="checkbox" id="showMissingOnly" onchange="filterGrid()">
+              Show only missing for current FY
+            </label>
+          </div>
         </div>
       </div>
     </div>
@@ -289,6 +295,17 @@
       (e.ein && e.ein.toLowerCase().includes(search)) ||
       (e.employeeName && e.employeeName.toLowerCase().includes(search))
     ) : employees;
+
+    const showMissingOnly = document.getElementById('showMissingOnly') && document.getElementById('showMissingOnly').checked;
+    if (showMissingOnly) {
+      const now = new Date();
+      const currentFYStart = now.getMonth() >= 5 ? now.getFullYear() : now.getFullYear() - 1;
+      const currentFY = currentFYStart + '-' + String(currentFYStart + 1).slice(2);
+      filtered = filtered.filter(e => {
+        const ap = apMap[e.ein + '-' + currentFY];
+        return !ap || !ap.monthlySalary || ap.monthlySalary <= 0;
+      });
+    }
 
     if (!filtered.length) {
       document.getElementById('gridBody').innerHTML =
