@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Employee Details Form</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; }
+    .container { max-width: 700px; margin: 0 auto; }
+    .card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 30px; margin-bottom: 20px; }
+    h1 { font-size: 22px; color: #1a1a2e; margin-bottom: 6px; }
+    .subtitle { font-size: 14px; color: #666; margin-bottom: 25px; }
+    .section-title { font-size: 15px; font-weight: 700; color: #1a73e8; margin: 25px 0 15px; padding-bottom: 8px; border-bottom: 2px solid #e8f0fe; }
+    .section-title:first-child { margin-top: 0; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group.full { grid-column: 1 / -1; }
+    .form-group label { font-size: 13px; font-weight: 600; color: #333; }
+    .form-group label .req { color: #ea4335; }
+    .form-group input, .form-group select, .form-group textarea {
+      padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; outline: none; font-family: inherit;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: #1a73e8; }
+    .qual-row { display: grid; grid-template-columns: 1fr 1fr 100px 100px 36px; gap: 10px; margin-bottom: 10px; align-items: end; }
+    .qual-headers { display: grid; grid-template-columns: 1fr 1fr 100px 100px 36px; gap: 10px; margin-bottom: 6px; }
+    .qual-headers div { font-size: 11px; font-weight: 600; color: #666; }
+    .btn-remove-qual { background: #fce8e6; color: #ea4335; border: none; width: 36px; height: 36px; border-radius: 6px; cursor: pointer; font-size: 16px; }
+    .btn-add-qual { background: #e8f0fe; color: #1a73e8; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; margin-top: 5px; }
+    .btn-submit { background: #1a73e8; color: white; border: none; padding: 14px 30px; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 700; width: 100%; margin-top: 10px; }
+    .btn-submit:hover { background: #1557b0; }
+    .btn-submit:disabled { background: #ccc; cursor: not-allowed; }
+    .alert { padding: 12px 16px; border-radius: 8px; margin-bottom: 15px; font-size: 14px; display: none; }
+    .alert-error { background: #fce8e6; color: #ea4335; }
+    .success-screen { text-align: center; padding: 40px 20px; }
+    .success-icon { font-size: 60px; margin-bottom: 15px; }
+    .success-screen h2 { font-size: 20px; color: #333; margin-bottom: 10px; }
+    .success-screen p { font-size: 14px; color: #666; }
+    .hint { font-size: 11px; color: #999; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="card">
+    <div id="formView">
+      <h1>Employee Details Form</h1>
+      <p class="subtitle">Please fill in your details accurately. All fields marked with <span style="color:#ea4335;">*</span> are required.</p>
+
+      <div class="alert alert-error" id="alertError"></div>
+
+      <form id="empForm" onsubmit="return false;">
+
+        <div class="section-title">Personal Information</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Title <span class="req">*</span></label>
+            <select id="title" required>
+              <option value="">Select</option>
+              <option>Mr</option><option>Mrs</option><option>Ms</option><option>Dr</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Gender <span class="req">*</span></label>
+            <select id="gender" required>
+              <option value="">Select</option>
+              <option>Male</option><option>Female</option><option>Other</option>
+            </select>
+          </div>
+          <div class="form-group full">
+            <label>Full Name <span class="req">*</span></label>
+            <input type="text" id="employeeName" required placeholder="As per official documents">
+          </div>
+          <div class="form-group">
+            <label>Date of Birth <span class="req">*</span></label>
+            <input type="date" id="dateOfBirth" required>
+          </div>
+          <div class="form-group">
+            <label>Date of Joining <span class="req">*</span></label>
+            <input type="date" id="dateOfJoining" required>
+          </div>
+          <div class="form-group">
+            <label>Phone Number <span class="req">*</span></label>
+            <input type="tel" id="phoneNumber" required placeholder="10-digit mobile number">
+          </div>
+          <div class="form-group">
+            <label>Email <span class="req">*</span></label>
+            <input type="email" id="email" required placeholder="you@example.com">
+          </div>
+          <div class="form-group full">
+            <label>Address <span class="req">*</span></label>
+            <textarea id="address" required rows="2" placeholder="Full residential address"></textarea>
+          </div>
+        </div>
+
+        <div class="section-title">Work Details</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Location <span class="req">*</span></label>
+            <select id="location" required><option value="">Select Location</option></select>
+          </div>
+          <div class="form-group">
+            <label>Section <span class="req">*</span></label>
+            <select id="section" required><option value="">Select Section</option></select>
+          </div>
+          <div class="form-group">
+            <label>Profile <span class="req">*</span></label>
+            <select id="profile" required><option value="">Select Profile</option></select>
+          </div>
+          <div class="form-group">
+            <label>Department <span class="req">*</span></label>
+            <select id="department" required><option value="">Select Department</option></select>
+          </div>
+          <div class="form-group full">
+            <label>Designation <span class="req">*</span></label>
+            <input type="text" id="designation" required placeholder="e.g. Teacher, Clerk, Accountant">
+          </div>
+        </div>
+
+        <div class="section-title">Identity Documents</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>PAN Number <span class="req">*</span></label>
+            <input type="text" id="panNumber" required placeholder="ABCDE1234F" style="text-transform:uppercase;">
+          </div>
+          <div class="form-group">
+            <label>Aadhaar Number <span class="req">*</span></label>
+            <input type="text" id="aadhaarNumber" required placeholder="12-digit Aadhaar number">
+          </div>
+          <div class="form-group">
+            <label>UAN Number <span class="req">*</span></label>
+            <input type="text" id="uanNumber" required placeholder="UAN number">
+          </div>
+        </div>
+
+        <div class="section-title">Education Qualifications</div>
+        <div class="qual-headers">
+          <div>Degree / Certificate</div>
+          <div>Institution</div>
+          <div>Year</div>
+          <div>Grade / %</div>
+          <div></div>
+        </div>
+        <div id="qualContainer"></div>
+        <button type="button" class="btn-add-qual" onclick="addQualification()">+ Add Qualification</button>
+
+        <button type="button" class="btn-submit" id="submitBtn" onclick="submitForm()" style="margin-top:25px;">Submit Details</button>
+      </form>
+    </div>
+
+    <div id="successView" class="success-screen" style="display:none;">
+      <div class="success-icon">✅</div>
+      <h2>Thank you!</h2>
+      <p>Your details have been submitted successfully.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  window.onload = async () => {
+    await loadMasters();
+    addQualification();
+  };
+
+  async function loadMasters() {
+    try {
+      const [locRes, secRes, proRes, deptRes] = await Promise.all([
+        fetch('/api/masters/location'),
+        fetch('/api/masters/section'),
+        fetch('/api/masters/profile'),
+        fetch('/api/masters/department')
+      ]);
+      const [locData, secData, proData, deptData] = await Promise.all([
+        locRes.json(), secRes.json(), proRes.json(), deptRes.json()
+      ]);
+      if (locData.success) populateSelect('location', locData.masters);
+      if (secData.success) populateSelect('section', secData.masters);
+      if (proData.success) populateSelect('profile', proData.masters);
+      if (deptData.success) populateSelect('department', deptData.masters);
+    } catch(e) { console.error(e); }
+  }
+
+  function populateSelect(id, masters) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    masters.forEach(m => { el.innerHTML += '<option value="' + m.value + '">' + m.value + '</option>'; });
+  }
+
+  let qualCount = 0;
+  function addQualification() {
+    const container = document.getElementById('qualContainer');
+    const idx = qualCount++;
+    const div = document.createElement('div');
+    div.className = 'qual-row';
+    div.id = 'qual-' + idx;
+    div.innerHTML =
+      '<input type="text" placeholder="e.g. B.Ed" id="qDegree' + idx + '" required>' +
+      '<input type="text" placeholder="e.g. Mumbai University" id="qInst' + idx + '" required>' +
+      '<input type="text" placeholder="2020" id="qYear' + idx + '" required>' +
+      '<input type="text" placeholder="65%" id="qGrade' + idx + '" required>' +
+      '<button type="button" class="btn-remove-qual" onclick="removeQualification(' + idx + ')">×</button>';
+    container.appendChild(div);
+  }
+
+  function removeQualification(idx) {
+    const el = document.getElementById('qual-' + idx);
+    if (el) el.remove();
+  }
+
+  function getQualifications() {
+    const container = document.getElementById('qualContainer');
+    const quals = [];
+    Array.from(container.children).forEach(row => {
+      const inputs = row.querySelectorAll('input');
+      if (inputs[0].value.trim()) {
+        quals.push({
+          degree: inputs[0].value.trim(),
+          institution: inputs[1].value.trim(),
+          yearOfPassing: inputs[2].value.trim(),
+          grade: inputs[3].value.trim()
+        });
+      }
+    });
+    return quals;
+  }
+
+  function showAlert(msg) {
+    const el = document.getElementById('alertError');
+    el.textContent = msg;
+    el.style.display = 'block';
+    window.scrollTo(0, 0);
+    setTimeout(() => el.style.display = 'none', 5000);
+  }
+
+  async function submitForm() {
+    const form = document.getElementById('empForm');
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      return;
+    }
+
+    const qualifications = getQualifications();
+    if (!qualifications.length) {
+      showAlert('Please add at least one qualification');
+      return;
+    }
+
+    const phoneVal = document.getElementById('phoneNumber').value.trim();
+    if (!/^\d{10}$/.test(phoneVal)) {
+      showAlert('Phone number must be exactly 10 digits');
+      return;
+    }
+
+    const aadhaarVal = document.getElementById('aadhaarNumber').value.trim();
+    if (!/^\d{12}$/.test(aadhaarVal)) {
+      showAlert('Aadhaar number must be exactly 12 digits');
+      return;
+    }
+
+    const panVal = document.getElementById('panNumber').value.trim().toUpperCase();
+    if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(panVal)) {
+      showAlert('PAN number format is invalid (e.g. ABCDE1234F)');
+      return;
+    }
+
+    const payload = {
+      title: document.getElementById('title').value,
+      gender: document.getElementById('gender').value,
+      employeeName: document.getElementById('employeeName').value.trim(),
+      dateOfBirth: document.getElementById('dateOfBirth').value,
+      dateOfJoining: document.getElementById('dateOfJoining').value,
+      phoneNumber: phoneVal,
+      email: document.getElementById('email').value.trim(),
+      address: document.getElementById('address').value.trim(),
+      location: document.getElementById('location').value,
+      section: document.getElementById('section').value,
+      profile: document.getElementById('profile').value,
+      department: document.getElementById('department').value,
+      designation: document.getElementById('designation').value.trim(),
+      panNumber: panVal,
+      aadhaarNumber: aadhaarVal,
+      uanNumber: document.getElementById('uanNumber').value.trim(),
+      qualifications
+    };
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.textContent = 'Submitting...';
+
+    try {
+      const res = await fetch('/api/employee-submissions/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById('formView').style.display = 'none';
+        document.getElementById('successView').style.display = 'block';
+      } else {
+        showAlert(data.message || 'Submission failed. Please try again.');
+        btn.disabled = false;
+        btn.textContent = 'Submit Details';
+      }
+    } catch(e) {
+      showAlert('Error: ' + e.message);
+      btn.disabled = false;
+      btn.textContent = 'Submit Details';
+    }
+  }
+</script>
+</body>
+</html>

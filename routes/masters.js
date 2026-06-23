@@ -67,6 +67,17 @@ router.get('/menus', isLoggedIn, async (req, res) => {
 });
 
 // GET masters by type
+// PUBLIC - for join-form page (no login required)
+router.get('/public/:type', async (req, res) => {
+  try {
+    const Master = require('../models/Master');
+    const masters = await Master.find({ type: req.params.type }).sort({ value: 1 });
+    return res.json({ success: true, masters });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 router.get('/:type', isLoggedIn, async (req, res) => {
   try {
     const filter = { type: req.params.type };

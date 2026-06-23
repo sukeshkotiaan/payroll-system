@@ -54,6 +54,7 @@ app.use('/api/arrears', require('./routes/arrears'));
 app.use('/api/tds', require('./routes/tds'));
 app.use('/api/ot', require('./routes/ot'));
 app.use('/api/appraisals', require('./routes/appraisals'));
+app.use('/api/employee-submissions', require('./routes/employeeSubmissions'));
 app.use('/api/schoolinfo', require('./routes/schoolinfo'));
 app.use('/api/email', require('./routes/email'));
 app.use('/api/dashboard', require('./routes/dashboard'));
@@ -95,6 +96,10 @@ app.get('/payroll', (req, res) => {
 
 app.get('/arrears', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'pages', 'arrears.html'));
+});
+
+app.get('/join-form', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'pages', 'join-form.html'));
 });
 
 app.get('/appraisals', (req, res) => {
