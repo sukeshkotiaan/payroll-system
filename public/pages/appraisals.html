@@ -187,6 +187,7 @@
   let currentUser = {};
   let allApprisals = [];
   let allEmployees = [];
+  let apSortState = { field: null, direction: 'asc' };
   let allFYs = [];
   let parsedRecords = [];
 
@@ -258,13 +259,28 @@
 
   function filterGrid() { renderGrid(); }
 
+  function sortAppraisalGrid(field) {
+    if (apSortState.field === field) {
+      apSortState.direction = apSortState.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+      apSortState.field = field;
+      apSortState.direction = 'asc';
+    }
+    renderGrid();
+    const indEl = document.getElementById('apsortind-' + field);
+    if (indEl) indEl.innerHTML = renderSortIndicator(field, apSortState);
+  }
+
   function renderGrid() {
     let employees = allEmployees;
     const apMap = {};
     allApprisals.forEach(a => { apMap[a.ein + '-' + a.financialYear] = a; });
     document.getElementById('gridInfo').textContent = employees.length + ' employees';
 
-    let head = '<tr><th class="emp-col">EIN</th><th class="name-col">Name</th><th class="loc-col">Loc</th>';
+    let head = '<tr>' +
+      '<th class="emp-col" onclick="sortAppraisalGrid(\'ein\')" style="cursor:pointer;">EIN<span id="apsortind-ein"></span></th>' +
+      '<th class="name-col" onclick="sortAppraisalGrid(\'employeeName\')" style="cursor:pointer;">Name<span id="apsortind-employeeName"></span></th>' +
+      '<th class="loc-col" onclick="sortAppraisalGrid(\'location\')" style="cursor:pointer;">Loc<span id="apsortind-location"></span></th>';
     allFYs.forEach(fy => { head += '<th style="min-width:90px;">' + fy + '</th>'; });
     document.getElementById('gridHead').innerHTML = head;
 
@@ -278,6 +294,10 @@
       document.getElementById('gridBody').innerHTML =
         '<tr><td colspan="12"><div class="empty-state">No employees found</div></td></tr>';
       return;
+    }
+
+    if (apSortState.field) {
+      filtered = genericSort(filtered, apSortState.field, apSortState.direction);
     }
 
     let body = '';
@@ -456,5 +476,6 @@
     setTimeout(() => el.style.display = 'none', 4000);
   }
 </script>
+<script src="/js/table-sort.js"></script>
 </body>
 </html>
