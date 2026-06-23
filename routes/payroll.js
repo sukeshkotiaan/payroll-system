@@ -30,14 +30,21 @@ function getGroupName(section, location, profile) {
 
 function getPT(grossSalary, gender, month, rules) {
   if (!rules.ptApplicable || rules.ptApplicable === 'No') return 0;
-  if (gender === 'Female') return 0;
-  const slabs = rules.ptSlabs || [];
-  const isFebruary = month === 'February';
-  if (isFebruary && rules.februaryPT) return rules.februaryPT;
+  const allSlabs = rules.ptSlabs || [];
+  // Filter slabs to match employee's gender (default to Male slabs if not set, for backward compatibility)
+  const genderKey = gender === 'Female' ? 'Female' : 'Male';
+  const slabs = allSlabs.filter(s => (s.gender || 'Male') === genderKey);
+
+  let matchedAmount = 0;
   for (const slab of slabs) {
-    if (grossSalary >= slab.min && grossSalary <= slab.max) return slab.amount;
+    if (grossSalary >= slab.min && grossSalary <= slab.max) { matchedAmount = slab.amount; break; }
   }
-  return 0;
+
+  // February override only applies if PT is actually due that month
+  const isFebruary = month === 'February';
+  if (isFebruary && matchedAmount > 0 && rules.februaryPT) return rules.februaryPT;
+
+  return matchedAmount;
 }
 
 function calculatePayroll(emp, attendance, rules, month) {

@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const ptSlabSchema = new mongoose.Schema({
+  gender: { type: String, enum: ['Male', 'Female'], default: 'Male' },
   min: { type: Number, default: 0 },
   max: { type: Number, default: 0 },
   amount: { type: Number, default: 0 }
