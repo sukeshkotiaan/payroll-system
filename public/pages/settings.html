@@ -358,14 +358,27 @@
         <div class="form-grid">
           <div class="form-group">
             <label>Basic %</label>
-            <input type="number" id="basicPercent" step="0.001" placeholder="e.g. 76.923">
-            <span class="hint">Basic = Monthly Salary × Basic %</span>
+            <input type="number" id="basicPercent" step="0.001" placeholder="e.g. 76.923" oninput="updateSalaryTotal()">
+            <span class="hint">Basic = Monthly Salary × Basic %. PF is calculated on Basic only.</span>
           </div>
           <div class="form-group">
             <label>HRA & Allowance %</label>
-            <input type="number" id="hraPercent" step="0.001" placeholder="e.g. 23.077">
+            <input type="number" id="hraPercent" step="0.001" placeholder="e.g. 23.077" oninput="updateSalaryTotal()">
             <span class="hint">HRA = Monthly Salary × HRA %</span>
           </div>
+        </div>
+
+        <h4 style="font-size:13px;color:#555;margin:20px 0 8px;">Additional Components</h4>
+        <div class="slab-headers">
+          <div class="slab-label">Component Name</div>
+          <div class="slab-label">% of Monthly Salary</div>
+          <div></div>
+        </div>
+        <div id="salaryComponents"></div>
+        <button class="btn-add-slab" onclick="addSalaryComponent()">+ Add Component</button>
+
+        <div id="salaryTotalBox" style="margin-top:15px;padding:10px 15px;border-radius:8px;font-size:13px;font-weight:600;">
+          Total: <span id="salaryTotalValue">100.0</span>%
         </div>
       </div>
     </div>
@@ -725,6 +738,7 @@
     if (!rules) return;
     document.getElementById('basicPercent').value = rules.basicPercent || 76.923;
     document.getElementById('hraPercent').value = rules.hraPercent || 23.077;
+    renderSalaryComponents(rules.salaryComponents || []);
     document.getElementById('lopBase').value = rules.lopBase || 'total_salary';
     document.getElementById('lopDivisor').value =
       rules.lopDivisor || 'actual_days_in_month';
@@ -821,6 +835,77 @@
     });
   }
 
+  function renderSalaryComponents(components) {
+    const container = document.getElementById('salaryComponents');
+    if (!container) return;
+    container.innerHTML = (components || []).map((c, i) => `
+      <div class="pt-slab-row" id="comp-${i}">
+        <input type="text" placeholder="e.g. Conveyance Allowance" value="${c.name || ''}" id="compName${i}">
+        <input type="number" placeholder="%" step="0.001" value="${c.percent || 0}" id="compPct${i}" oninput="updateSalaryTotal()">
+        <button class="btn-remove-slab" onclick="removeSalaryComponent(${i})">✕</button>
+      </div>
+    `).join('');
+    updateSalaryTotal();
+  }
+
+  function addSalaryComponent() {
+    const container = document.getElementById('salaryComponents');
+    const count = container.children.length;
+    const div = document.createElement('div');
+    div.className = 'pt-slab-row';
+    div.id = 'comp-' + count;
+    div.innerHTML = `
+      <input type="text" placeholder="e.g. Conveyance Allowance" id="compName${count}" value="">
+      <input type="number" placeholder="%" step="0.001" id="compPct${count}" value="0" oninput="updateSalaryTotal()">
+      <button class="btn-remove-slab" onclick="removeSalaryComponent(${count})">✕</button>
+    `;
+    container.appendChild(div);
+    updateSalaryTotal();
+  }
+
+  function removeSalaryComponent(index) {
+    const el = document.getElementById('comp-' + index);
+    if (el) el.remove();
+    reindexSalaryComponents();
+    updateSalaryTotal();
+  }
+
+  function reindexSalaryComponents() {
+    const container = document.getElementById('salaryComponents');
+    Array.from(container.children).forEach((row, i) => {
+      row.id = 'comp-' + i;
+      const inputs = row.querySelectorAll('input');
+      inputs[0].id = 'compName' + i;
+      inputs[1].id = 'compPct' + i;
+      row.querySelector('button').setAttribute('onclick', 'removeSalaryComponent(' + i + ')');
+    });
+  }
+
+  function getSalaryComponents() {
+    const container = document.getElementById('salaryComponents');
+    if (!container) return [];
+    return Array.from(container.children).map((row, i) => ({
+      name: document.getElementById('compName' + i).value.trim(),
+      percent: parseFloat(document.getElementById('compPct' + i).value) || 0
+    })).filter(c => c.name);
+  }
+
+  function updateSalaryTotal() {
+    const basic = parseFloat(document.getElementById('basicPercent').value) || 0;
+    const hra = parseFloat(document.getElementById('hraPercent').value) || 0;
+    const components = getSalaryComponents();
+    const compTotal = components.reduce((s, c) => s + c.percent, 0);
+    const total = basic + hra + compTotal;
+    const valEl = document.getElementById('salaryTotalValue');
+    const boxEl = document.getElementById('salaryTotalBox');
+    if (valEl) valEl.textContent = total.toFixed(3);
+    if (boxEl) {
+      const isOk = Math.abs(total - 100) < 0.01;
+      boxEl.style.background = isOk ? '#e6f4ea' : '#fce8e6';
+      boxEl.style.color = isOk ? '#34a853' : '#ea4335';
+    }
+  }
+
   function getPTSlabs() {
     const result = [];
     ['Male', 'Female'].forEach(function(gender) {
@@ -863,6 +948,7 @@
       esicSalaryLimit: parseFloat(document.getElementById('esicSalaryLimit').value) || 21000,
       ptApplicable: document.getElementById('ptApplicable').value,
       ptSlabs: getPTSlabs(),
+      salaryComponents: getSalaryComponents(),
       februaryPT: parseFloat(document.getElementById('februaryPT').value) || 300,
       tdsType: document.getElementById('tdsType').value,
       tdsRate: parseFloat(document.getElementById('tdsRate').value) || 10,

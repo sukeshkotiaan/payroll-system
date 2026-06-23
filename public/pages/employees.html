@@ -177,9 +177,17 @@
         <table>
           <thead>
             <tr>
-              <th>EIN</th><th>Name</th><th>Designation</th><th>Department</th>
-              <th>Location</th><th>Section</th><th>Profile</th>
-              <th>Joining Date</th><th>Exit Date</th><th>Status</th><th>Actions</th>
+              <th id="th-ein" onclick="sortEmployeeTable('ein')" style="cursor:pointer;">EIN<span id="sortind-ein"></span></th>
+              <th id="th-employeeName" onclick="sortEmployeeTable('employeeName')" style="cursor:pointer;">Name<span id="sortind-employeeName"></span></th>
+              <th id="th-designation" onclick="sortEmployeeTable('designation')" style="cursor:pointer;">Designation<span id="sortind-designation"></span></th>
+              <th id="th-department" onclick="sortEmployeeTable('department')" style="cursor:pointer;">Department<span id="sortind-department"></span></th>
+              <th id="th-location" onclick="sortEmployeeTable('location')" style="cursor:pointer;">Location<span id="sortind-location"></span></th>
+              <th id="th-section" onclick="sortEmployeeTable('section')" style="cursor:pointer;">Section<span id="sortind-section"></span></th>
+              <th id="th-profile" onclick="sortEmployeeTable('profile')" style="cursor:pointer;">Profile<span id="sortind-profile"></span></th>
+              <th id="th-dateOfJoining" onclick="sortEmployeeTable('dateOfJoining')" style="cursor:pointer;">Joining Date<span id="sortind-dateOfJoining"></span></th>
+              <th id="th-dateOfExit" onclick="sortEmployeeTable('dateOfExit')" style="cursor:pointer;">Exit Date<span id="sortind-dateOfExit"></span></th>
+              <th id="th-isActive" onclick="sortEmployeeTable('isActive')" style="cursor:pointer;">Status<span id="sortind-isActive"></span></th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody id="employeeTable">
@@ -408,6 +416,7 @@
 <script>
   let allEmployees = [];
   let filteredEmployees = [];
+  let empSortState = { field: null, direction: 'asc' };
   let importData = [];
   let calcRules = {};
   let currentUser = {};
@@ -527,6 +536,20 @@
       const matchStatus = !status || (status === 'active' ? emp.isActive : !emp.isActive);
       return matchSearch && matchLocation && matchSection && matchProfile && matchDept && matchStatus;
     });
+    renderTable(filteredEmployees);
+  }
+
+  function sortEmployeeTable(field) {
+    if (empSortState.field === field) {
+      empSortState.direction = empSortState.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+      empSortState.field = field;
+      empSortState.direction = 'asc';
+    }
+    filteredEmployees = genericSort(filteredEmployees, field, empSortState.direction);
+    document.querySelectorAll('[id^="sortind-"]').forEach(el => el.innerHTML = '');
+    const indEl = document.getElementById('sortind-' + field);
+    if (indEl) indEl.innerHTML = renderSortIndicator(field, empSortState);
     renderTable(filteredEmployees);
   }
 
@@ -1214,5 +1237,6 @@
     <button onclick="printLetter()" style="background:#34a853;color:white;border:none;padding:9px 18px;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;">Print / Save as PDF</button>
   </div>
 </div>
+<script src="/js/table-sort.js"></script>
 </body>
 </html>

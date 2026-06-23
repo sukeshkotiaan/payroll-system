@@ -7,11 +7,17 @@ const ptSlabSchema = new mongoose.Schema({
   amount: { type: Number, default: 0 }
 }, { _id: false });
 
+const salaryComponentSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  percent: { type: Number, default: 0 }
+}, { _id: false });
+
 const ruleVersionSchema = new mongoose.Schema({
   effectiveMonth: { type: String, required: true },
   effectiveYear: { type: Number, required: true },
   basicPercent: { type: Number, default: 76.923 },
   hraPercent: { type: Number, default: 23.077 },
+  salaryComponents: { type: [salaryComponentSchema], default: [] },
   lopBase: { type: String, default: 'total_salary' },
   lopDivisor: { type: String, default: 'actual_days_in_month' },
   pfRate: { type: Number, default: 12 },
