@@ -165,10 +165,10 @@
   async function loadMasters() {
     try {
       const [locRes, secRes, proRes, deptRes] = await Promise.all([
-        fetch('/api/masters/location'),
-        fetch('/api/masters/section'),
-        fetch('/api/masters/profile'),
-        fetch('/api/masters/department')
+        fetch('/api/masters/public/location'),
+        fetch('/api/masters/public/section'),
+        fetch('/api/masters/public/profile'),
+        fetch('/api/masters/public/department')
       ]);
       const [locData, secData, proData, deptData] = await Promise.all([
         locRes.json(), secRes.json(), proRes.json(), deptRes.json()
