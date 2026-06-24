@@ -98,6 +98,10 @@ app.get('/arrears', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'pages', 'arrears.html'));
 });
 
+app.get('/submissions', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'pages', 'submissions.html'));
+});
+
 app.get('/join-form', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'pages', 'join-form.html'));
 });

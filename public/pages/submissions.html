@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Employee Submissions — Payroll System</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; }
+    .header { background: #1a73e8; color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+    .header h1 { font-size: 20px; }
+    .btn-back { background: white; color: #1a73e8; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+    .container { padding: 20px; max-width: 1300px; margin: 0 auto; }
+    .btn-primary { background: #1a73e8; color: white; border: none; padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
+    .btn-success { background: #34a853; color: white; border: none; padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
+    .btn-danger { background: #ea4335; color: white; border: none; padding: 5px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 600; }
+    .card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; margin-bottom: 20px; }
+    .card-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+    .card-header h3 { font-size: 15px; color: #333; }
+    .empty-state { text-align: center; padding: 40px; color: #999; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: #f8f9fa; padding: 12px 15px; text-align: left; font-weight: 600; color: #555; border-bottom: 1px solid #eee; cursor: pointer; }
+    td { padding: 12px 15px; border-bottom: 1px solid #f5f5f5; color: #333; }
+    tr:hover { background: #f8f9ff; }
+    .badge { padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+    .badge-pending { background: #fef3c7; color: #d97706; }
+    .badge-imported { background: #e6f4ea; color: #34a853; }
+    .alert { padding: 10px 14px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; display: none; }
+    .alert-success { background: #e6f4ea; color: #34a853; }
+    .alert-error { background: #fce8e6; color: #ea4335; }
+    .link-box { background: #e8f0fe; border-radius: 8px; padding: 15px 20px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .link-box input { flex: 1; min-width: 250px; padding: 8px 12px; border: 1px solid #1a73e8; border-radius: 6px; font-size: 13px; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📋 Employee Submissions</h1>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span id="headerUser" style="font-size:13px;"></span>
+    <button class="btn-back" onclick="window.location.href='/dashboard'">← Dashboard</button>
+  </div>
+</div>
+
+<div class="container">
+  <div class="alert alert-success" id="alertSuccess"></div>
+  <div class="alert alert-error" id="alertError"></div>
+
+  <div class="link-box">
+    <strong>Public Form Link:</strong>
+    <input type="text" id="formLink" readonly>
+    <button class="btn-primary" onclick="copyFormLink()">📋 Copy Link</button>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h3>Submissions <span id="subCount" style="font-size:13px;color:#666;font-weight:400;"></span></h3>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-success" onclick="exportSubmissions()">⬇️ Export to Excel</button>
+        <button class="btn-primary" onclick="loadSubmissions()">🔄 Refresh</button>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th><th>Designation</th><th>Location</th>
+          <th>Phone</th><th>Email</th><th>Submitted At</th>
+          <th>Status</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="submissionsTable">
+        <tr><td colspan="8"><div class="empty-state">Loading...</div></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  let allSubmissions = [];
+
+  window.onload = async () => {
+    await checkAuth();
+    document.getElementById('formLink').value = window.location.origin + '/join-form';
+    await loadSubmissions();
+  };
+
+  async function checkAuth() {
+    const res = await fetch('/api/auth/me');
+    const data = await res.json();
+    if (!data.success) { window.location.href = '/'; return; }
+    document.getElementById('headerUser').textContent = data.user.fullName;
+  }
+
+  function copyFormLink() {
+    const input = document.getElementById('formLink');
+    input.select();
+    document.execCommand('copy');
+    showAlert('alertSuccess', '✅ Link copied to clipboard');
+  }
+
+  async function loadSubmissions() {
+    try {
+      const res = await fetch('/api/employee-submissions');
+      const data = await res.json();
+      if (!data.success) return;
+      allSubmissions = data.submissions;
+      document.getElementById('subCount').textContent = '(' + allSubmissions.length + ' total)';
+      renderTable(allSubmissions);
+    } catch(e) { showAlert('alertError', 'Error: ' + e.message); }
+  }
+
+  function renderTable(submissions) {
+    const tbody = document.getElementById('submissionsTable');
+    if (!submissions.length) {
+      tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state">No submissions yet. Share the form link above with staff.</div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = submissions.map(s => '<tr>' +
+      '<td><strong>' + s.title + ' ' + s.employeeName + '</strong></td>' +
+      '<td>' + s.designation + '</td>' +
+      '<td>' + s.location + '</td>' +
+      '<td>' + s.phoneNumber + '</td>' +
+      '<td>' + s.email + '</td>' +
+      '<td>' + new Date(s.submittedAt).toLocaleString('en-IN') + '</td>' +
+      '<td><span class="badge badge-' + s.status.toLowerCase() + '">' + s.status + '</span></td>' +
+      '<td><button class="btn-danger" onclick="deleteSubmission(\'' + s._id + '\')">Delete</button></td>' +
+      '</tr>'
+    ).join('');
+  }
+
+  async function exportSubmissions() {
+    window.location.href = '/api/employee-submissions/export';
+  }
+
+  async function deleteSubmission(id) {
+    if (!confirm('Delete this submission?')) return;
+    try {
+      const res = await fetch('/api/employee-submissions/' + id, { method: 'DELETE', credentials: 'include' });
+      const data = await res.json();
+      if (data.success) {
+        showAlert('alertSuccess', data.message);
+        await loadSubmissions();
+      } else { showAlert('alertError', data.message); }
+    } catch(e) { showAlert('alertError', 'Error: ' + e.message); }
+  }
+
+  function showAlert(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg; el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 4000);
+  }
+</script>
+</body>
+</html>
