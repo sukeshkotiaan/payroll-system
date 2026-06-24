@@ -113,7 +113,7 @@
           </div>
           <div class="form-group full">
             <label>Designation <span class="req">*</span></label>
-            <input type="text" id="designation" required placeholder="e.g. Teacher, Clerk, Accountant">
+            <select id="designation" required><option value="">Select Designation</option></select>
           </div>
         </div>
 
@@ -164,19 +164,21 @@
 
   async function loadMasters() {
     try {
-      const [locRes, secRes, proRes, deptRes] = await Promise.all([
+      const [locRes, secRes, proRes, deptRes, desigRes] = await Promise.all([
         fetch('/api/masters/public/location'),
         fetch('/api/masters/public/section'),
         fetch('/api/masters/public/profile'),
-        fetch('/api/masters/public/department')
+        fetch('/api/masters/public/department'),
+        fetch('/api/masters/public/designation')
       ]);
-      const [locData, secData, proData, deptData] = await Promise.all([
-        locRes.json(), secRes.json(), proRes.json(), deptRes.json()
+      const [locData, secData, proData, deptData, desigData] = await Promise.all([
+        locRes.json(), secRes.json(), proRes.json(), deptRes.json(), desigRes.json()
       ]);
       if (locData.success) populateSelect('location', locData.masters);
       if (secData.success) populateSelect('section', secData.masters);
       if (proData.success) populateSelect('profile', proData.masters);
       if (deptData.success) populateSelect('department', deptData.masters);
+      if (desigData.success) populateSelect('designation', desigData.masters);
     } catch(e) { console.error(e); }
   }
 

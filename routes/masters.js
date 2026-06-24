@@ -71,7 +71,7 @@ router.get('/menus', isLoggedIn, async (req, res) => {
 router.get('/public/:type', async (req, res) => {
   try {
     const Master = require('../models/Master');
-    const masters = await Master.find({ type: req.params.type }).sort({ value: 1 });
+    const masters = await Master.find({ type: req.params.type, isActive: { $ne: false } }).sort({ value: 1 });
     return res.json({ success: true, masters });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
