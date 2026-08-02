@@ -314,6 +314,10 @@
           <label>Full Name <span class="req">*</span></label>
           <input type="text" id="fullName" placeholder="e.g. Rahul Sharma">
         </div>
+        <div class="form-group full-width">
+          <label>Email Address <span style="color:#666;font-size:11px;">(Required for Management L1 — receives OTP alerts)</span></label>
+          <input type="email" id="userEmail" placeholder="e.g. manager@school.com">
+        </div>
         <div class="form-group">
           <label>Username <span class="req">*</span></label>
           <input type="text" id="username" placeholder="e.g. stt1001" autocomplete="off">
@@ -529,6 +533,7 @@
     document.getElementById('einSearchResult').style.display = 'none';
     document.getElementById('linkedEmployeeId').value = '';
     document.getElementById('fullName').value = '';
+    document.getElementById('userEmail').value = '';
     document.getElementById('username').value = '';
     document.getElementById('role').value = '';
     onRoleChange();
@@ -624,6 +629,7 @@
     document.getElementById('formTitle').textContent = 'Add New User';
     document.getElementById('userId').value = '';
     document.getElementById('fullName').value = '';
+    document.getElementById('userEmail').value = '';
     document.getElementById('username').value = '';
     document.getElementById('username').disabled = false;
     document.getElementById('role').value = '';
@@ -648,6 +654,7 @@
       document.getElementById('formTitle').textContent = 'Edit User — ' + u.fullName;
       document.getElementById('userId').value = u._id;
       document.getElementById('fullName').value = u.fullName;
+      document.getElementById('userEmail').value = u.email || '';
       document.getElementById('username').value = u.username;
       document.getElementById('username').disabled = true;
       document.getElementById('role').value = u.role;
@@ -692,7 +699,8 @@
     if (role === 'management_l1') { actualRole = 'management'; managementLevel = 1; }
     else if (role === 'management_l2') { actualRole = 'management'; managementLevel = 2; }
     else if (role === 'management_l3') { actualRole = 'management'; managementLevel = 3; }
-    const payload = { fullName, role: actualRole, managementLevel, branches };
+    const email = document.getElementById('userEmail').value.trim();
+    const payload = { fullName, role: actualRole, managementLevel, branches, email };
     if (!editMode) { payload.username = username; payload.password = password; }
     if (linkedEmployeeId) payload.linkedEmployeeId = linkedEmployeeId;
 

@@ -61,13 +61,22 @@ const userLockSchema = new mongoose.Schema({
   attempts: { type: Number, default: 0 }
 }, { _id: false });
 
+const securityConfigSchema = new mongoose.Schema({
+  supervisorLoginEnabled: { type: Boolean, default: true },
+  supervisorLoginDays: { type: [String], default: ['Mon','Tue','Wed','Thu','Fri','Sat'] },
+  supervisorLoginStart: { type: String, default: '06:00' },
+  supervisorLoginEnd: { type: String, default: '20:00' },
+  supervisorLoginMessage: { type: String, default: 'Access is restricted to school hours only.' }
+}, { _id: false });
+
 const settingsSchema = new mongoose.Schema({
   locationSettings: { type: [locationSettingsSchema], default: [] },
   correctionPasswordHash: { type: String, default: '' },
   correctionAttempts: { type: [correctionAttemptSchema], default: [] },
   userLocks: { type: [userLockSchema], default: [] },
   createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
+  updatedAt: { type: Date, default: Date.now },
+  securityConfig: { type: securityConfigSchema, default: () => ({}) }
 });
 
 module.exports = mongoose.model('Settings', settingsSchema);

@@ -54,6 +54,7 @@ app.use('/api/arrears', require('./routes/arrears'));
 app.use('/api/tds', require('./routes/tds'));
 app.use('/api/ot', require('./routes/ot'));
 app.use('/api/appraisals', require('./routes/appraisals'));
+app.use('/api/security', require('./routes/security').router);
 app.use('/api/employee-submissions', require('./routes/employeeSubmissions'));
 app.use('/api/schoolinfo', require('./routes/schoolinfo'));
 app.use('/api/email', require('./routes/email'));
@@ -96,6 +97,10 @@ app.get('/payroll', (req, res) => {
 
 app.get('/arrears', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'pages', 'arrears.html'));
+});
+
+app.get('/audit-log', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'pages', 'audit-log.html'));
 });
 
 app.get('/submissions', (req, res) => {

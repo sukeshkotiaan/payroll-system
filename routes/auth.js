@@ -5,6 +5,8 @@ const User = require('../models/User');
 const { isLoggedIn } = require('../middleware/auth');
 const Employee = require('../models/Employee');
 const Attendance = require('../models/Attendance');
+const Settings = require('../models/Settings');
+const { logAudit } = require('./security');
 
 // Seed default admin on first run
 const seedAdmin = async () => {
@@ -74,7 +76,65 @@ router.post('/login', async (req, res) => {
       }
     }
 
+    // SECURITY CHECK 1: Supervisor time-window restriction
+    if (user.role === 'supervisor') {
+      const settings = await Settings.findOne();
+      const sec = settings && settings.securityConfig ? settings.securityConfig : {};
+      if (sec.supervisorLoginEnabled !== false) {
+        const now = new Date();
+        const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+        const todayDay = days[now.getDay()];
+        const allowedDays = sec.supervisorLoginDays || ['Mon','Tue','Wed','Thu','Fri','Sat'];
+        const startTime = sec.supervisorLoginStart || '06:00';
+        const endTime = sec.supervisorLoginEnd || '20:00';
+        const [startH, startM] = startTime.split(':').map(Number);
+        const [endH, endM] = endTime.split(':').map(Number);
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        const startMinutes = startH * 60 + startM;
+        const endMinutes = endH * 60 + endM;
+        const dayAllowed = allowedDays.includes(todayDay);
+        const timeAllowed = currentMinutes >= startMinutes && currentMinutes <= endMinutes;
+        if (!dayAllowed || !timeAllowed) {
+          const msg = sec.supervisorLoginMessage || 'Access is restricted to school hours only.';
+          return res.status(403).json({
+            success: false,
+            message: msg + ' Allowed: ' + allowedDays.join(', ') + ' ' + startTime + ' to ' + endTime
+          });
+        }
+      }
+    }
+
+    // SECURITY CHECK 2: Accountant OTP — don't set session yet, return pending
+    if (user.role === 'accountant') {
+      const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+      await logAudit(user._id, user.username, user.fullName, user.role, 'LOGIN_OTP_REQUESTED', 'OTP requested for accountant login', ip);
+      // Store temp data in a short-lived session key for OTP verification
+      req.session.pendingOTP = {
+        userId: user._id.toString(),
+        sessionUser,
+        emp: emp ? emp._id.toString() : null
+      };
+      // Generate and send OTP
+      const OTP = require('../models/OTP');
+      const crypto = require('crypto');
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+      await OTP.deleteMany({ userId: user._id, used: false });
+      await OTP.create({ userId: user._id, username: user.username, code, expiresAt });
+      const { sendOTPToL1 } = require('./security');
+      await sendOTPToL1(user.username, user.fullName, code);
+      return res.json({
+        success: false,
+        otpRequired: true,
+        message: 'OTP has been sent to Management. Please enter the OTP to complete login.'
+      });
+    }
+
     req.session.user = sessionUser;
+
+    // Audit log successful login
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+    await logAudit(user._id, user.username, user.fullName, user.role, 'LOGIN', 'Successful login', ip);
 
     // Auto-generate attendance for Management users (all levels)
     if (user.role === 'management' && emp) {
@@ -93,6 +153,36 @@ router.post('/login', async (req, res) => {
 });
 
 // LOGOUT
+// VERIFY OTP for accountant login
+router.post('/verify-otp', async (req, res) => {
+  try {
+    const { code } = req.body;
+    const pending = req.session.pendingOTP;
+    if (!pending) {
+      return res.status(400).json({ success: false, message: 'Session expired. Please login again.' });
+    }
+    const OTP = require('../models/OTP');
+    const otp = await OTP.findOne({ userId: pending.userId, used: false });
+    if (!otp) return res.status(400).json({ success: false, message: 'No OTP found. Please login again.' });
+    if (otp.expiresAt < new Date()) return res.status(400).json({ success: false, message: 'OTP expired. Please login again.' });
+    if (otp.code !== String(code).trim()) return res.status(400).json({ success: false, message: 'Invalid OTP. Please check with Management.' });
+
+    otp.used = true;
+    await otp.save();
+
+    // Complete the login
+    req.session.user = pending.sessionUser;
+    delete req.session.pendingOTP;
+
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+    await logAudit(pending.userId, pending.sessionUser.username, pending.sessionUser.fullName, 'accountant', 'LOGIN', 'Successful login via OTP', ip);
+
+    return res.json({ success: true, message: 'Login successful', user: req.session.user });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 router.post('/logout', (req, res) => {
   req.session.destroy();
   res.json({ success: true, message: 'Logged out' });

@@ -11,6 +11,7 @@ const userSchema = new mongoose.Schema({
   accountantId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   employeeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee', default: null },
   ein: { type: String, default: null },
+  email: { type: String, default: '', trim: true, lowercase: true },
   branches: { type: [String], default: ['all'] },
   isActive: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now },

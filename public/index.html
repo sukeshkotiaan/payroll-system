@@ -108,6 +108,29 @@
     <div class="footer">Payroll Management System v1.0</div>
   </div>
 
+  <!-- OTP FORM -->
+  <div id="otpForm" style="display:none;background:white;border-radius:16px;padding:40px;width:100%;max-width:400px;box-shadow:0 4px 24px rgba(0,0,0,0.12);">
+    <div style="text-align:center;margin-bottom:20px;">
+      <div style="font-size:40px;">🔐</div>
+      <h2 style="font-size:20px;color:#333;margin-top:10px;">OTP Verification</h2>
+    </div>
+    <p id="otpMsg" style="font-size:13px;color:#666;text-align:center;margin-bottom:20px;background:#e8f0fe;padding:12px;border-radius:8px;"></p>
+    <div style="margin-bottom:15px;">
+      <label style="font-size:13px;font-weight:600;color:#333;display:block;margin-bottom:6px;">Enter 6-digit OTP</label>
+      <input type="text" id="otpInput" placeholder="e.g. 123456" maxlength="6"
+        style="width:100%;padding:14px;border:2px solid #1a73e8;border-radius:8px;font-size:20px;text-align:center;letter-spacing:8px;outline:none;">
+    </div>
+    <div id="otpError" style="display:none;color:#ea4335;font-size:13px;background:#fce8e6;padding:10px;border-radius:6px;margin-bottom:10px;"></div>
+    <button id="otpBtn" onclick="verifyOTP()"
+      style="width:100%;padding:14px;background:#1a73e8;color:white;border:none;border-radius:8px;font-size:16px;font-weight:700;cursor:pointer;">
+      Verify OTP
+    </button>
+    <button onclick="window.location.reload()"
+      style="width:100%;padding:10px;background:none;color:#666;border:none;font-size:13px;cursor:pointer;margin-top:10px;">
+      ← Back to Login
+    </button>
+  </div>
+
   <script>
     // Check if already logged in
     fetch('/api/auth/me')
@@ -141,6 +164,12 @@
         const data = await res.json();
         if (data.success) {
           window.location.href = '/dashboard';
+        } else if (data.otpRequired) {
+          // Show OTP screen for accountant
+          document.getElementById('loginForm').style.display = 'none';
+          document.getElementById('otpForm').style.display = 'block';
+          document.getElementById('otpMsg').textContent = data.message;
+          document.getElementById('otpInput').focus();
         } else {
           errorMsg.textContent = data.message;
           errorMsg.style.display = 'block';
@@ -157,8 +186,50 @@
 
     // Allow Enter key to login
     document.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') login();
+      if (e.key === 'Enter') {
+        const otpForm = document.getElementById('otpForm');
+        if (otpForm && otpForm.style.display !== 'none') {
+          verifyOTP();
+        } else {
+          login();
+        }
+      }
     });
+
+    async function verifyOTP() {
+      const code = document.getElementById('otpInput').value.trim();
+      const otpError = document.getElementById('otpError');
+      const otpBtn = document.getElementById('otpBtn');
+      if (!code || code.length !== 6) {
+        otpError.textContent = 'Please enter the 6-digit OTP';
+        otpError.style.display = 'block';
+        return;
+      }
+      otpBtn.disabled = true;
+      otpBtn.textContent = 'Verifying...';
+      otpError.style.display = 'none';
+      try {
+        const res = await fetch('/api/auth/verify-otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code })
+        });
+        const data = await res.json();
+        if (data.success) {
+          window.location.href = '/dashboard';
+        } else {
+          otpError.textContent = data.message;
+          otpError.style.display = 'block';
+          otpBtn.disabled = false;
+          otpBtn.textContent = 'Verify OTP';
+        }
+      } catch(e) {
+        otpError.textContent = 'Connection error. Please try again.';
+        otpError.style.display = 'block';
+        otpBtn.disabled = false;
+        otpBtn.textContent = 'Verify OTP';
+      }
+    }
   </script>
 </body>
 </html>
