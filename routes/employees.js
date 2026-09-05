@@ -593,12 +593,31 @@ router.post('/upload-excel', isLoggedIn, isAdmin, excelUpload.single('file'), as
           updatedAt:      new Date()
         };
 
-        // ── Upsert: match on existing EIN ──────────────────────────────────
-        const existing = await Employee.findOne({ ein: einValue });
+        // ── Upsert logic ───────────────────────────────────────────────────
+        // Priority 1: match by EIN (if the row had an explicit EIN from the file)
+        // Priority 2: match by employee name (for auto-generated EINs — prevents
+        //             duplicates on re-import because the EIN would be brand-new)
+        let existing = null;
+        const fileHadEIN = einSource === 'provided';   // true only when the file's EIN column was non-empty
+
+        if (fileHadEIN) {
+          existing = await Employee.findOne({ ein: einValue });
+        } else {
+          // Try name match first (case-insensitive, trimmed)
+          existing = await Employee.findOne({
+            employeeName: { $regex: '^' + employeeName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', $options: 'i' }
+          });
+        }
+
         if (existing) {
-          await Employee.findByIdAndUpdate(existing._id, { $set: empData });
+          // Keep the employee's existing EIN — don't overwrite with a freshly generated one
+          const updateData = { ...empData };
+          if (!fileHadEIN) {
+            updateData.ein = existing.ein;   // preserve existing EIN on name-match updates
+          }
+          await Employee.findByIdAndUpdate(existing._id, { $set: updateData });
           results.updated++;
-          results.rows.push({ row: r, ein: einValue, name: employeeName, action: 'updated', einSource });
+          results.rows.push({ row: r, ein: existing.ein, name: employeeName, action: 'updated', einSource: fileHadEIN ? 'provided' : 'name-match' });
         } else {
           const created = await Employee.create(empData);
           results.created++;
