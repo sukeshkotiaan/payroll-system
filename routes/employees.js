@@ -282,6 +282,7 @@ router.post('/', isLoggedIn, isAdmin, upload.single('photo'), async (req, res) =
 
 router.put('/:id', isLoggedIn, isAdmin, upload.single('photo'), async (req, res) => {
   try {
+    console.log('PUT /employees/:id =>', req.params.id, '| body keys:', Object.keys(req.body || {}));
     const data = req.body;
     if (req.file) data.photo = '/uploads/' + req.file.filename;
     data.updatedAt = Date.now();
@@ -293,10 +294,39 @@ router.put('/:id', isLoggedIn, isAdmin, upload.single('photo'), async (req, res)
       data.ctcAnnual = parseFloat(data.monthlySalary) * 12;
     }
     if (data.bankVerifiedAt === '') data.bankVerifiedAt = null;
+    // Remove _id from $set to avoid Mongoose immutable field error
+    delete data._id;
     const employee = await Employee.findByIdAndUpdate(req.params.id, { $set: data }, { new: true });
-    if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
+    console.log('PUT /employees/:id result:', employee ? 'found & updated' : 'NOT FOUND for id=' + req.params.id);
+    if (!employee) return res.status(404).json({ success: false, message: 'Employee not found. Try refreshing the page and editing again.' });
     return res.json({ success: true, message: 'Employee updated successfully', employee });
   } catch (err) {
+    console.error('PUT /employees/:id error:', err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// PATCH EIN only — JSON body, no multer, for quick EIN reassignment from admin
+router.patch('/:id/ein', isLoggedIn, isAdmin, async (req, res) => {
+  try {
+    const { ein } = req.body;
+    if (!ein || !ein.trim()) return res.status(400).json({ success: false, message: 'EIN is required' });
+    const newEIN = ein.trim().toUpperCase();
+    // Check if another employee already has this EIN
+    const conflict = await Employee.findOne({ ein: newEIN, _id: { $ne: req.params.id } });
+    if (conflict) {
+      return res.status(400).json({ success: false, message: `EIN ${newEIN} is already assigned to ${conflict.employeeName}` });
+    }
+    const employee = await Employee.findByIdAndUpdate(
+      req.params.id,
+      { $set: { ein: newEIN, updatedAt: Date.now() } },
+      { new: true }
+    );
+    if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
+    console.log('PATCH EIN:', employee.employeeName, '->', newEIN);
+    return res.json({ success: true, message: `EIN updated to ${newEIN}`, employee });
+  } catch (err) {
+    console.error('PATCH /:id/ein error:', err.message);
     return res.status(500).json({ success: false, message: err.message });
   }
 });
@@ -451,7 +481,7 @@ router.post('/upload-excel', isLoggedIn, isAdmin, excelUpload.single('file'), as
         .filter(Boolean)
     );
 
-    const results = { created: 0, updated: 0, skipped: 0, errors: [], rows: [] };
+    const results = { created: 0, updated: 0, skipped: 0, skippedRows: [], errors: [], rows: [] };
 
     // Cache the highest existing EIN number per prefix so we don't query DB for every row
     const einCounters = {};
@@ -480,6 +510,7 @@ router.post('/upload-excel', isLoggedIn, isAdmin, excelUpload.single('file'), as
       // Skip placeholder / blank rows
       if (!employeeName || employeeName.toLowerCase() === 'blank') {
         results.skipped++;
+        results.skippedRows.push({ row: r, reason: employeeName ? 'Name is "Blank"' : 'Empty name' });
         continue;
       }
 
@@ -590,7 +621,8 @@ router.post('/upload-excel', isLoggedIn, isAdmin, excelUpload.single('file'), as
     return res.json({
       success: true,
       message: `Import complete — Created: ${results.created}, Updated: ${results.updated}, Skipped: ${results.skipped}, Errors: ${results.errors.length}`,
-      ...results
+      ...results,
+      skippedRows: results.skippedRows   // explicit for clarity
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });

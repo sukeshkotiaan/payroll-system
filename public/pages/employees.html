@@ -528,7 +528,7 @@
 
   async function loadEmployees() {
     try {
-      const res = await fetch('/api/employees');
+      const res = await fetch('/api/employees', { credentials: 'include' });
       const data = await res.json();
       if (data.success) {
         allEmployees = data.employees;
@@ -817,7 +817,9 @@
       document.getElementById('ptApplicable').checked = emp.ptApplicable || false;
       document.getElementById('isRestricted').checked = emp.isRestricted || false;
       document.getElementById('einValue').textContent = emp.ein || '—';
-      document.getElementById('ein').value = emp.ein || '';
+      const einHidden = document.getElementById('ein');
+      einHidden.value = emp.ein || '';
+      einHidden.dataset.original = emp.ein || '';   // remember original for change-detection
       document.getElementById('einBox').style.display = 'flex';
       document.getElementById('generateEINBtn').style.display = 'none';
       // Show EIN override input for admins in edit mode
@@ -901,7 +903,18 @@
   }
 
   async function saveEmployee() {
-    const id = document.getElementById('empId').value;
+    const id = document.getElementById('empId').value.trim();
+
+    if (!id && editMode) {
+      showAlert('alertError', 'Employee ID is missing — please refresh the page and try again.');
+      return;
+    }
+
+    // If admin changed the EIN in edit mode, save EIN separately via the lightweight PATCH route
+    const newEIN = (document.getElementById('einEditInput') || {}).value
+                   ? document.getElementById('einEditInput').value.trim().toUpperCase() : '';
+    const originalEIN = document.getElementById('ein').dataset.original || '';
+    const einChanged = id && newEIN && newEIN !== originalEIN;
 
     // HARD BLOCK: cannot save if account number is a duplicate
     const accNumVal = document.getElementById('accountNumber').value.trim();
@@ -909,7 +922,7 @@
       try {
         let checkUrl = '/api/employees/check-account/' + encodeURIComponent(accNumVal);
         if (id) checkUrl += '?excludeId=' + id;
-        const checkRes = await fetch(checkUrl);
+        const checkRes = await fetch(checkUrl, { credentials: 'include' });
         const checkData = await checkRes.json();
         if (checkData.success && checkData.duplicates && checkData.duplicates.length > 0) {
           const names = checkData.duplicates.map(d => d.employeeName + ' (' + d.ein + ')').join(', ');
@@ -969,10 +982,38 @@
     try {
       const url = id ? '/api/employees/' + id : '/api/employees';
       const method = id ? 'PUT' : 'POST';
-      const res = await fetch(url, { method, body: formData });
-      const data = await res.json();
-      if (data.success) { showAlert('alertSuccess', data.message); await loadEmployees(); setTimeout(showListView, 1500); }
-      else { showAlert('alertError', data.message); }
+      const res = await fetch(url, { method, body: formData, credentials: 'include' });
+      let data;
+      try { data = await res.json(); }
+      catch(e) { throw new Error('Server returned status ' + res.status + ' (not JSON)'); }
+      if (!data.success) {
+        showAlert('alertError', data.message + (res.status === 404 ? ' — Please refresh the page and try editing again.' : ''));
+        return;
+      }
+      // If EIN was changed by admin, apply it via the dedicated PATCH route
+      if (einChanged) {
+        try {
+          const einRes = await fetch('/api/employees/' + id + '/ein', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ ein: newEIN })
+          });
+          const einData = await einRes.json();
+          if (!einData.success) {
+            showAlert('alertError', 'Employee saved but EIN update failed: ' + einData.message);
+            await loadEmployees();
+            return;
+          }
+        } catch(e) {
+          showAlert('alertError', 'Employee saved but EIN update error: ' + e.message);
+          await loadEmployees();
+          return;
+        }
+      }
+      showAlert('alertSuccess', data.message + (einChanged ? ' (EIN → ' + newEIN + ')' : ''));
+      await loadEmployees();
+      setTimeout(showListView, 1500);
     } catch(err) { showAlert('alertError', 'Error: ' + err.message); }
   }
 
@@ -1088,6 +1129,10 @@
       if (data.success) {
         // Build a clear summary
         let msg = data.message;
+        if (data.skippedRows && data.skippedRows.length) {
+          msg += '\n\nSkipped rows (empty/blank names):';
+          data.skippedRows.forEach(s => { msg += '\n  Row ' + s.row + ': ' + s.reason; });
+        }
         if (data.errors && data.errors.length) {
           msg += '\n\nRows with errors:';
           data.errors.forEach(e => { msg += '\n  Row ' + e.row + ' (' + e.name + '): ' + e.error; });
