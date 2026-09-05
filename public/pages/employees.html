@@ -162,6 +162,13 @@
           <option value="active">Active</option>
           <option value="inactive">Inactive</option>
         </select>
+        <select id="filterCompletion" onchange="filterEmployees()">
+          <option value="">All Profiles</option>
+          <option value="complete">✅ Complete (100%)</option>
+          <option value="high">🟢 High (≥80%)</option>
+          <option value="medium">🟡 Medium (50–79%)</option>
+          <option value="low">🔴 Low (&lt;50%)</option>
+        </select>
       </div>
       <div class="action-btns">
         <button class="btn-success" onclick="openImportModal()">📥 Import</button>
@@ -187,11 +194,12 @@
               <th id="th-dateOfJoining" onclick="sortEmployeeTable('dateOfJoining')" style="cursor:pointer;">Joining Date<span id="sortind-dateOfJoining"></span></th>
               <th id="th-dateOfExit" onclick="sortEmployeeTable('dateOfExit')" style="cursor:pointer;">Exit Date<span id="sortind-dateOfExit"></span></th>
               <th id="th-isActive" onclick="sortEmployeeTable('isActive')" style="cursor:pointer;">Status<span id="sortind-isActive"></span></th>
+              <th style="min-width:90px;">Profile</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody id="employeeTable">
-            <tr><td colspan="11"><div class="empty-state">Loading...</div></td></tr>
+            <tr><td colspan="12"><div class="empty-state">Loading...</div></td></tr>
           </tbody>
         </table>
       </div>
@@ -215,6 +223,19 @@
     <div class="form-card">
       <div class="alert alert-success" id="alertSuccess"></div>
       <div class="alert alert-error" id="alertError"></div>
+      <!-- Profile completion banner — shown only in edit mode -->
+      <div id="profileCompletionBanner" style="display:none;background:#f8f9fa;border:1px solid #e0e0e0;border-radius:8px;padding:12px 16px;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+          <div style="display:flex;align-items:center;gap:10px;flex:1;">
+            <span style="font-weight:600;font-size:13px;white-space:nowrap;">Profile Completion</span>
+            <div style="flex:1;height:8px;background:#e0e0e0;border-radius:4px;min-width:80px;max-width:200px;">
+              <div id="completionBar" style="height:8px;border-radius:4px;transition:width .4s;"></div>
+            </div>
+            <span id="completionPct" style="font-weight:700;font-size:14px;"></span>
+          </div>
+          <div id="completionMissing" style="font-size:12px;color:#666;"></div>
+        </div>
+      </div>
       <input type="hidden" id="empId">
 
       <div class="section-title">📋 Personal Information</div>
@@ -545,6 +566,7 @@
     const profile = document.getElementById('filterProfile').value;
     const department = document.getElementById('filterDepartment').value;
     const status = document.getElementById('filterStatus').value;
+    const completion = document.getElementById('filterCompletion').value;
     filteredEmployees = allEmployees.filter(emp => {
       const matchSearch = !search || emp.employeeName.toLowerCase().includes(search) || (emp.ein && emp.ein.toLowerCase().includes(search));
       const matchLocation = !location || emp.location === location;
@@ -552,7 +574,15 @@
       const matchProfile = !profile || emp.profile === profile;
       const matchDept = !department || emp.department === department;
       const matchStatus = !status || (status === 'active' ? emp.isActive : !emp.isActive);
-      return matchSearch && matchLocation && matchSection && matchProfile && matchDept && matchStatus;
+      let matchCompletion = true;
+      if (completion) {
+        const pct = computeCompletion(emp).pct;
+        if (completion === 'complete') matchCompletion = pct === 100;
+        else if (completion === 'high')     matchCompletion = pct >= 80 && pct < 100;
+        else if (completion === 'medium')   matchCompletion = pct >= 50 && pct < 80;
+        else if (completion === 'low')      matchCompletion = pct < 50;
+      }
+      return matchSearch && matchLocation && matchSection && matchProfile && matchDept && matchStatus && matchCompletion;
     });
     renderTable(filteredEmployees);
   }
@@ -585,7 +615,7 @@
     document.getElementById('empFooter').style.display    = employees.length ? 'flex' : 'none';
 
     if (employees.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="11"><div class="empty-state">No employees found</div></td></tr>';
+      tbody.innerHTML = '<tr><td colspan="12"><div class="empty-state">No employees found</div></td></tr>';
       return;
     }
     tbody.innerHTML = employees.map(emp =>
@@ -600,6 +630,7 @@
       '<td>' + (emp.dateOfJoining ? new Date(emp.dateOfJoining).toLocaleDateString('en-IN') : '—') + '</td>' +
       '<td>' + (emp.dateOfExit ? new Date(emp.dateOfExit).toLocaleDateString('en-IN') : '—') + '</td>' +
       '<td><span class="badge ' + (emp.isActive ? 'badge-active' : 'badge-inactive') + '">' + (emp.isActive ? 'Active' : 'Inactive') + '</span></td>' +
+      '<td>' + profileCompletionHTML(emp) + '</td>' +
       '<td>' +
       '<button class="btn-edit" onclick="editEmployee(\'' + emp._id + '\')">Edit</button>' +
       (currentUser.role === 'admin' ? '<button class="btn-secondary" style="margin-left:4px;padding:5px 10px;font-size:12px;background:#fff3cd;border:1px solid #f0ad4e;color:#856404;" onclick="changeEINQuick(\'' + emp._id + '\',\'' + (emp.ein||'') + '\',\'' + emp.employeeName.replace(/'/g,'\\\'') + '\')">🔑 EIN</button>' : '') +
@@ -619,10 +650,51 @@
     document.getElementById('generateEINBtn').style.display = 'inline-block';
     document.getElementById('generateEINBtn').disabled = true;
     document.getElementById('einEditInput').style.display = 'none';
+    document.getElementById('profileCompletionBanner').style.display = 'none';
     switchView('formView');
   }
 
   function showListView() { switchView('listView'); editMode = false; }
+
+  // ── Profile completion ───────────────────────────────────────────────────────
+  function computeCompletion(emp) {
+    const checks = [
+      { label: 'Photo',               done: !!emp.photo },
+      { label: 'Title (Mr/Mrs/Dr)',   done: !!emp.title },
+      { label: 'Gender',              done: !!emp.gender },
+      { label: 'Department',          done: !!emp.department },
+      { label: 'PAN Number',          done: !!emp.panNumber },
+      { label: 'Aadhaar Number',      done: !!emp.aadhaarNumber },
+      { label: 'Phone Number',        done: !!emp.phoneNumber },
+      { label: 'Email',               done: !!emp.email },
+      { label: 'Address',             done: !!emp.address },
+      { label: 'UAN Number',          done: !!emp.uanNumber },
+      { label: 'Bank Name',           done: !!emp.bankName },
+      { label: 'Account Number',      done: !!emp.accountNumber },
+      { label: 'IFSC Code',           done: !!emp.ifscCode },
+      { label: 'Account Holder Name', done: !!emp.accountHolderName },
+      { label: 'Bank Verified',       done: emp.bankVerificationStatus === 'Verified' },
+      { label: 'Qualifications',      done: !!(emp.qualifications && emp.qualifications.length > 0) },
+    ];
+    const done = checks.filter(c => c.done).length;
+    const pct  = Math.round(done / checks.length * 100);
+    const missing = checks.filter(c => !c.done).map(c => c.label);
+    return { pct, done, total: checks.length, missing };
+  }
+
+  function profileCompletionHTML(emp) {
+    const { pct, missing } = computeCompletion(emp);
+    const color = pct === 100 ? '#27ae60' : pct >= 80 ? '#2ecc71' : pct >= 50 ? '#f39c12' : '#e74c3c';
+    const tip = pct === 100 ? 'Profile complete!' : 'Missing: ' + missing.join(', ');
+    return `<div title="${tip}" style="cursor:default;">
+      <div style="display:flex;align-items:center;gap:5px;">
+        <div style="flex:1;height:6px;background:#eee;border-radius:3px;min-width:55px;">
+          <div style="width:${pct}%;height:6px;background:${color};border-radius:3px;transition:width .3s;"></div>
+        </div>
+        <span style="font-size:11px;font-weight:600;color:${color};white-space:nowrap;">${pct}%</span>
+      </div>
+    </div>`;
+  }
 
   async function changeEINQuick(empId, currentEIN, empName) {
     const newEIN = window.prompt(
@@ -867,6 +939,16 @@
       }
       calculateAge();
       calculateSalary();
+      // Show profile completion banner
+      const comp = computeCompletion(emp);
+      const color = comp.pct === 100 ? '#27ae60' : comp.pct >= 80 ? '#2ecc71' : comp.pct >= 50 ? '#f39c12' : '#e74c3c';
+      document.getElementById('profileCompletionBanner').style.display = 'block';
+      document.getElementById('completionBar').style.width = comp.pct + '%';
+      document.getElementById('completionBar').style.background = color;
+      document.getElementById('completionPct').textContent = comp.pct + '%';
+      document.getElementById('completionPct').style.color = color;
+      document.getElementById('completionMissing').textContent =
+        comp.pct === 100 ? '✅ All fields filled' : '⚠ Missing: ' + comp.missing.join(' · ');
       switchView('formView');
     } catch(err) { console.error(err); }
   }
