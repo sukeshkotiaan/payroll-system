@@ -390,8 +390,16 @@
       <button class="btn-success" onclick="downloadTemplate()">⬇️ Download Template</button>
     </div>
     <div class="form-group" style="margin-bottom:15px;">
-      <label style="font-size:13px;font-weight:600;display:block;margin-bottom:5px;">Upload Excel File</label>
-      <input type="file" id="importFile" accept=".xlsx,.xls">
+      <label style="font-size:13px;font-weight:600;display:block;margin-bottom:5px;">Upload Excel File (.xlsx)</label>
+      <input type="file" id="importFile" accept=".xlsx">
+    </div>
+    <div class="form-group" style="margin-bottom:15px;">
+      <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">
+        Management Designations <span style="font-weight:400;color:#666;">(get MGT-### EINs — comma separated, optional)</span>
+      </label>
+      <input type="text" id="mgtDesignations" placeholder="e.g. Principal, Director, Vice Principal"
+             style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;box-sizing:border-box;">
+      <div style="font-size:11px;color:#888;margin-top:3px;">Leave blank to give everyone a standard auto-generated EIN. Seed the MGT pool first via <code>POST /api/reserved-eins/seed</code>.</div>
     </div>
     <div id="importPreview" style="display:none;margin-bottom:15px;">
       <h4 style="font-size:13px;margin-bottom:8px;">Preview (first 5 rows)</h4>
@@ -978,23 +986,34 @@
   function closeImportModal() {
     document.getElementById('importModal').style.display = 'none';
     document.getElementById('importFile').value = '';
+    document.getElementById('mgtDesignations').value = '';
     document.getElementById('importPreview').style.display = 'none';
     document.getElementById('importBtn').style.display = 'none';
+    document.getElementById('importError').style.display = 'none';
+    document.getElementById('importSuccess').style.display = 'none';
     importData = [];
+    importFile = null;
   }
+
+  // Store the raw File object so we can send it as multipart later
+  let importFile = null;
 
   document.getElementById('importFile').addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (!file) return;
+    importFile = file;
+
+    // Use SheetJS only to build the preview — actual parsing happens server-side
     const reader = new FileReader();
     reader.onload = function(ev) {
       try {
         const wb = XLSX.read(ev.target.result, { type: 'binary' });
         const ws = wb.Sheets[wb.SheetNames[0]];
         const json = XLSX.utils.sheet_to_json(ws, { defval: '' });
-        if (!json.length) { showImportMsg('importError', 'No data found'); return; }
-        importData = json; showPreview(json);
-      } catch(err) { showImportMsg('importError', 'Error: ' + err.message); }
+        if (!json.length) { showImportMsg('importError', 'No data found in the file'); return; }
+        importData = json;
+        showPreview(json);
+      } catch(err) { showImportMsg('importError', 'Could not read file: ' + err.message); }
     };
     reader.readAsBinaryString(file);
   });
@@ -1002,65 +1021,67 @@
   function showPreview(data) {
     const cols = Object.keys(data[0]);
     document.getElementById('previewHead').innerHTML = '<tr>' + cols.map(c => '<th style="padding:6px;background:#f0f2f5;border:1px solid #ddd;">' + c + '</th>').join('') + '</tr>';
-    document.getElementById('previewBody').innerHTML = data.slice(0,5).map(row => '<tr>' + cols.map(c => '<td style="padding:6px;border:1px solid #eee;">' + row[c] + '</td>').join('') + '</tr>').join('');
-    document.getElementById('importCount').textContent = 'Total: ' + data.length + ' rows';
+    // Skip rows where Employee Name is blank or "Blank"
+    const valid = data.filter(r => r['Employee Name'] && String(r['Employee Name']).toLowerCase() !== 'blank');
+    document.getElementById('previewBody').innerHTML = valid.slice(0,5).map(row => '<tr>' + cols.map(c => '<td style="padding:6px;border:1px solid #eee;">' + (row[c] != null ? row[c] : '') + '</td>').join('') + '</tr>').join('');
+    document.getElementById('importCount').textContent = 'Total: ' + valid.length + ' employee rows (preview shows first 5)';
     document.getElementById('importPreview').style.display = 'block';
     document.getElementById('importBtn').style.display = 'inline-block';
   }
 
   async function importEmployees() {
-    if (!importData.length) return;
-    const mapped = importData.map(row => {
-      const monthly = parseFloat(row['Monthly Salary']) || 0;
-      return {
-        ein: String(row['EIN'] || '').trim() || undefined,
-        location: row['Location'] || '',
-        section: row['Section'] || '',
-        profile: row['Profile'] || '',
-        department: row['Department'] || 'Secondary',
-        title: row['Title'] || '',
-        gender: row['Gender'] || '',
-        employeeName: row['Employee Name'] || '',
-        designation: row['Designation'] || 'Teacher',
-        dateOfBirth: row['Date of Birth'] ? new Date(row['Date of Birth']).toISOString() : new Date('1990-01-01').toISOString(),
-        dateOfJoining: row['Date of Joining'] ? new Date(row['Date of Joining']).toISOString() : new Date().toISOString(),
-        panNumber: row['PAN Number'] || '',
-        aadhaarNumber: String(row['Aadhaar Number'] || ''),
-        phoneNumber: String(row['Phone Number'] || '0000000000'),
-        email: row['Email'] || '',
-        address: row['Address'] || '',
-        monthlySalary: monthly,
-        ctcAnnual: monthly * 12,
-        ctcMonthly: monthly,
-        basic: parseFloat((monthly * 0.76923).toFixed(2)),
-        hraAllowance: parseFloat((monthly * 0.23077).toFixed(2)),
-        pfApplicable: String(row['PF Applicable'] || '').toLowerCase() === 'yes',
-        esicApplicable: String(row['ESIC Applicable'] || '').toLowerCase() === 'yes',
-        ptApplicable: String(row['PT Applicable'] || '').toLowerCase() === 'yes',
-        isRestricted: String(row['Restricted'] || '').toLowerCase() === 'yes',
-        uanNumber: String(row['UAN Number'] || '')
-      };
-    }).filter(e => e.employeeName && e.location && e.section && e.profile);
+    if (!importFile) { showImportMsg('importError', 'Please select a file first'); return; }
+
+    const btn = document.getElementById('importBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Importing…';
+    document.getElementById('importError').style.display = 'none';
+    document.getElementById('importSuccess').style.display = 'none';
+
     try {
-      const batchSize = 50;
-      let totalCreated = 0, totalSkipped = 0;
-      for (let i = 0; i < mapped.length; i += batchSize) {
-        const batch = mapped.slice(i, i + batchSize);
-        showImportMsg('importSuccess', 'Importing ' + Math.min(i + batchSize, mapped.length) + ' of ' + mapped.length + '...');
-        const res = await fetch('/api/employees/bulk-import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ employees: batch }) });
-        const data = await res.json();
-        if (data.success) {
-          const match = data.message.match(/Created: (d+), Skipped: (d+)/);
-          if (match) { totalCreated += parseInt(match[1]); totalSkipped += parseInt(match[2]); }
-        } else { showImportMsg('importError', data.message); return; }
+      const formData = new FormData();
+      formData.append('file', importFile);
+
+      const mgtDesig = document.getElementById('mgtDesignations').value.trim();
+      if (mgtDesig) formData.append('managementDesignations', mgtDesig);
+
+      showImportMsg('importSuccess', 'Uploading and processing ' + importFile.name + '…');
+
+      const res = await fetch('/api/employees/upload-excel', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData   // no Content-Type header — browser sets multipart boundary automatically
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        // Build a clear summary
+        let msg = data.message;
+        if (data.errors && data.errors.length) {
+          msg += '\n\nRows with errors:';
+          data.errors.forEach(e => { msg += '\n  Row ' + e.row + ' (' + e.name + '): ' + e.error; });
+        }
+        showImportMsg('importSuccess', msg);
+        await loadEmployees();
+        setTimeout(closeImportModal, 4000);
+      } else {
+        showImportMsg('importError', data.message || 'Import failed');
       }
-      showImportMsg('importSuccess', 'Import complete! Created: ' + totalCreated + ', Skipped: ' + totalSkipped);
-      await loadEmployees();
-      setTimeout(closeImportModal, 3000);
-    } catch(e) { showImportMsg('importError', 'Error: ' + e.message); }
+    } catch(e) {
+      showImportMsg('importError', 'Error: ' + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '📥 Import All';
+    }
   }
 
-  function showImportMsg(id, msg) { const el = document.getElementById(id); el.textContent = msg; el.style.display = 'block'; }
+  function showImportMsg(id, msg) {
+    const el = document.getElementById(id);
+    el.style.whiteSpace = 'pre-wrap';
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
 
   function downloadTemplate() {
     const headers = ['EIN','Location','Section','Profile','Department','Title','Gender','Employee Name','Designation','Date of Birth','Date of Joining','PAN Number','Aadhaar Number','Phone Number','Email','Address','Monthly Salary','PF Applicable','ESIC Applicable','PT Applicable','Restricted','UAN Number'];

@@ -5,6 +5,7 @@ process.on('unhandledRejection', (reason, promise) => {
 process.on('uncaughtException', (err) => {
   console.log('UNCAUGHT EXCEPTION:', err.message);
   console.log(err.stack);
+  process.exit(1);
 });
 
 const express = require('express');
@@ -23,7 +24,6 @@ mongoose.connect(process.env.MONGODB_URI)
 // Middleware
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
-app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Session
@@ -36,7 +36,9 @@ app.use(session({
   }),
   cookie: {
     maxAge: 24 * 60 * 60 * 1000,
-    httpOnly: true
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax'
   }
 }));
 
@@ -56,6 +58,7 @@ app.use('/api/ot', require('./routes/ot'));
 app.use('/api/appraisals', require('./routes/appraisals'));
 app.use('/api/security', require('./routes/security').router);
 app.use('/api/employee-submissions', require('./routes/employeeSubmissions'));
+app.use('/api/reserved-eins', require('./routes/reservedEins'));
 app.use('/api/schoolinfo', require('./routes/schoolinfo'));
 app.use('/api/email', require('./routes/email'));
 app.use('/api/dashboard', require('./routes/dashboard'));
@@ -77,8 +80,6 @@ app.get('/settings', (req, res) => {
 app.get('/exits', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'pages', 'exits.html'));
 });
-app.use('/api/users', require('./routes/users'));
-
 app.get('/users', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'pages', 'users.html'));
 });

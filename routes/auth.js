@@ -21,7 +21,7 @@ const seedAdmin = async () => {
         role: 'admin',
         branch: 'all'
       });
-      console.log('✅ Default admin created → username: admin / password: Admin@1234');
+      console.log('✅ Default admin created → username: admin (change the password on first login)');
     } else {
       console.log('✅ Admin already exists');
     }
@@ -117,7 +117,7 @@ router.post('/login', async (req, res) => {
       // Generate and send OTP
       const OTP = require('../models/OTP');
       const crypto = require('crypto');
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const code = crypto.randomInt(100000, 1000000).toString();
       const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
       await OTP.deleteMany({ userId: user._id, used: false });
       await OTP.create({ userId: user._id, username: user.username, code, expiresAt });
@@ -165,7 +165,25 @@ router.post('/verify-otp', async (req, res) => {
     const otp = await OTP.findOne({ userId: pending.userId, used: false });
     if (!otp) return res.status(400).json({ success: false, message: 'No OTP found. Please login again.' });
     if (otp.expiresAt < new Date()) return res.status(400).json({ success: false, message: 'OTP expired. Please login again.' });
-    if (otp.code !== String(code).trim()) return res.status(400).json({ success: false, message: 'Invalid OTP. Please check with Management.' });
+
+    // Brute-force protection: max 5 attempts per OTP
+    const MAX_OTP_ATTEMPTS = 5;
+    if (otp.attempts >= MAX_OTP_ATTEMPTS) {
+      otp.used = true; // invalidate after too many attempts
+      await otp.save();
+      delete req.session.pendingOTP;
+      return res.status(429).json({ success: false, message: 'Too many incorrect attempts. Please login again.' });
+    }
+
+    if (otp.code !== String(code).trim()) {
+      otp.attempts += 1;
+      await otp.save();
+      const remaining = MAX_OTP_ATTEMPTS - otp.attempts;
+      return res.status(400).json({
+        success: false,
+        message: `Invalid OTP. ${remaining} attempt${remaining === 1 ? '' : 's'} remaining.`
+      });
+    }
 
     otp.used = true;
     await otp.save();

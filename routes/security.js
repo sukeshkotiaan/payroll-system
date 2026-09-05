@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
 const OTP = require('../models/OTP');
 const AuditLog = require('../models/AuditLog');
 const User = require('../models/User');
@@ -7,9 +8,9 @@ const Settings = require('../models/Settings');
 const nodemailer = require('nodemailer');
 const { isLoggedIn } = require('../middleware/auth');
 
-// Helper: generate 6-digit OTP
+// Helper: generate cryptographically secure 6-digit OTP
 function generateOTP() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return crypto.randomInt(100000, 1000000).toString();
 }
 
 // Helper: send OTP email to all Management L1 users
@@ -53,7 +54,7 @@ async function logAudit(userId, username, fullName, role, action, details, ip) {
 }
 
 // GENERATE OTP for accountant login (called from auth.js after password verified)
-router.post('/generate-otp', async (req, res) => {
+router.post('/generate-otp', isLoggedIn, async (req, res) => {
   try {
     const { userId, username, fullName } = req.body;
     if (!userId) return res.status(400).json({ success: false, message: 'User ID required' });

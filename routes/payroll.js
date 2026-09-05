@@ -686,12 +686,37 @@ router.post('/process-all', isLoggedIn, isAdmin, async (req, res) => {
           processedAt: new Date()
         };
 
+        let savedPayroll;
         if (existingPayroll) {
           Object.assign(existingPayroll, payrollData);
           existingPayroll.markModified('records');
-          await existingPayroll.save();
+          savedPayroll = await existingPayroll.save();
         } else {
-          await Payroll.create(payrollData);
+          savedPayroll = await Payroll.create(payrollData);
+        }
+
+        // Mark arrears as pulled
+        await Arrear.updateMany(
+          { location, section, profile, month, year: parseInt(year), pulledToPayroll: false },
+          { pulledToPayroll: true, payrollId: savedPayroll._id }
+        );
+
+        // Mark loan EMIs as Paid (mirrors single /process route)
+        for (const loan of loans) {
+          const sItem = loan.schedule ? loan.schedule.find(s =>
+            s.month === month && s.year === parseInt(year) && s.status === 'Pending'
+          ) : null;
+          if (!sItem) continue;
+          const record = records.find(r => r.ein === loan.ein);
+          if (!record) continue;
+          sItem.status = 'Paid';
+          sItem.paidInPayrollId = savedPayroll._id;
+          loan.totalPaid = parseFloat((loan.totalPaid + sItem.emiAmount).toFixed(2));
+          loan.outstandingBalance = sItem.balance;
+          if (sItem.balance === 0) loan.status = 'Closed';
+          loan.updatedAt = new Date();
+          loan.markModified('schedule');
+          await loan.save();
         }
 
         results.push({

@@ -1,16 +1,23 @@
 const express = require('express');
 const router = express.Router();
-const Employee = require('../models/Employee');
+const Employee    = require('../models/Employee');
+const ReservedEIN = require('../models/ReservedEIN');
 const { isLoggedIn, isAdmin } = require('../middleware/auth');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const ExcelJS = require('exceljs');
 
 const uploadsDir = path.join(__dirname, '../public/uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
+const uploadsTmpDir = path.join(__dirname, '../public/uploads/tmp');
+if (!fs.existsSync(uploadsTmpDir)) {
+  fs.mkdirSync(uploadsTmpDir, { recursive: true });
+}
 
+// Multer for employee photo uploads (jpg/png)
 const storage = multer.diskStorage({
   destination: function(req, file, cb) { cb(null, uploadsDir); },
   filename: function(req, file, cb) { cb(null, Date.now() + path.extname(file.originalname)); }
@@ -25,6 +32,41 @@ const upload = multer({
     cb(new Error('Only jpg/png allowed'));
   }
 });
+
+// Multer for Excel imports (xlsx only, stored in /tmp so it can be deleted after parsing)
+const excelUpload = multer({
+  dest: path.join(__dirname, '../public/uploads/tmp/'),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: function(req, file, cb) {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (ext === '.xlsx') return cb(null, true);
+    cb(new Error('Only .xlsx files are allowed'));
+  }
+});
+
+// ─── EIN HELPERS (mirrors /api/reserved-eins logic) ──────────────────────────
+
+async function getNextAutoEIN(location, section, profile) {
+  const secCode  = section  === 'Global' ? 'G' : 'S';
+  const locCode  = location === 'Thane'  ? 'T' : 'P';
+  const profCode = profile  === 'Teaching' ? 'T' : 'N';
+  const prefix   = secCode + locCode + profCode;
+  const last = await Employee.findOne({ ein: { $regex: '^' + prefix + '-' } }).sort({ ein: -1 });
+  let nextNumber = 1001;
+  if (last && last.ein) {
+    const parts = last.ein.split('-');
+    if (parts.length === 2) {
+      const n = parseInt(parts[1]);
+      if (!isNaN(n)) nextNumber = n + 1;
+    }
+  }
+  return prefix + '-' + nextNumber;
+}
+
+async function getNextReservedEIN() {
+  const slot = await require('../models/ReservedEIN').findOne({ status: 'available' }).sort({ ein: 1 });
+  return slot || null;
+}
 
 router.post('/generate-ein', isLoggedIn, async (req, res) => {
   try {
@@ -185,7 +227,7 @@ router.get('/:id', isLoggedIn, async (req, res) => {
   }
 });
 
-router.post('/', isLoggedIn, upload.single('photo'), async (req, res) => {
+router.post('/', isLoggedIn, isAdmin, upload.single('photo'), async (req, res) => {
   try {
     const data = req.body;
     if (typeof data.qualifications === 'string') {
@@ -238,7 +280,7 @@ router.post('/', isLoggedIn, upload.single('photo'), async (req, res) => {
   }
 });
 
-router.put('/:id', isLoggedIn, upload.single('photo'), async (req, res) => {
+router.put('/:id', isLoggedIn, isAdmin, upload.single('photo'), async (req, res) => {
   try {
     const data = req.body;
     if (req.file) data.photo = '/uploads/' + req.file.filename;
@@ -318,41 +360,263 @@ router.post('/bulk-import', isLoggedIn, isAdmin, async (req, res) => {
   }
 });
 
+// ─── EXCEL UPLOAD & BULK CREATE ───────────────────────────────────────────────
+//
+// Matches Employee_Import_Ready_v2.xlsx column layout:
+//   EIN | Title | Employee Name | Gender | Designation | Department |
+//   Location | Section | Profile | Date of Birth | Date of Joining |
+//   PAN Number | Aadhaar Number | Phone Number | Email | Address |
+//   Monthly Salary | CTC Annual | PF Applicable | ESIC Applicable |
+//   PT Applicable | Restricted | UAN Number | Bank Account Number
+//
+// Rules:
+//   • EIN filled in file  → used as-is
+//   • EIN blank + designation in managementDesignations list
+//                         → pulls next available reserved EIN (e.g. MGT-001) from pool
+//   • EIN blank, no match → auto-generated from Location/Section/Profile (e.g. STT-1001)
+//   • Rows where Employee Name is empty or "Blank" are silently skipped
+//   • Dates accepted as DD/MM/YYYY strings or native Excel date values
+//   • Bank account number set to Pending verification if present
+//
+// Form fields:
+//   file                    — the .xlsx file (required)
+//   managementDesignations  — comma-separated list of designations that should get
+//                             reserved MGT EINs, e.g. "Principal,Director,Vice Principal"
+//
+router.post('/upload-excel', isLoggedIn, isAdmin, excelUpload.single('file'), async (req, res) => {
+  const tmpPath = req.file ? req.file.path : null;
+
+  // Normalise a header string to a plain lowercase key for matching
+  const key = s => String(s || '').toLowerCase().replace(/[^a-z]/g, '');
+
+  // Parse a date that could be a DD/MM/YYYY string, an ISO string, or a JS Date
+  const parseDate = (raw) => {
+    if (!raw) return null;
+    if (raw instanceof Date) return raw;
+    const s = String(raw).trim();
+    // DD/MM/YYYY
+    const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (m) return new Date(parseInt(m[3]), parseInt(m[2]) - 1, parseInt(m[1]));
+    // Fallback: let JS parse it
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+  };
+
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No file uploaded' });
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.readFile(tmpPath);
+
+    const sheet = workbook.worksheets[0];
+    if (!sheet) {
+      return res.status(400).json({ success: false, message: 'Excel file has no worksheets' });
+    }
+
+    // Build header → column-index map from row 1
+    const headerRow = sheet.getRow(1).values; // array is 1-indexed
+    const colMap = {};
+    for (let c = 1; c < headerRow.length; c++) {
+      if (headerRow[c] != null) colMap[key(headerRow[c])] = c;
+    }
+
+    // Require the four columns that drive EIN generation
+    for (const req_col of ['employeename', 'location', 'section', 'profile']) {
+      if (colMap[req_col] == null) {
+        return res.status(400).json({
+          success: false,
+          message: `Missing required column: "${req_col}" — check your header row`
+        });
+      }
+    }
+
+    // Read a cell value as a trimmed string
+    const col = (row, name) => {
+      const idx = colMap[key(name)];
+      if (idx == null) return '';
+      const cell = row.getCell(idx);
+      if (cell.value == null) return '';
+      // ExcelJS may return { text, hyperlink } objects for rich cells
+      if (typeof cell.value === 'object' && cell.value.text) return String(cell.value.text).trim();
+      return String(cell.value).trim();
+    };
+
+    // Build the set of designations that should receive reserved (MGT) EINs
+    const mgtDesignations = new Set(
+      (req.body.managementDesignations || '')
+        .split(',')
+        .map(d => d.trim().toLowerCase())
+        .filter(Boolean)
+    );
+
+    const results = { created: 0, updated: 0, skipped: 0, errors: [], rows: [] };
+
+    // Cache the highest existing EIN number per prefix so we don't query DB for every row
+    const einCounters = {};
+    const getAutoEIN = async (location, section, profile) => {
+      const secCode  = section  === 'Global'      ? 'G' : 'S';
+      const locCode  = location === 'Thane'        ? 'T' : 'P';
+      const profCode = profile  === 'Teaching'     ? 'T' : 'N';
+      const prefix   = secCode + locCode + profCode;
+      if (einCounters[prefix] == null) {
+        const last = await Employee.findOne({ ein: { $regex: '^' + prefix + '-' } }).sort({ ein: -1 });
+        einCounters[prefix] = 1000;
+        if (last && last.ein) {
+          const n = parseInt((last.ein.split('-')[1]) || '1000');
+          if (!isNaN(n)) einCounters[prefix] = n;
+        }
+      }
+      einCounters[prefix]++;
+      return prefix + '-' + einCounters[prefix];
+    };
+
+    for (let r = 2; r <= sheet.rowCount; r++) {
+      const row = sheet.getRow(r);
+      if (!row.hasValues) continue;
+
+      const employeeName = col(row, 'Employee Name');
+      // Skip placeholder / blank rows
+      if (!employeeName || employeeName.toLowerCase() === 'blank') {
+        results.skipped++;
+        continue;
+      }
+
+      const location = col(row, 'Location');
+      const section  = col(row, 'Section');
+      const profile  = col(row, 'Profile');
+
+      if (!location || !section || !profile) {
+        results.errors.push({ row: r, name: employeeName, error: 'Missing Location / Section / Profile' });
+        continue;
+      }
+
+      try {
+        // ── EIN ────────────────────────────────────────────────────────────
+        let einValue     = col(row, 'EIN');
+        let einSource    = 'provided';
+        let reservedSlot = null;
+
+        if (!einValue) {
+          const designation = col(row, 'Designation');
+          const isMgt = mgtDesignations.size > 0 &&
+                        mgtDesignations.has(designation.toLowerCase());
+
+          if (isMgt) {
+            reservedSlot = await ReservedEIN.findOne({ status: 'available' }).sort({ ein: 1 });
+            if (!reservedSlot) {
+              results.errors.push({
+                row: r, name: employeeName,
+                error: `Designation "${designation}" needs a reserved EIN but the pool is empty. ` +
+                       'Seed more with POST /api/reserved-eins/seed.'
+              });
+              continue;
+            }
+            einValue  = reservedSlot.ein;
+            einSource = 'reserved';
+          } else {
+            einValue  = await getAutoEIN(location, section, profile);
+            einSource = 'auto';
+          }
+        }
+
+        // ── Salary / CTC ───────────────────────────────────────────────────
+        const monthlySalary = parseFloat(col(row, 'Monthly Salary')) || 0;
+        const ctcAnnualRaw  = parseFloat(col(row, 'CTC Annual'))     || 0;
+        const ctcAnnual     = ctcAnnualRaw || monthlySalary * 12;
+
+        // ── Bank account ───────────────────────────────────────────────────
+        const accountNumber = col(row, 'Bank Account Number') || '';
+
+        // ── Build the full employee record ──────────────────────────────────
+        const empData = {
+          ein:            einValue,
+          title:          col(row, 'Title')          || '',
+          employeeName,
+          gender:         col(row, 'Gender')         || '',
+          designation:    col(row, 'Designation')    || '',
+          department:     col(row, 'Department')     || '',
+          location,
+          section,
+          profile,
+          dateOfBirth:    parseDate(col(row, 'Date of Birth')),
+          dateOfJoining:  parseDate(col(row, 'Date of Joining')),
+          panNumber:      col(row, 'PAN Number')     || '',
+          aadhaarNumber:  col(row, 'Aadhaar Number') || '',
+          phoneNumber:    col(row, 'Phone Number')   || '',
+          email:          col(row, 'Email')          || '',
+          address:        col(row, 'Address')        || '',
+          monthlySalary,
+          ctcAnnual,
+          ctcMonthly:     ctcAnnual / 12,
+          pfApplicable:   col(row, 'PF Applicable').toLowerCase()   === 'yes',
+          esicApplicable: col(row, 'ESIC Applicable').toLowerCase() === 'yes',
+          ptApplicable:   col(row, 'PT Applicable').toLowerCase()   === 'yes',
+          isRestricted:   col(row, 'Restricted').toLowerCase()      === 'yes',
+          uanNumber:      col(row, 'UAN Number')     || '',
+          accountNumber,
+          bankVerificationStatus: accountNumber ? 'Pending' : 'Not Filled',
+          isActive:       true,
+          createdBy:      req.session.user.username,
+          updatedAt:      new Date()
+        };
+
+        // ── Upsert: match on existing EIN ──────────────────────────────────
+        const existing = await Employee.findOne({ ein: einValue });
+        if (existing) {
+          await Employee.findByIdAndUpdate(existing._id, { $set: empData });
+          results.updated++;
+          results.rows.push({ row: r, ein: einValue, name: employeeName, action: 'updated', einSource });
+        } else {
+          const created = await Employee.create(empData);
+          results.created++;
+          results.rows.push({ row: r, ein: einValue, name: employeeName, action: 'created', einSource });
+
+          // Mark reserved slot as assigned if we used one
+          if (reservedSlot) {
+            reservedSlot.status             = 'assigned';
+            reservedSlot.assignedTo         = employeeName;
+            reservedSlot.assignedEmployeeId = created._id;
+            reservedSlot.assignedAt         = new Date();
+            await reservedSlot.save();
+          }
+        }
+      } catch (e) {
+        results.errors.push({ row: r, name: employeeName, error: e.message });
+      }
+    }
+
+    return res.json({
+      success: true,
+      message: `Import complete — Created: ${results.created}, Updated: ${results.updated}, Skipped: ${results.skipped}, Errors: ${results.errors.length}`,
+      ...results
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  } finally {
+    if (tmpPath && fs.existsSync(tmpPath)) {
+      try { fs.unlinkSync(tmpPath); } catch (_) {}
+    }
+  }
+});
+
+// BULK UPDATE SUPERVISOR
+router.patch('/bulk-update-supervisor', isLoggedIn, isAdmin, async (req, res) => {
+  try {
+    const { employeeIds, supervisorId, supervisorName } = req.body;
+    if (!employeeIds || !employeeIds.length) {
+      return res.status(400).json({ success: false, message: 'No employees selected' });
+    }
+    await Employee.updateMany(
+      { _id: { $in: employeeIds } },
+      { $set: { supervisorId: supervisorId || null, supervisorName: supervisorName || '' } }
+    );
+    const action = supervisorId ? 'assigned to supervisor' : 'unassigned from supervisor';
+    return res.json({ success: true, message: employeeIds.length + ' employees ' + action });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
 
 module.exports = router;
-
-// BULK UPDATE SUPERVISOR
-router.patch('/bulk-update-supervisor', isLoggedIn, isAdmin, async (req, res) => {
-  try {
-    const { employeeIds, supervisorId, supervisorName } = req.body;
-    if (!employeeIds || !employeeIds.length) {
-      return res.status(400).json({ success: false, message: 'No employees selected' });
-    }
-    await Employee.updateMany(
-      { _id: { $in: employeeIds } },
-      { $set: { supervisorId: supervisorId || null, supervisorName: supervisorName || '' } }
-    );
-    const action = supervisorId ? 'assigned to supervisor' : 'unassigned from supervisor';
-    return res.json({ success: true, message: employeeIds.length + ' employees ' + action });
-  } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
-  }
-});
-
-// BULK UPDATE SUPERVISOR
-router.patch('/bulk-update-supervisor', isLoggedIn, isAdmin, async (req, res) => {
-  try {
-    const { employeeIds, supervisorId, supervisorName } = req.body;
-    if (!employeeIds || !employeeIds.length) {
-      return res.status(400).json({ success: false, message: 'No employees selected' });
-    }
-    await Employee.updateMany(
-      { _id: { $in: employeeIds } },
-      { $set: { supervisorId: supervisorId || null, supervisorName: supervisorName || '' } }
-    );
-    const action = supervisorId ? 'assigned to supervisor' : 'unassigned from supervisor';
-    return res.json({ success: true, message: employeeIds.length + ' employees ' + action });
-  } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
-  }
-});

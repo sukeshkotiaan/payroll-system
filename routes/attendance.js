@@ -40,7 +40,9 @@ function calculateTotals(days) {
     }
   });
   const lopDays = absent;
-  const payableDays = presentDays - absent;
+  // payableDays = days the employee is entitled to pay (present + paid leaves + week-offs + holidays)
+  // Absent days are already excluded from presentDays, so do NOT subtract them again
+  const payableDays = presentDays + weekOff + holidays;
   return { presentDays, cl, sl, pl, spL, absent, halfDays, weekOff, holidays, otHours, lopDays, payableDays };
 }
 
