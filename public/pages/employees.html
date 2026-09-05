@@ -369,6 +369,11 @@
           <div class="hint">Or enter annual → Monthly auto calculates</div>
         </div>
       </div>
+      <div class="form-group" style="max-width:280px;margin-bottom:10px;">
+        <label>Salary in Cash (₹)</label>
+        <input type="number" id="salaryInCash" placeholder="0" min="0">
+        <div class="hint">Portion of salary paid in cash (if any)</div>
+      </div>
       <div class="salary-preview" id="salaryPreview" style="display:none;">
         <div style="font-size:13px;font-weight:600;color:#333;">Monthly Breakdown — Editable</div>
         <div class="salary-grid">
@@ -431,6 +436,15 @@
       <input type="text" id="mgtDesignations" placeholder="e.g. Principal, Director, Vice Principal"
              style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;box-sizing:border-box;">
       <div style="font-size:11px;color:#888;margin-top:3px;">Leave blank to give everyone a standard auto-generated EIN. Seed the MGT pool first via <code>POST /api/reserved-eins/seed</code>.</div>
+    </div>
+    <div style="margin-bottom:15px;padding:12px;background:#fff3cd;border:1px solid #f0ad4e;border-radius:8px;">
+      <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;">
+        <input type="checkbox" id="clearBeforeImport" style="margin-top:2px;width:16px;height:16px;flex-shrink:0;">
+        <span>
+          <strong style="color:#856404;">⚠ Clear existing employees before import</strong><br>
+          <span style="font-size:12px;color:#856404;">Deletes all current employee records (except MGT employees like Janhavi) and re-creates them from this file with EINs assigned by seniority (oldest joining date → lowest EIN number).</span>
+        </span>
+      </label>
     </div>
     <div id="importPreview" style="display:none;margin-bottom:15px;">
       <h4 style="font-size:13px;margin-bottom:8px;">Preview (first 5 rows)</h4>
@@ -633,7 +647,6 @@
       '<td>' + profileCompletionHTML(emp) + '</td>' +
       '<td>' +
       '<button class="btn-edit" onclick="editEmployee(\'' + emp._id + '\')">Edit</button>' +
-      (currentUser.role === 'admin' ? '<button class="btn-secondary" style="margin-left:4px;padding:5px 10px;font-size:12px;background:#fff3cd;border:1px solid #f0ad4e;color:#856404;" onclick="changeEINQuick(\'' + emp._id + '\',\'' + (emp.ein||'') + '\',\'' + emp.employeeName.replace(/'/g,'\\\'') + '\')">🔑 EIN</button>' : '') +
       '<button class="btn-secondary" style="margin-left:4px;padding:5px 10px;font-size:12px;" onclick="goToPayslip(\'' + emp.ein + '\')">Payslip</button>' +
       (emp.isActive && currentUser.role !== 'supervisor' ? '<button class="btn-secondary" style="margin-left:4px;padding:5px 10px;font-size:12px;" onclick="goToOfferLetterPopup(\'' + emp._id + '\')">Offer Letter</button>' : '') +
       (!emp.isActive ? '<button class="btn-secondary" style="margin-left:4px;padding:5px 10px;font-size:12px;" onclick="goToExperienceLetterPopup(\'' + emp._id + '\')">Exp. Letter</button>' : '') +
@@ -861,7 +874,7 @@
       'designationSelect','designationCustom','designation','employeeName',
       'dateOfBirth','dateOfJoining','panNumber','aadhaarNumber',
       'phoneNumber','email','address','uanNumber',
-      'monthlySalary','ctcAnnual','ctcMonthly','basic','hraAllowance','pf','pt','ein'];
+      'monthlySalary','salaryInCash','ctcAnnual','ctcMonthly','basic','hraAllowance','pf','pt','ein'];
     ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
     document.getElementById('ageDisplay').textContent = '';
     document.getElementById('pfApplicable').checked = false;
@@ -907,6 +920,7 @@
       document.getElementById('address').value = emp.address || '';
       document.getElementById('uanNumber').value = emp.uanNumber || '';
       document.getElementById('monthlySalary').value = emp.monthlySalary || Math.round(emp.ctcAnnual / 12) || '';
+      document.getElementById('salaryInCash').value = emp.salaryInCash || '';
       document.getElementById('ctcAnnual').value = emp.ctcAnnual || '';
       document.getElementById('pfApplicable').checked = emp.pfApplicable || false;
       document.getElementById('esicApplicable').checked = emp.esicApplicable || false;
@@ -1055,7 +1069,7 @@
     // Collect all text/number fields into a plain object
     const textFields = ['location','section','profile','department','title','gender','designation',
       'employeeName','dateOfBirth','dateOfJoining','panNumber','aadhaarNumber',
-      'phoneNumber','email','address','uanNumber','monthlySalary','ctcAnnual',
+      'phoneNumber','email','address','uanNumber','monthlySalary','salaryInCash','ctcAnnual',
       'ctcMonthly','basic','hraAllowance','pf','pt','ein',
       'bankName','accountNumber','ifscCode','accountHolderName'];
     const payload = {};
@@ -1176,6 +1190,7 @@
     document.getElementById('importModal').style.display = 'none';
     document.getElementById('importFile').value = '';
     document.getElementById('mgtDesignations').value = '';
+    document.getElementById('clearBeforeImport').checked = false;
     document.getElementById('importPreview').style.display = 'none';
     document.getElementById('importBtn').style.display = 'none';
     document.getElementById('importError').style.display = 'none';
@@ -1228,13 +1243,22 @@
     document.getElementById('importSuccess').style.display = 'none';
 
     try {
+      const clearFirst = document.getElementById('clearBeforeImport').checked;
+      if (clearFirst) {
+        const confirmed = window.confirm(
+          '⚠ Are you sure?\n\nThis will DELETE all existing employees (except MGT employees) and re-create them from this file.\n\nThis cannot be undone. Continue?'
+        );
+        if (!confirmed) { btn.disabled = false; btn.textContent = '📥 Import All'; return; }
+      }
+
       const formData = new FormData();
       formData.append('file', importFile);
 
       const mgtDesig = document.getElementById('mgtDesignations').value.trim();
       if (mgtDesig) formData.append('managementDesignations', mgtDesig);
+      if (clearFirst) formData.append('clearFirst', 'true');
 
-      showImportMsg('importSuccess', 'Uploading and processing ' + importFile.name + '…');
+      showImportMsg('importSuccess', (clearFirst ? 'Clearing existing records… then i' : 'I') + 'mporting ' + importFile.name + '…');
 
       const res = await fetch('/api/employees/upload-excel', {
         method: 'POST',

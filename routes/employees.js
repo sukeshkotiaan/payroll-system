@@ -447,9 +447,27 @@ router.post('/upload-excel', isLoggedIn, isAdmin, excelUpload.single('file'), as
     return isNaN(d.getTime()) ? null : d;
   };
 
+  // Derive a 3-letter EIN prefix from location/section/profile
+  const getPrefix = (location, section, profile) => {
+    const secCode  = section  === 'Global'  ? 'G' : 'S';
+    const locCode  = location === 'Thane'   ? 'T' : 'P';
+    const profCode = profile  === 'Teaching' ? 'T' : 'N';
+    return secCode + locCode + profCode;
+  };
+
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'No file uploaded' });
+    }
+
+    const clearFirst = req.body.clearFirst === 'true';
+
+    // ── Step 0: Clear non-MGT employees if requested ──────────────────────
+    let deletedCount = 0;
+    if (clearFirst) {
+      const deleted = await Employee.deleteMany({ ein: { $not: /^MGT-/i } });
+      deletedCount = deleted.deletedCount;
+      console.log('clearFirst: deleted', deletedCount, 'non-MGT employees');
     }
 
     const workbook = new ExcelJS.Workbook();
@@ -497,97 +515,61 @@ router.post('/upload-excel', isLoggedIn, isAdmin, excelUpload.single('file'), as
     );
 
     const results = { created: 0, updated: 0, skipped: 0, skippedRows: [], errors: [], rows: [] };
+    if (clearFirst) results.deletedBefore = deletedCount;
 
-    // Cache the highest existing EIN number per prefix so we don't query DB for every row
-    const einCounters = {};
-    const getAutoEIN = async (location, section, profile) => {
-      const secCode  = section  === 'Global'      ? 'G' : 'S';
-      const locCode  = location === 'Thane'        ? 'T' : 'P';
-      const profCode = profile  === 'Teaching'     ? 'T' : 'N';
-      const prefix   = secCode + locCode + profCode;
-      if (einCounters[prefix] == null) {
-        const last = await Employee.findOne({ ein: { $regex: '^' + prefix + '-' } }).sort({ ein: -1 });
-        einCounters[prefix] = 1000;
-        if (last && last.ein) {
-          const n = parseInt((last.ein.split('-')[1]) || '1000');
-          if (!isNaN(n)) einCounters[prefix] = n;
-        }
-      }
-      einCounters[prefix]++;
-      return prefix + '-' + einCounters[prefix];
-    };
+    // ── PASS 1: Collect all valid rows ────────────────────────────────────
+    // We defer EIN assignment for auto-prefix rows so we can sort by tenure.
+    const validRows = [];
 
     for (let r = 2; r <= sheet.rowCount; r++) {
       const row = sheet.getRow(r);
       if (!row.hasValues) continue;
 
       const employeeName = col(row, 'Employee Name');
-      // Skip placeholder / blank rows
       if (!employeeName || employeeName.toLowerCase() === 'blank') {
         results.skipped++;
         results.skippedRows.push({ row: r, reason: employeeName ? 'Name is "Blank"' : 'Empty name' });
         continue;
       }
 
-      const location = col(row, 'Location');
-      const section  = col(row, 'Section');
-      const profile  = col(row, 'Profile');
+      const location    = col(row, 'Location');
+      const section     = col(row, 'Section');
+      const profile     = col(row, 'Profile');
+      const designation = col(row, 'Designation');
 
       if (!location || !section || !profile) {
         results.errors.push({ row: r, name: employeeName, error: 'Missing Location / Section / Profile' });
         continue;
       }
 
-      try {
-        // ── EIN ────────────────────────────────────────────────────────────
-        let einValue     = col(row, 'EIN');
-        let einSource    = 'provided';
-        let reservedSlot = null;
+      const fileEIN  = col(row, 'EIN');  // non-empty → use as-is
+      const isMgt    = mgtDesignations.size > 0 && mgtDesignations.has(designation.toLowerCase());
+      const prefix   = (!fileEIN && !isMgt) ? getPrefix(location, section, profile) : null;
 
-        if (!einValue) {
-          const designation = col(row, 'Designation');
-          const isMgt = mgtDesignations.size > 0 &&
-                        mgtDesignations.has(designation.toLowerCase());
+      const monthlySalary = parseFloat(col(row, 'Monthly Salary')) || 0;
+      const ctcAnnualRaw  = parseFloat(col(row, 'CTC Annual'))     || 0;
+      const ctcAnnual     = ctcAnnualRaw || monthlySalary * 12;
+      const accountNumber = col(row, 'Bank Account Number') || '';
+      const dateOfJoining = parseDate(col(row, 'Date of Joining'));
 
-          if (isMgt) {
-            reservedSlot = await ReservedEIN.findOne({ status: 'available' }).sort({ ein: 1 });
-            if (!reservedSlot) {
-              results.errors.push({
-                row: r, name: employeeName,
-                error: `Designation "${designation}" needs a reserved EIN but the pool is empty. ` +
-                       'Seed more with POST /api/reserved-eins/seed.'
-              });
-              continue;
-            }
-            einValue  = reservedSlot.ein;
-            einSource = 'reserved';
-          } else {
-            einValue  = await getAutoEIN(location, section, profile);
-            einSource = 'auto';
-          }
-        }
-
-        // ── Salary / CTC ───────────────────────────────────────────────────
-        const monthlySalary = parseFloat(col(row, 'Monthly Salary')) || 0;
-        const ctcAnnualRaw  = parseFloat(col(row, 'CTC Annual'))     || 0;
-        const ctcAnnual     = ctcAnnualRaw || monthlySalary * 12;
-
-        // ── Bank account ───────────────────────────────────────────────────
-        const accountNumber = col(row, 'Bank Account Number') || '';
-
-        // ── Build the full employee record ──────────────────────────────────
-        const empData = {
-          ein:            einValue,
+      validRows.push({
+        rowNum: r,
+        employeeName,
+        designation,
+        location, section, profile, prefix,
+        fileEIN,
+        isMgt,
+        dateOfJoining,
+        // full empData fields (EIN assigned later for auto/reserved rows)
+        fields: {
           title:          col(row, 'Title')          || '',
           employeeName,
           gender:         col(row, 'Gender')         || '',
-          designation:    col(row, 'Designation')    || '',
+          designation,
           department:     col(row, 'Department')     || '',
-          location,
-          section,
-          profile,
+          location, section, profile,
           dateOfBirth:    parseDate(col(row, 'Date of Birth')),
-          dateOfJoining:  parseDate(col(row, 'Date of Joining')),
+          dateOfJoining,
           panNumber:      col(row, 'PAN Number')     || '',
           aadhaarNumber:  col(row, 'Aadhaar Number') || '',
           phoneNumber:    col(row, 'Phone Number')   || '',
@@ -602,46 +584,129 @@ router.post('/upload-excel', isLoggedIn, isAdmin, excelUpload.single('file'), as
           isRestricted:   col(row, 'Restricted').toLowerCase()      === 'yes',
           uanNumber:      col(row, 'UAN Number')     || '',
           accountNumber,
+          // Auto-fill bank details when an account number is present
+          bankName:              accountNumber ? 'IDBI'          : '',
+          ifscCode:              accountNumber ? 'IBKL0000430'   : '',
+          accountHolderName:     accountNumber ? employeeName    : '',
           bankVerificationStatus: accountNumber ? 'Pending' : 'Not Filled',
           isActive:       true,
           createdBy:      req.session.user.username,
           updatedAt:      new Date()
-        };
+        }
+      });
+    }
 
-        // ── Upsert logic ───────────────────────────────────────────────────
-        // Priority 1: match by EIN (if the row had an explicit EIN from the file)
-        // Priority 2: match by employee name (for auto-generated EINs — prevents
-        //             duplicates on re-import because the EIN would be brand-new)
+    // ── Between passes: assign EINs for auto-prefix rows by tenure ────────
+    // Group rows that need a prefix-based EIN by prefix, sort oldest→newest
+    // joining date, then assign sequential numbers so the most senior
+    // employee gets the lowest EIN (e.g. STT-1001).
+    const prefixGroups = {};
+    for (const vr of validRows) {
+      if (!vr.fileEIN && !vr.isMgt && vr.prefix) {
+        if (!prefixGroups[vr.prefix]) prefixGroups[vr.prefix] = [];
+        prefixGroups[vr.prefix].push(vr);
+      }
+    }
+
+    for (const prefix of Object.keys(prefixGroups)) {
+      // Sort ascending: oldest joining date → lowest EIN number
+      // Rows with no joining date go to the end
+      prefixGroups[prefix].sort((a, b) => {
+        if (!a.dateOfJoining && !b.dateOfJoining) return 0;
+        if (!a.dateOfJoining) return 1;
+        if (!b.dateOfJoining) return -1;
+        return a.dateOfJoining - b.dateOfJoining;
+      });
+
+      // Determine starting counter:
+      //   clearFirst → fresh start at 1000 (first assigned will be 1001)
+      //   otherwise  → find the highest existing EIN for this prefix
+      let counter = 1000;
+      if (!clearFirst) {
+        const last = await Employee.findOne({ ein: { $regex: '^' + prefix + '-' } }).sort({ ein: -1 });
+        if (last && last.ein) {
+          const n = parseInt((last.ein.split('-')[1]) || '1000');
+          if (!isNaN(n)) counter = n;
+        }
+      }
+
+      for (const vr of prefixGroups[prefix]) {
+        counter++;
+        vr.assignedEIN = prefix + '-' + counter;
+      }
+    }
+
+    // ── PASS 2: Upsert each row with its final EIN ─────────────────────────
+    for (const vr of validRows) {
+      const { rowNum, employeeName, fileEIN, isMgt, fields } = vr;
+
+      try {
+        let einValue  = fileEIN || vr.assignedEIN || null;
+        let einSource = fileEIN ? 'provided' : (isMgt ? 'reserved' : 'auto');
+        let reservedSlot = null;
+
+        // MGT designation → pull from reserved pool (or name-match existing MGT employee)
+        if (isMgt && !fileEIN) {
+          // First check if they already have an MGT EIN in the DB (name match)
+          const existingMgt = await Employee.findOne({
+            employeeName: { $regex: '^' + employeeName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', $options: 'i' },
+            ein: /^MGT-/i
+          });
+          if (existingMgt) {
+            einValue  = existingMgt.ein;
+            einSource = 'mgt-name-match';
+          } else {
+            reservedSlot = await ReservedEIN.findOne({ status: 'available' }).sort({ ein: 1 });
+            if (!reservedSlot) {
+              results.errors.push({
+                row: rowNum, name: employeeName,
+                error: `Designation "${vr.designation}" needs a reserved EIN but the pool is empty. ` +
+                       'Seed more with POST /api/reserved-eins/seed.'
+              });
+              continue;
+            }
+            einValue  = reservedSlot.ein;
+            einSource = 'reserved';
+          }
+        }
+
+        if (!einValue) {
+          results.errors.push({ row: rowNum, name: employeeName, error: 'Could not determine EIN' });
+          continue;
+        }
+
+        const empData = { ...fields, ein: einValue };
+
+        // ── Upsert ──────────────────────────────────────────────────────────
+        // Priority 1: match by EIN if the file provided one
+        // Priority 2: match by name (handles re-import when clearFirst=false)
         let existing = null;
-        const fileHadEIN = einSource === 'provided';   // true only when the file's EIN column was non-empty
-
-        if (fileHadEIN) {
+        if (fileEIN) {
           existing = await Employee.findOne({ ein: einValue });
-        } else {
-          // Try name match first (case-insensitive, trimmed)
+        } else if (einSource === 'mgt-name-match') {
+          existing = await Employee.findOne({ ein: einValue });
+        } else if (!clearFirst) {
+          // name-match upsert — only needed when we didn't just clear the table
           existing = await Employee.findOne({
             employeeName: { $regex: '^' + employeeName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', $options: 'i' }
           });
         }
 
         if (existing) {
-          // Keep the employee's existing EIN — don't overwrite with a freshly generated one
+          // Preserve the existing EIN on a name-match update so we don't shift EINs
           const updateData = { ...empData };
-          if (!fileHadEIN) {
-            updateData.ein = existing.ein;   // preserve existing EIN on name-match updates
+          if (einSource === 'auto' || einSource === 'mgt-name-match') {
+            updateData.ein = existing.ein;
           }
           await Employee.findByIdAndUpdate(existing._id, { $set: updateData }, { runValidators: false });
           results.updated++;
-          results.rows.push({ row: r, ein: existing.ein, name: employeeName, action: 'updated', einSource: fileHadEIN ? 'provided' : 'name-match' });
+          results.rows.push({ row: rowNum, ein: existing.ein, name: employeeName, action: 'updated', einSource });
         } else {
-          // Use validateBeforeSave:false so rows with missing optional-in-import
-          // fields (designation, dateOfBirth) still import rather than failing
           const doc = new Employee(empData);
           const created = await doc.save({ validateBeforeSave: false });
           results.created++;
-          results.rows.push({ row: r, ein: einValue, name: employeeName, action: 'created', einSource });
+          results.rows.push({ row: rowNum, ein: einValue, name: employeeName, action: 'created', einSource });
 
-          // Mark reserved slot as assigned if we used one
           if (reservedSlot) {
             reservedSlot.status             = 'assigned';
             reservedSlot.assignedTo         = employeeName;
@@ -651,15 +716,18 @@ router.post('/upload-excel', isLoggedIn, isAdmin, excelUpload.single('file'), as
           }
         }
       } catch (e) {
-        results.errors.push({ row: r, name: employeeName, error: e.message });
+        results.errors.push({ row: rowNum, name: employeeName, error: e.message });
       }
     }
 
+    const msgParts = [`Import complete — Created: ${results.created}, Updated: ${results.updated}, Skipped: ${results.skipped}, Errors: ${results.errors.length}`];
+    if (clearFirst) msgParts.push(`(cleared ${deletedCount} previous employees before import)`);
+
     return res.json({
       success: true,
-      message: `Import complete — Created: ${results.created}, Updated: ${results.updated}, Skipped: ${results.skipped}, Errors: ${results.errors.length}`,
+      message: msgParts.join(' '),
       ...results,
-      skippedRows: results.skippedRows   // explicit for clarity
+      skippedRows: results.skippedRows
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
