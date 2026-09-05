@@ -970,13 +970,14 @@
       if (!el || !el.value.trim()) { showAlert('alertError', f.label + ' is required'); return; }
     }
     if (!designationVal) { showAlert('alertError', 'Designation is required'); return; }
-    const formData = new FormData();
-    const fields = ['location','section','profile','department','title','gender','designation',
+    // Collect all text/number fields into a plain object
+    const textFields = ['location','section','profile','department','title','gender','designation',
       'employeeName','dateOfBirth','dateOfJoining','panNumber','aadhaarNumber',
       'phoneNumber','email','address','uanNumber','monthlySalary','ctcAnnual',
       'ctcMonthly','basic','hraAllowance','pf','pt','ein',
       'bankName','accountNumber','ifscCode','accountHolderName'];
-    fields.forEach(f => { const el = document.getElementById(f); if (el) formData.append(f, el.value); });
+    const payload = {};
+    textFields.forEach(f => { const el = document.getElementById(f); if (el) payload[f] = el.value; });
 
     // Bank verification status logic
     const bankHasData = document.getElementById('bankName').value.trim() ||
@@ -985,28 +986,39 @@
     let bankStatus = 'Not Filled';
     if (bankHasData) {
       bankStatus = window.currentBankStatus || 'Pending';
-      // Supervisor edits always reset to Pending - they cannot verify
       if (currentUser.role === 'supervisor') bankStatus = 'Pending';
     }
-    formData.append('bankVerificationStatus', bankStatus);
-    if (bankStatus === 'Verified') {
-      formData.append('bankVerifiedBy', currentUser.fullName);
-      formData.append('bankVerifiedAt', new Date().toISOString());
-    } else {
-      formData.append('bankVerifiedBy', '');
-      formData.append('bankVerifiedAt', '');
-    }
-    formData.append('pfApplicable', document.getElementById('pfApplicable').checked);
-    formData.append('esicApplicable', document.getElementById('esicApplicable').checked);
-    formData.append('ptApplicable', document.getElementById('ptApplicable').checked);
-    formData.append('isRestricted', document.getElementById('isRestricted').checked);
-    formData.append('qualifications', JSON.stringify(getQualifications()));
+    payload.bankVerificationStatus = bankStatus;
+    payload.bankVerifiedBy = bankStatus === 'Verified' ? currentUser.fullName : '';
+    payload.bankVerifiedAt = bankStatus === 'Verified' ? new Date().toISOString() : '';
+    payload.pfApplicable   = document.getElementById('pfApplicable').checked;
+    payload.esicApplicable = document.getElementById('esicApplicable').checked;
+    payload.ptApplicable   = document.getElementById('ptApplicable').checked;
+    payload.isRestricted   = document.getElementById('isRestricted').checked;
+    payload.qualifications = getQualifications();
+
     const photoFile = document.getElementById('photo').files[0];
-    if (photoFile) formData.append('photo', photoFile);
+    const url    = id ? '/api/employees/' + id : '/api/employees';
+    const method = id ? 'PUT' : 'POST';
+
     try {
-      const url = id ? '/api/employees/' + id : '/api/employees';
-      const method = id ? 'PUT' : 'POST';
-      const res = await fetch(url, { method, body: formData, credentials: 'include' });
+      let res;
+      if (photoFile) {
+        // Has a photo — must use multipart FormData
+        const formData = new FormData();
+        Object.entries(payload).forEach(([k, v]) =>
+          formData.append(k, typeof v === 'object' ? JSON.stringify(v) : v));
+        formData.append('photo', photoFile);
+        res = await fetch(url, { method, body: formData, credentials: 'include' });
+      } else {
+        // No photo — send as plain JSON (bypasses multer entirely)
+        res = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(payload)
+        });
+      }
       let data;
       try { data = await res.json(); }
       catch(e) { throw new Error('Server returned status ' + res.status + ' (not JSON)'); }

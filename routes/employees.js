@@ -227,7 +227,10 @@ router.get('/:id', isLoggedIn, async (req, res) => {
   }
 });
 
-router.post('/', isLoggedIn, isAdmin, upload.single('photo'), async (req, res) => {
+router.post('/', isLoggedIn, isAdmin, (req, res, next) => {
+  if (req.is('multipart/form-data')) return upload.single('photo')(req, res, next);
+  next();
+}, async (req, res) => {
   try {
     const data = req.body;
     if (typeof data.qualifications === 'string') {
@@ -264,10 +267,10 @@ router.post('/', isLoggedIn, isAdmin, upload.single('photo'), async (req, res) =
       hraAllowance: parseFloat(data.hraAllowance) || 0,
       pf: parseFloat(data.pf) || 0,
       pt: parseFloat(data.pt) || 0,
-      pfApplicable: data.pfApplicable === 'true',
-      esicApplicable: data.esicApplicable === 'true',
-      ptApplicable: data.ptApplicable === 'true',
-      isRestricted: data.isRestricted === 'true',
+      pfApplicable: data.pfApplicable === true || data.pfApplicable === 'true',
+      esicApplicable: data.esicApplicable === true || data.esicApplicable === 'true',
+      ptApplicable: data.ptApplicable === true || data.ptApplicable === 'true',
+      isRestricted: data.isRestricted === true || data.isRestricted === 'true',
       photo: req.file ? '/uploads/' + req.file.filename : '',
       createdBy: req.session.user.username
     });
@@ -280,25 +283,37 @@ router.post('/', isLoggedIn, isAdmin, upload.single('photo'), async (req, res) =
   }
 });
 
-router.put('/:id', isLoggedIn, isAdmin, upload.single('photo'), async (req, res) => {
+// PUT handles both JSON (no photo) and multipart/form-data (with photo)
+// When the client sends JSON, express.json() has already parsed req.body
+// and multer.single() is a no-op (non-multipart request passes through).
+// When the client sends FormData (photo upload), multer parses req.body.
+router.put('/:id', isLoggedIn, isAdmin, (req, res, next) => {
+  // Only run multer if the request is multipart (has a photo)
+  if (req.is('multipart/form-data')) {
+    return upload.single('photo')(req, res, next);
+  }
+  next();
+}, async (req, res) => {
   try {
-    console.log('PUT /employees/:id =>', req.params.id, '| body keys:', Object.keys(req.body || {}));
-    const data = req.body;
+    console.log('PUT /employees/:id =>', req.params.id, '| content-type:', req.headers['content-type']);
+    const data = { ...req.body };
     if (req.file) data.photo = '/uploads/' + req.file.filename;
     data.updatedAt = Date.now();
+    // qualifications may be an array (JSON body) or a JSON string (FormData body)
     if (typeof data.qualifications === 'string') {
       try { data.qualifications = JSON.parse(data.qualifications); }
       catch(e) { data.qualifications = []; }
     }
-    if (data.monthlySalary) {
-      data.ctcAnnual = parseFloat(data.monthlySalary) * 12;
-    }
+    // Coerce string booleans from FormData to real booleans
+    ['pfApplicable','esicApplicable','ptApplicable','isRestricted'].forEach(k => {
+      if (typeof data[k] === 'string') data[k] = data[k] === 'true';
+    });
+    if (data.monthlySalary) data.ctcAnnual = parseFloat(data.monthlySalary) * 12;
     if (data.bankVerifiedAt === '') data.bankVerifiedAt = null;
-    // Remove _id from $set to avoid Mongoose immutable field error
     delete data._id;
     const employee = await Employee.findByIdAndUpdate(req.params.id, { $set: data }, { new: true });
-    console.log('PUT /employees/:id result:', employee ? 'found & updated' : 'NOT FOUND for id=' + req.params.id);
-    if (!employee) return res.status(404).json({ success: false, message: 'Employee not found. Try refreshing the page and editing again.' });
+    console.log('PUT /employees/:id result:', employee ? 'updated ' + employee.employeeName : 'NOT FOUND id=' + req.params.id);
+    if (!employee) return res.status(404).json({ success: false, message: 'Employee not found. Please refresh the page and try again.' });
     return res.json({ success: true, message: 'Employee updated successfully', employee });
   } catch (err) {
     console.error('PUT /employees/:id error:', err.message);
