@@ -195,6 +195,12 @@
           </tbody>
         </table>
       </div>
+      <!-- ── Footer count bar ── -->
+      <div id="empFooter" style="display:none;padding:10px 16px;border-top:1px solid #eee;background:#fafafa;border-radius:0 0 8px 8px;display:flex;gap:24px;align-items:center;font-size:13px;color:#555;">
+        <span>📋 Showing <strong id="footerShowing">0</strong> of <strong id="footerTotal">0</strong> employees</span>
+        <span style="color:#27ae60;">● Active: <strong id="footerActive">0</strong></span>
+        <span style="color:#e74c3c;">● Inactive: <strong id="footerInactive">0</strong></span>
+      </div>
     </div>
   </div>
 </div>
@@ -564,6 +570,16 @@
   function renderTable(employees) {
     const tbody = document.getElementById('employeeTable');
     document.getElementById('empCount').textContent = '(' + employees.length + ' employees)';
+
+    // Update footer count bar
+    const activeCount   = employees.filter(e => e.isActive).length;
+    const inactiveCount = employees.length - activeCount;
+    document.getElementById('footerShowing').textContent  = employees.length;
+    document.getElementById('footerTotal').textContent    = allEmployees.length;
+    document.getElementById('footerActive').textContent   = activeCount;
+    document.getElementById('footerInactive').textContent = inactiveCount;
+    document.getElementById('empFooter').style.display    = employees.length ? 'flex' : 'none';
+
     if (employees.length === 0) {
       tbody.innerHTML = '<tr><td colspan="11"><div class="empty-state">No employees found</div></td></tr>';
       return;
