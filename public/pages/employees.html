@@ -374,6 +374,10 @@
           <span>EIN:</span>
           <span class="ein-value" id="einValue"></span>
           <input type="hidden" id="ein">
+          <!-- Editable EIN override — shown only in edit mode for admins -->
+          <input type="text" id="einEditInput" placeholder="Override EIN (e.g. MGT-001)"
+                 style="display:none;padding:5px 10px;border:1px solid #1a73e8;border-radius:6px;font-size:13px;width:180px;"
+                 oninput="document.getElementById('ein').value=this.value.trim().toUpperCase();document.getElementById('einValue').textContent=this.value.trim().toUpperCase();">
         </div>
       </div>
 
@@ -613,6 +617,7 @@
     resetForm();
     document.getElementById('generateEINBtn').style.display = 'inline-block';
     document.getElementById('generateEINBtn').disabled = true;
+    document.getElementById('einEditInput').style.display = 'none';
     switchView('formView');
   }
 
@@ -815,6 +820,15 @@
       document.getElementById('ein').value = emp.ein || '';
       document.getElementById('einBox').style.display = 'flex';
       document.getElementById('generateEINBtn').style.display = 'none';
+      // Show EIN override input for admins in edit mode
+      const einEditInput = document.getElementById('einEditInput');
+      if (currentUser && currentUser.role === 'admin') {
+        einEditInput.style.display = 'inline-block';
+        einEditInput.value = emp.ein || '';
+        einEditInput.placeholder = 'Change EIN (e.g. MGT-001)';
+      } else {
+        einEditInput.style.display = 'none';
+      }
       document.getElementById('bankName').value = emp.bankName || '';
       document.getElementById('accountNumber').value = emp.accountNumber || '';
       document.getElementById('ifscCode').value = emp.ifscCode || '';
