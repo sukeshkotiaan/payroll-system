@@ -602,6 +602,7 @@
       '<td><span class="badge ' + (emp.isActive ? 'badge-active' : 'badge-inactive') + '">' + (emp.isActive ? 'Active' : 'Inactive') + '</span></td>' +
       '<td>' +
       '<button class="btn-edit" onclick="editEmployee(\'' + emp._id + '\')">Edit</button>' +
+      (currentUser.role === 'admin' ? '<button class="btn-secondary" style="margin-left:4px;padding:5px 10px;font-size:12px;background:#fff3cd;border:1px solid #f0ad4e;color:#856404;" onclick="changeEINQuick(\'' + emp._id + '\',\'' + (emp.ein||'') + '\',\'' + emp.employeeName.replace(/'/g,'\\\'') + '\')">🔑 EIN</button>' : '') +
       '<button class="btn-secondary" style="margin-left:4px;padding:5px 10px;font-size:12px;" onclick="goToPayslip(\'' + emp.ein + '\')">Payslip</button>' +
       (emp.isActive && currentUser.role !== 'supervisor' ? '<button class="btn-secondary" style="margin-left:4px;padding:5px 10px;font-size:12px;" onclick="goToOfferLetterPopup(\'' + emp._id + '\')">Offer Letter</button>' : '') +
       (!emp.isActive ? '<button class="btn-secondary" style="margin-left:4px;padding:5px 10px;font-size:12px;" onclick="goToExperienceLetterPopup(\'' + emp._id + '\')">Exp. Letter</button>' : '') +
@@ -622,6 +623,29 @@
   }
 
   function showListView() { switchView('listView'); editMode = false; }
+
+  async function changeEINQuick(empId, currentEIN, empName) {
+    const newEIN = window.prompt(
+      'Change EIN for: ' + empName + '\nCurrent EIN: ' + (currentEIN || '(none)') + '\n\nEnter new EIN (e.g. MGT-001):',
+      currentEIN || ''
+    );
+    if (!newEIN || newEIN.trim() === '' || newEIN.trim().toUpperCase() === currentEIN.toUpperCase()) return;
+    try {
+      const res = await fetch('/api/employees/' + empId + '/ein', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ ein: newEIN.trim().toUpperCase() })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('✅ ' + data.message);
+        await loadEmployees();
+      } else {
+        alert('❌ ' + data.message);
+      }
+    } catch(e) { alert('Error: ' + e.message); }
+  }
 
   function switchView(viewId) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));

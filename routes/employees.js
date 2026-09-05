@@ -615,11 +615,14 @@ router.post('/upload-excel', isLoggedIn, isAdmin, excelUpload.single('file'), as
           if (!fileHadEIN) {
             updateData.ein = existing.ein;   // preserve existing EIN on name-match updates
           }
-          await Employee.findByIdAndUpdate(existing._id, { $set: updateData });
+          await Employee.findByIdAndUpdate(existing._id, { $set: updateData }, { runValidators: false });
           results.updated++;
           results.rows.push({ row: r, ein: existing.ein, name: employeeName, action: 'updated', einSource: fileHadEIN ? 'provided' : 'name-match' });
         } else {
-          const created = await Employee.create(empData);
+          // Use validateBeforeSave:false so rows with missing optional-in-import
+          // fields (designation, dateOfBirth) still import rather than failing
+          const doc = new Employee(empData);
+          const created = await doc.save({ validateBeforeSave: false });
           results.created++;
           results.rows.push({ row: r, ein: einValue, name: employeeName, action: 'created', einSource });
 
