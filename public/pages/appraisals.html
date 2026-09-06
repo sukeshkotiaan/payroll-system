@@ -282,7 +282,7 @@
       if (!apData.success) return;
       allApprisals = apData.records;
 
-      let empUrl = '/api/employees?';
+      let empUrl = '/api/employees?all=true&';
       if (location) empUrl += 'location=' + encodeURIComponent(location) + '&';
       const empRes = await fetch(empUrl);
       const empData = await empRes.json();

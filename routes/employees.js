@@ -214,8 +214,12 @@ router.get('/', isLoggedIn, async (req, res) => {
 
     // Pagination: skip when the caller pins all three group dimensions
     // (attendance/payroll pages need every employee in a group).
-    // Otherwise default to 50 per page so large all-employee queries are bounded.
-    const isGroupScoped = req.query.location && req.query.section && req.query.profile;
+    // Admin/management may also pass ?all=true to bypass pagination for
+    // bulk operations like the appraisals grid.
+    const wantsAll = req.query.all === 'true' &&
+                     (user.role === 'admin' || user.role === 'management');
+    const isGroupScoped = wantsAll ||
+                          (req.query.location && req.query.section && req.query.profile);
     const page  = Math.max(1, parseInt(req.query.page)  || 1);
     const limit = isGroupScoped ? 0 : Math.min(500, parseInt(req.query.limit) || 50);
     const skip  = isGroupScoped ? 0 : (page - 1) * limit;
