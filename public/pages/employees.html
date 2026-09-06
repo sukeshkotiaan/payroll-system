@@ -339,6 +339,18 @@
             <label>Account Holder Name</label>
             <input type="text" id="accountHolderName" placeholder="As per bank records">
           </div>
+          <div class="form-group">
+            <label>Currency Code</label>
+            <input type="text" id="currencyCode" placeholder="INR" maxlength="5" style="text-transform:uppercase;">
+          </div>
+          <div class="form-group" id="serviceOutletGroup">
+            <label>Service Outlet <span style="font-size:11px;color:#888;">(IDBI branch code)</span></label>
+            <input type="text" id="serviceOutlet" placeholder="430">
+          </div>
+          <div class="form-group">
+            <label>Part Tran Type</label>
+            <input type="text" id="partTranType" placeholder="C" maxlength="2" style="text-transform:uppercase;">
+          </div>
         </div>
         <div id="bankVerifySection" style="display:none;margin-top:10px;padding:10px 15px;background:#f8f9fa;border-radius:8px;">
           <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
@@ -376,7 +388,8 @@
       <div class="form-group" style="max-width:280px;margin-bottom:10px;">
         <label>Payment Mode</label>
         <select id="paymentMode" onchange="onPaymentModeChange()">
-          <option value="Bank Transfer">Bank Transfer</option>
+          <option value="Bank Transfer">Bank Transfer (IDBI)</option>
+          <option value="NEFT">NEFT (Non-IDBI)</option>
           <option value="Cash">Cash</option>
           <option value="Cheque">Cheque</option>
         </select>
@@ -778,7 +791,19 @@
   function onPaymentModeChange() {
     const mode = document.getElementById('paymentMode').value;
     const bankSection = document.getElementById('bankDetailsSection');
-    bankSection.style.display = (mode === 'Bank Transfer') ? '' : 'none';
+    const isBankMode = (mode === 'Bank Transfer' || mode === 'NEFT');
+    bankSection.style.display = isBankMode ? '' : 'none';
+    // Service Outlet (IDBI branch code) is only for IDBI Bank Transfer
+    const soGroup = document.getElementById('serviceOutletGroup');
+    if (soGroup) soGroup.style.display = (mode === 'Bank Transfer') ? '' : 'none';
+    // Auto-fill defaults when switching modes
+    const currEl = document.getElementById('currencyCode');
+    const soEl   = document.getElementById('serviceOutlet');
+    const ptEl   = document.getElementById('partTranType');
+    if (currEl && !currEl.value) currEl.value = 'INR';
+    if (soEl  && mode === 'Bank Transfer' && !soEl.value) soEl.value = '430';
+    if (soEl  && mode === 'NEFT') soEl.value = '';
+    if (ptEl  && !ptEl.value) ptEl.value = 'C';
   }
 
   function onMonthlyChange() {
@@ -891,6 +916,11 @@
     ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
     document.getElementById('paymentMode').value = 'Bank Transfer';
     document.getElementById('bankDetailsSection').style.display = '';
+    document.getElementById('currencyCode').value = 'INR';
+    document.getElementById('serviceOutlet').value = '430';
+    document.getElementById('partTranType').value = 'C';
+    const soGroup = document.getElementById('serviceOutletGroup');
+    if (soGroup) soGroup.style.display = '';
     document.getElementById('ageDisplay').textContent = '';
     document.getElementById('pfApplicable').checked = false;
     document.getElementById('esicApplicable').checked = false;
@@ -961,6 +991,9 @@
       document.getElementById('accountNumber').value = emp.accountNumber || '';
       document.getElementById('ifscCode').value = emp.ifscCode || '';
       document.getElementById('accountHolderName').value = emp.accountHolderName || '';
+      document.getElementById('currencyCode').value = emp.currencyCode || 'INR';
+      document.getElementById('serviceOutlet').value = emp.serviceOutlet || (emp.paymentMode === 'Bank Transfer' ? '430' : '');
+      document.getElementById('partTranType').value = emp.partTranType || 'C';
       window.currentBankStatus = emp.bankVerificationStatus || 'Not Filled';
       renderBankStatusBadge(window.currentBankStatus, emp.bankVerifiedBy, emp.bankVerifiedAt);
 
@@ -1087,13 +1120,14 @@
       'employeeName','dateOfBirth','dateOfJoining','panNumber','aadhaarNumber',
       'phoneNumber','email','address','uanNumber','monthlySalary','ctcAnnual',
       'ctcMonthly','basic','hraAllowance','pf','pt','ein',
-      'bankName','accountNumber','ifscCode','accountHolderName'];
+      'bankName','accountNumber','ifscCode','accountHolderName',
+      'currencyCode','serviceOutlet','partTranType'];
     const payload = {};
     textFields.forEach(f => { const el = document.getElementById(f); if (el) payload[f] = el.value; });
     payload.paymentMode = document.getElementById('paymentMode').value;
 
     // Bank verification status logic
-    const isBankTransfer = payload.paymentMode === 'Bank Transfer';
+    const isBankTransfer = payload.paymentMode === 'Bank Transfer' || payload.paymentMode === 'NEFT';
     const bankHasData = isBankTransfer && (
       document.getElementById('bankName').value.trim() ||
       document.getElementById('accountNumber').value.trim() ||

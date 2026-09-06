@@ -73,93 +73,118 @@ router.get('/bank-advice', isLoggedIn, isAdmin, async (req, res) => {
       }
     }
 
-    // Fetch employee bank details
+    // Fetch employee bank details (include new IDBI fields)
     const eins = [...new Set(allRecords.map(r => r.ein))];
     const employees = await Employee.find({ ein: { $in: eins } })
-      .select('ein paymentMode bankName accountNumber ifscCode accountHolderName')
+      .select('ein paymentMode bankName accountNumber ifscCode accountHolderName currencyCode serviceOutlet partTranType')
       .lean();
     const empMap = new Map(employees.map(e => [e.ein, e]));
 
-    // Filter to Bank Transfer employees only
-    const bankRows = allRecords
-      .filter(r => {
-        const emp = empMap.get(r.ein);
-        return emp && emp.paymentMode === 'Bank Transfer';
-      })
+    // Split into IDBI (Bank Transfer) and NEFT rows
+    const idbiRows = allRecords
+      .filter(r => { const emp = empMap.get(r.ein); return emp && emp.paymentMode === 'Bank Transfer'; })
+      .sort((a, b) => (a.ein || '').localeCompare(b.ein || ''));
+    const neftRows = allRecords
+      .filter(r => { const emp = empMap.get(r.ein); return emp && emp.paymentMode === 'NEFT'; })
       .sort((a, b) => (a.ein || '').localeCompare(b.ein || ''));
 
-    if (!bankRows.length) {
-      return res.status(404).json({ success: false, message: 'No employees with "Bank Transfer" payment mode in the selected payroll' });
+    if (!idbiRows.length && !neftRows.length) {
+      return res.status(404).json({ success: false, message: 'No employees with Bank Transfer or NEFT payment mode in the selected payroll' });
     }
 
-    // ── Build Excel workbook ──
+    // ── Helper: build one sheet ──────────────────────────────────────────────
+    function buildBankSheet(wb, sheetName, rows, empMap, month, year, isNEFT) {
+      const ws = wb.addWorksheet(sheetName);
+      const COLS = isNEFT
+        ? ['Sr.No', 'Name', 'Account No.', 'Bank Name', 'IFSC Code', 'Currency Code', 'Part Tran Type', 'Transaction Amt', 'Transaction Particulars']
+        : ['Sr.No', 'Name', 'Account No.', 'Currency Code', 'Service Outlet', 'Part Tran Type', 'Transaction Amt', 'Transaction Particulars'];
+      const numCols = COLS.length;
+      const lastCol = String.fromCharCode(64 + numCols);
+
+      // Title rows
+      ws.mergeCells(`A1:${lastCol}1`);
+      const t1 = ws.getCell('A1');
+      t1.value = 'BANK SALARY ADVICE' + (isNEFT ? ' — NEFT' : ' — IDBI');
+      t1.font  = { bold: true, size: 14 };
+      t1.alignment = { horizontal: 'center' };
+
+      ws.mergeCells(`A2:${lastCol}2`);
+      const t2 = ws.getCell('A2');
+      t2.value = `Salary for the Month of ${month} ${year}`;
+      t2.font  = { size: 11 };
+      t2.alignment = { horizontal: 'center' };
+
+      ws.addRow([]); // spacer
+
+      // Headers
+      const hdr = ws.addRow(COLS);
+      applyHeaderStyle(hdr, isNEFT ? 'FF0F9D58' : 'FF1A73E8');
+
+      let sl = 1, total = 0;
+      for (const r of rows) {
+        const emp = empMap.get(r.ein) || {};
+        const net = round2(r.netSalary || 0);
+        total += net;
+        let dataRow;
+        if (isNEFT) {
+          dataRow = ws.addRow([
+            sl++,
+            r.employeeName || '',
+            emp.accountNumber || '',
+            emp.bankName || '',
+            emp.ifscCode || '',
+            emp.currencyCode || 'INR',
+            emp.partTranType || 'C',
+            net,
+            'SALARY CREDIT'
+          ]);
+          dataRow.getCell(8).numFmt = '#,##0.00';
+          dataRow.getCell(8).alignment = { horizontal: 'right' };
+        } else {
+          dataRow = ws.addRow([
+            sl++,
+            r.employeeName || '',
+            emp.accountNumber || '',
+            emp.currencyCode || 'INR',
+            emp.serviceOutlet || '430',
+            emp.partTranType || 'C',
+            net,
+            'SALARY CREDIT'
+          ]);
+          dataRow.getCell(7).numFmt = '#,##0.00';
+          dataRow.getCell(7).alignment = { horizontal: 'right' };
+        }
+      }
+
+      // Total row
+      const totalCol = isNEFT ? 8 : 7;
+      const totRow = ws.addRow(Array(numCols).fill(''));
+      totRow.getCell(totalCol - 1).value = 'TOTAL';
+      totRow.getCell(totalCol).value = round2(total);
+      applyTotalStyle(totRow);
+      totRow.getCell(totalCol).numFmt = '#,##0.00';
+      totRow.getCell(totalCol).alignment = { horizontal: 'right' };
+
+      // Note row
+      ws.addRow([]);
+      ws.addRow([`Total employees: ${rows.length}`, '', '', '', '', '', '', `Generated: ${new Date().toLocaleDateString('en-IN')}`]);
+
+      // Column widths
+      if (isNEFT) {
+        [7, 28, 22, 18, 14, 14, 12, 16, 18].forEach((w, i) => ws.getColumn(i + 1).width = w);
+      } else {
+        [7, 28, 22, 14, 14, 12, 16, 18].forEach((w, i) => ws.getColumn(i + 1).width = w);
+      }
+      ws.views = [{ state: 'frozen', ySplit: 4 }];
+    }
+
+    // ── Build workbook ────────────────────────────────────────────────────────
     const wb = new ExcelJS.Workbook();
     wb.creator = 'Payroll System';
     wb.created = new Date();
 
-    const ws = wb.addWorksheet('Bank Advice');
-
-    // Title
-    ws.mergeCells('A1:H1');
-    const t1 = ws.getCell('A1');
-    t1.value = 'BANK SALARY ADVICE';
-    t1.font  = { bold: true, size: 15 };
-    t1.alignment = { horizontal: 'center' };
-
-    ws.mergeCells('A2:H2');
-    const t2 = ws.getCell('A2');
-    t2.value = month + ' ' + year;
-    t2.font  = { size: 12 };
-    t2.alignment = { horizontal: 'center' };
-
-    ws.addRow([]); // blank spacer
-
-    // Column headers
-    const hdr = ws.addRow(['Sl No', 'EIN', 'Employee Name', 'Designation', 'Bank Name', 'Account Number', 'IFSC Code', 'Net Salary (₹)']);
-    applyHeaderStyle(hdr);
-
-    let sl = 1, total = 0;
-    for (const r of bankRows) {
-      const emp = empMap.get(r.ein) || {};
-      const net = r.netSalary || 0;
-      total += net;
-      const dataRow = ws.addRow([
-        sl++,
-        r.ein || '',
-        r.employeeName || '',
-        r.designation || '',
-        emp.bankName || '',
-        emp.accountNumber || '',
-        emp.ifscCode || '',
-        round2(net)
-      ]);
-      dataRow.getCell(8).numFmt = '#,##0.00';
-      dataRow.getCell(8).alignment = { horizontal: 'right' };
-    }
-
-    // Total row
-    const totRow = ws.addRow(['', '', '', '', '', '', 'TOTAL', round2(total)]);
-    applyTotalStyle(totRow);
-    totRow.getCell(8).numFmt = '#,##0.00';
-    totRow.getCell(8).alignment = { horizontal: 'right' };
-
-    // Note row
-    ws.addRow([]);
-    const noteRow = ws.addRow(['', `Total employees: ${bankRows.length}`, '', '', '', '', 'Generated:', new Date().toLocaleDateString('en-IN')]);
-    noteRow.eachCell(cell => { cell.font = { italic: true, color: { argb: 'FF888888' }, size: 10 }; });
-
-    // Column widths
-    ws.getColumn(1).width = 7;
-    ws.getColumn(2).width = 13;
-    ws.getColumn(3).width = 28;
-    ws.getColumn(4).width = 22;
-    ws.getColumn(5).width = 22;
-    ws.getColumn(6).width = 22;
-    ws.getColumn(7).width = 14;
-    ws.getColumn(8).width = 16;
-
-    // Freeze header
-    ws.views = [{ state: 'frozen', ySplit: 4 }];
+    if (idbiRows.length) buildBankSheet(wb, 'Bank Transfer (IDBI)', idbiRows, empMap, month, year, false);
+    if (neftRows.length) buildBankSheet(wb, 'NEFT', neftRows, empMap, month, year, true);
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="Bank_Advice_${month}_${year}.xlsx"`);

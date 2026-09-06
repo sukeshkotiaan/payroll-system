@@ -330,6 +330,14 @@ router.post('/', isLoggedIn, isAdmin, (req, res, next) => {
       esicApplicable: data.esicApplicable === true || data.esicApplicable === 'true',
       ptApplicable: data.ptApplicable === true || data.ptApplicable === 'true',
       isRestricted: data.isRestricted === true || data.isRestricted === 'true',
+      paymentMode: data.paymentMode || 'Bank Transfer',
+      bankName: data.bankName || '',
+      accountNumber: data.accountNumber || '',
+      ifscCode: data.ifscCode || '',
+      accountHolderName: data.accountHolderName || '',
+      currencyCode: data.currencyCode || 'INR',
+      serviceOutlet: data.serviceOutlet || (data.paymentMode === 'NEFT' ? '' : '430'),
+      partTranType: data.partTranType || 'C',
       photo: req.file ? '/uploads/' + req.file.filename : '',
       createdBy: req.session.user.username
     });
