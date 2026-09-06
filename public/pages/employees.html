@@ -594,21 +594,56 @@
     } catch(e) { console.error(e); }
   }
 
+  let _searchTimer = null;
   function filterEmployees() {
-    const search = document.getElementById('searchInput').value.toLowerCase();
+    const search   = document.getElementById('searchInput').value.trim();
     const location = document.getElementById('filterLocation').value;
-    const section = document.getElementById('filterSection').value;
-    const profile = document.getElementById('filterProfile').value;
+    const section  = document.getElementById('filterSection').value;
+    const profile  = document.getElementById('filterProfile').value;
     const department = document.getElementById('filterDepartment').value;
-    const status = document.getElementById('filterStatus').value;
+    const status     = document.getElementById('filterStatus').value;
     const completion = document.getElementById('filterCompletion').value;
+
+    // If there's a search term and no group filter, ask the server (covers all pages)
+    const hasGroupFilter = location && section && profile;
+    if (search && !hasGroupFilter) {
+      clearTimeout(_searchTimer);
+      _searchTimer = setTimeout(async () => {
+        try {
+          const res  = await fetch('/api/employees?search=' + encodeURIComponent(search) + '&all=true', { credentials: 'include' });
+          const data = await res.json();
+          if (data.success) {
+            let results = data.employees || [];
+            if (location)    results = results.filter(e => e.location   === location);
+            if (section)     results = results.filter(e => e.section    === section);
+            if (profile)     results = results.filter(e => e.profile    === profile);
+            if (department)  results = results.filter(e => e.department === department);
+            if (status)      results = results.filter(e => status === 'active' ? e.isActive : !e.isActive);
+            if (completion)  results = results.filter(e => {
+              const pct = computeCompletion(e).pct;
+              if (completion === 'complete') return pct === 100;
+              if (completion === 'high')     return pct >= 80 && pct < 100;
+              if (completion === 'medium')   return pct >= 50 && pct < 80;
+              if (completion === 'low')      return pct < 50;
+              return true;
+            });
+            filteredEmployees = results;
+            renderTable(filteredEmployees);
+          }
+        } catch(e) { console.error('Search error', e); }
+      }, 300);
+      return;
+    }
+
+    // Local filter over already-loaded records
+    const searchLower = search.toLowerCase();
     filteredEmployees = allEmployees.filter(emp => {
-      const matchSearch = !search || emp.employeeName.toLowerCase().includes(search) || (emp.ein && emp.ein.toLowerCase().includes(search));
+      const matchSearch = !search || emp.employeeName.toLowerCase().includes(searchLower) || (emp.ein && emp.ein.toLowerCase().includes(searchLower));
       const matchLocation = !location || emp.location === location;
-      const matchSection = !section || emp.section === section;
-      const matchProfile = !profile || emp.profile === profile;
-      const matchDept = !department || emp.department === department;
-      const matchStatus = !status || (status === 'active' ? emp.isActive : !emp.isActive);
+      const matchSection  = !section  || emp.section  === section;
+      const matchProfile  = !profile  || emp.profile  === profile;
+      const matchDept     = !department || emp.department === department;
+      const matchStatus   = !status || (status === 'active' ? emp.isActive : !emp.isActive);
       let matchCompletion = true;
       if (completion) {
         const pct = computeCompletion(emp).pct;
