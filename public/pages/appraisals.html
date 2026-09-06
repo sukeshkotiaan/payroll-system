@@ -132,6 +132,11 @@
             <button class="btn-primary" onclick="loadApGrid()">🔄 Refresh</button>
           </div>
           <div class="form-group" style="align-self:end;">
+            <button class="btn-success" id="seedBtn" onclick="seedFromEmployees()" title="Auto-fill appraisals for a financial year using each employee's current salary on record">
+              ⚡ Seed from Employee Records
+            </button>
+          </div>
+          <div class="form-group" style="align-self:end;">
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap;">
               <input type="checkbox" id="showMissingOnly" onchange="filterGrid()">
               Show only missing for current FY
@@ -198,9 +203,13 @@
   let parsedRecords = [];
 
   window.onload = async () => {
-    await checkAuth();
-    await loadLocations();
-    await loadApGrid();
+    try {
+      await checkAuth();
+      await loadLocations();
+      await loadApGrid();
+    } catch (e) {
+      if (e.message !== 'ACCESS_DENIED') console.error(e);
+    }
   };
 
   async function checkAuth() {
@@ -209,6 +218,27 @@
     if (!data.success) { window.location.href = '/'; return; }
     currentUser = data.user;
     document.getElementById('headerUser').textContent = data.user.fullName;
+
+    // Only admin and management may use this page
+    if (currentUser.role !== 'admin' && currentUser.role !== 'management') {
+      document.querySelector('.container').innerHTML = `
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+                    min-height:60vh;text-align:center;gap:16px;">
+          <div style="font-size:56px;">🔒</div>
+          <h2 style="color:#333;font-size:22px;">Access Restricted</h2>
+          <p style="color:#666;font-size:15px;max-width:380px;">
+            You do not have permission to view appraisal records.<br>
+            Please contact your administrator.
+          </p>
+          <button onclick="window.location.href='/dashboard'"
+                  style="margin-top:8px;background:#1a73e8;color:white;border:none;
+                         padding:10px 24px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;">
+            ← Back to Dashboard
+          </button>
+        </div>`;
+      // Prevent the rest of onload from running
+      throw new Error('ACCESS_DENIED');
+    }
   }
 
   async function loadLocations() {
@@ -487,10 +517,70 @@
     });
   });
 
+  // ── Seed appraisals from employee records ───────────────────
+  async function seedFromEmployees() {
+    // Current FY based on today's date (June–May)
+    const now = new Date();
+    const fyStart = now.getMonth() >= 5 ? now.getFullYear() : now.getFullYear() - 1;
+    const defaultFY = fyStart + '-' + String(fyStart + 1).slice(2);
+
+    const fy = prompt(
+      'Enter the Financial Year to seed (e.g. ' + defaultFY + ').\n\n' +
+      'Employees with no salary on record will be skipped.\n' +
+      'Employees who already have an appraisal for that FY will be skipped (safe to re-run).',
+      defaultFY
+    );
+    if (!fy || !fy.trim()) return;
+
+    const overwriteAns = confirm(
+      'Overwrite existing appraisal records for FY ' + fy.trim() + '?\n\n' +
+      'OK = Yes, overwrite all (use latest employee salary)\n' +
+      'Cancel = No, only fill in missing records'
+    );
+
+    const btn = document.getElementById('seedBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Seeding…';
+
+    try {
+      // Apply any active location/section/profile filters from the grid dropdowns
+      const location = document.getElementById('filterLocation') ? document.getElementById('filterLocation').value : '';
+      const section  = document.getElementById('filterSection')  ? document.getElementById('filterSection').value  : '';
+      const profile  = document.getElementById('filterProfile')  ? document.getElementById('filterProfile').value  : '';
+
+      const res = await fetch('/api/appraisals/seed-from-employees', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          financialYear: fy.trim(),
+          location: location || undefined,
+          section:  section  || undefined,
+          profile:  profile  || undefined,
+          overwrite: overwriteAns
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showAlert('alertSuccess', '✅ ' + data.message +
+          (data.errors && data.errors.length ? ' (' + data.errors.length + ' errors — see console)' : ''));
+        if (data.errors && data.errors.length) console.warn('Seed errors:', data.errors);
+        await loadApGrid();
+      } else {
+        showAlert('alertError', '❌ ' + data.message);
+      }
+    } catch (e) {
+      showAlert('alertError', 'Error: ' + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '⚡ Seed from Employee Records';
+    }
+  }
+
   function showAlert(id, msg) {
     const el = document.getElementById(id);
     el.textContent = msg; el.style.display = 'block';
-    setTimeout(() => el.style.display = 'none', 4000);
+    setTimeout(() => el.style.display = 'none', 5000);
   }
 </script>
 <script src="/js/table-sort.js"></script>

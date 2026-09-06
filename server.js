@@ -79,6 +79,7 @@ app.use('/api/schoolinfo', require('./routes/schoolinfo'));
 app.use('/api/email', require('./routes/email'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/loans', require('./routes/loans'));
+app.use('/api/reports', require('./routes/reports'));
 
 // Page Routes
 app.get('/', (req, res) => {
@@ -165,6 +166,16 @@ app.get('/supervisor-mapping', (req, res) => {
 });
 app.get('/masters', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'pages', 'masters.html'));
+});
+
+// Health check — used by load balancers and uptime monitors
+app.get('/healthz', (req, res) => {
+  const dbState = mongoose.connection.readyState;
+  // 0=disconnected, 1=connected, 2=connecting, 3=disconnecting
+  if (dbState === 1) {
+    return res.json({ status: 'ok', db: 'connected' });
+  }
+  return res.status(503).json({ status: 'degraded', db: 'disconnected' });
 });
 
 // Test route

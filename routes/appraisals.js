@@ -8,10 +8,21 @@ const { logAudit } = require('./security');
 // GET all appraisal records
 router.get('/', isLoggedIn, async (req, res) => {
   try {
+    const user = req.session.user;
     let filter = {};
     if (req.query.financialYear) filter.financialYear = req.query.financialYear;
-    if (req.query.location) filter.location = req.query.location;
-    if (req.query.ein) filter.ein = req.query.ein;
+    if (req.query.location)      filter.location      = req.query.location;
+    if (req.query.ein)           filter.ein           = req.query.ein;
+
+    // Appraisals contain salary data — only admin and management may access them.
+    const canAccess = user.role === 'admin' || user.role === 'management';
+    if (!canAccess) {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have permission to view appraisal records.'
+      });
+    }
+
     const records = await Appraisal.find(filter).sort({ financialYear: -1, ein: 1 });
     return res.json({ success: true, records });
   } catch (err) {
@@ -19,9 +30,13 @@ router.get('/', isLoggedIn, async (req, res) => {
   }
 });
 
-// FIND employee by EIN or Name
+// FIND employee by EIN or Name (admin/management only — used on the appraisals page)
 router.get('/find-employee/:search', isLoggedIn, async (req, res) => {
   try {
+    const user = req.session.user;
+    if (user.role !== 'admin' && user.role !== 'management') {
+      return res.status(403).json({ success: false, message: 'You do not have permission to view appraisal records.' });
+    }
     const search = req.params.search.trim();
     let employee = await Employee.findOne({ ein: search.toUpperCase(), isActive: true });
     if (!employee) {
@@ -30,6 +45,7 @@ router.get('/find-employee/:search', isLoggedIn, async (req, res) => {
       });
     }
     if (!employee) return res.status(404).json({ success: false, message: 'Employee not found: ' + search });
+
     return res.json({ success: true, employee });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
@@ -68,6 +84,85 @@ router.post('/', isLoggedIn, isAdmin, async (req, res) => {
     await logAudit(req.session.user.id, req.session.user.username, req.session.user.fullName, req.session.user.role,
       'SALARY_CHANGED', `Appraisal saved for ${ein} FY ${financialYear} — ₹${monthlySalary}/month`, ip);
     return res.json({ success: true, message: 'Appraisal record saved successfully', appraisal });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// SEED appraisals from current employee monthlySalary (one-time FY bootstrap)
+// POST /api/appraisals/seed-from-employees
+// Body: { financialYear, location?, section?, profile?, overwrite? }
+//   overwrite=false (default) → skip employees who already have an appraisal for that FY
+//   overwrite=true            → update even existing records
+router.post('/seed-from-employees', isLoggedIn, isAdmin, async (req, res) => {
+  try {
+    const { financialYear, location, section, profile, overwrite } = req.body;
+    if (!financialYear) {
+      return res.status(400).json({ success: false, message: 'financialYear is required (e.g. 2026-27)' });
+    }
+
+    // Build employee filter
+    const empFilter = { isActive: true };
+    if (location) empFilter.location = location;
+    if (section)  empFilter.section  = section;
+    if (profile)  empFilter.profile  = profile;
+
+    const employees = await Employee.find(empFilter);
+    if (!employees.length) {
+      return res.status(404).json({ success: false, message: 'No active employees found with the given filters' });
+    }
+
+    let seeded = 0, skipped = 0, noSalary = 0;
+    const errors = [];
+
+    for (const emp of employees) {
+      try {
+        const salary = emp.monthlySalary || 0;
+        if (salary <= 0) { noSalary++; continue; }
+
+        // Check if an appraisal already exists for this FY
+        if (!overwrite) {
+          const existing = await Appraisal.findOne({ ein: emp.ein, financialYear });
+          if (existing && existing.monthlySalary > 0) { skipped++; continue; }
+        }
+
+        await Appraisal.findOneAndUpdate(
+          { ein: emp.ein, financialYear },
+          {
+            ein: emp.ein,
+            employeeId: emp._id,
+            employeeName: emp.employeeName,
+            location: emp.location,
+            section: emp.section,
+            profile: emp.profile,
+            financialYear,
+            monthlySalary: salary,
+            ctcAnnual: salary * 12,
+            remarks: 'Seeded from employee record',
+            addedBy: req.session.user.username,
+            updatedAt: new Date()
+          },
+          { upsert: true, new: true }
+        );
+        seeded++;
+      } catch (e) {
+        errors.push({ ein: emp.ein, name: emp.employeeName, error: e.message });
+      }
+    }
+
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+    await logAudit(
+      req.session.user.id, req.session.user.username, req.session.user.fullName, req.session.user.role,
+      'SALARY_CHANGED',
+      `Seed appraisals FY ${financialYear} from employee records — seeded: ${seeded}, skipped: ${skipped}, no-salary: ${noSalary}`,
+      ip
+    );
+
+    return res.json({
+      success: true,
+      message: `FY ${financialYear} appraisals seeded — Created/updated: ${seeded}, Already existed (skipped): ${skipped}, No salary on record (skipped): ${noSalary}`,
+      seeded, skipped, noSalary, errors
+    });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }

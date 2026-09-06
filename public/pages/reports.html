@@ -55,6 +55,7 @@
     <button class="tab active" id="tabSummary" onclick="switchTab('Summary')">📊 Monthly Summary</button>
     <button class="tab" id="tabEmployee" onclick="switchTab('Employee')">👤 Employee-wise</button>
     <button class="tab" id="tabStatutory" onclick="switchTab('Statutory')">📋 Statutory</button>
+    <button class="tab" id="tabDownloads" onclick="switchTab('Downloads')">⬇️ Downloads</button>
   </div>
 
   <!-- TAB 1: MONTHLY SUMMARY -->
@@ -245,6 +246,111 @@
       </div>
     </div>
   </div>
+
+  <!-- TAB 4: DOWNLOADS & COMPLIANCE -->
+  <div id="sectionDownloads" class="tab-section">
+
+    <!-- Bank Salary Advice -->
+    <div class="card" style="margin-bottom:20px;">
+      <div class="card-header">
+        <h3>🏦 Bank Salary Advice</h3>
+        <span style="font-size:12px;color:#666;">Excel download for bank salary transfer (Bank Transfer employees only)</span>
+      </div>
+      <div class="card-body">
+        <div style="display:flex;gap:15px;flex-wrap:wrap;align-items:flex-end;">
+          <div class="form-group">
+            <label>Month</label>
+            <select id="dlMonth">
+              <option value="">Select Month</option>
+              <option>January</option><option>February</option><option>March</option>
+              <option>April</option><option>May</option><option>June</option>
+              <option>July</option><option>August</option><option>September</option>
+              <option>October</option><option>November</option><option>December</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Year</label>
+            <select id="dlYear"></select>
+          </div>
+          <div class="form-group">
+            <label>Location (optional)</label>
+            <select id="dlLocation">
+              <option value="">All Locations</option>
+            </select>
+          </div>
+          <button class="btn-success" id="dlBankBtn" onclick="downloadBankAdvice()">⬇️ Download Excel</button>
+        </div>
+        <p style="font-size:12px;color:#888;margin-top:10px;">
+          Includes: EIN, Employee Name, Bank Name, Account Number, IFSC Code, Net Salary — for approved/locked payrolls only.
+        </p>
+      </div>
+    </div>
+
+    <!-- PF ECR -->
+    <div class="card" style="margin-bottom:20px;">
+      <div class="card-header">
+        <h3>🏛️ PF ECR (EPFO Filing)</h3>
+        <span style="font-size:12px;color:#666;">ECR2-format text file for uploading to the EPFO portal</span>
+      </div>
+      <div class="card-body">
+        <div style="display:flex;gap:15px;flex-wrap:wrap;align-items:flex-end;">
+          <div class="form-group">
+            <label>Month</label>
+            <select id="ecrMonth">
+              <option value="">Select Month</option>
+              <option>January</option><option>February</option><option>March</option>
+              <option>April</option><option>May</option><option>June</option>
+              <option>July</option><option>August</option><option>September</option>
+              <option>October</option><option>November</option><option>December</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Year</label>
+            <select id="ecrYear"></select>
+          </div>
+          <div class="form-group">
+            <label>Location (optional)</label>
+            <select id="ecrLocation">
+              <option value="">All Locations</option>
+            </select>
+          </div>
+          <button class="btn-success" id="dlEcrBtn" onclick="downloadPFECR()">⬇️ Download ECR</button>
+        </div>
+        <p style="font-size:12px;color:#888;margin-top:10px;">
+          ECR2 format: UAN, Name, Gross Wages, EPF Wages, EPS Wages, Contributions, NCP Days — for PF-applicable employees only.
+          Ensure UAN numbers are set in employee records before generating.
+        </p>
+      </div>
+    </div>
+
+    <!-- YTD Summary -->
+    <div class="card">
+      <div class="card-header">
+        <h3>📅 Year-to-Date Salary Summary</h3>
+        <span style="font-size:12px;color:#666;">Per-employee salary totals across a full financial year (June–May)</span>
+      </div>
+      <div class="card-body">
+        <div style="display:flex;gap:15px;flex-wrap:wrap;align-items:flex-end;">
+          <div class="form-group">
+            <label>Financial Year</label>
+            <select id="ytdFY"></select>
+          </div>
+          <div class="form-group">
+            <label>Location (optional)</label>
+            <select id="ytdLocation">
+              <option value="">All Locations</option>
+            </select>
+          </div>
+          <button class="btn-success" id="dlYtdBtn" onclick="downloadYTD()">⬇️ Download Excel</button>
+        </div>
+        <p style="font-size:12px;color:#888;margin-top:10px;">
+          Aggregates gross, PF, PT, ESIC, TDS, loan deductions and net pay from all approved payrolls in the selected FY.
+        </p>
+      </div>
+    </div>
+
+  </div><!-- /sectionDownloads -->
+
 </div>
 
 <script>
@@ -261,6 +367,7 @@
     await loadMasters();
     populateYears();
     setDefaults();
+    await populateDownloadLocations();
   };
 
   async function checkAuth() {
@@ -294,20 +401,42 @@
 
   function populateYears() {
     const now = new Date().getFullYear();
-    ['sumYear','empRepYear','statYear'].forEach(id => {
+    ['sumYear','empRepYear','statYear','dlYear','ecrYear'].forEach(id => {
       const el = document.getElementById(id);
       el.innerHTML = '<option value="">Select Year</option>';
       for (let y = now + 1; y >= now - 3; y--) {
         el.innerHTML += '<option value="' + y + '"' + (y === now ? ' selected' : '') + '>' + y + '</option>';
       }
     });
+    // Financial year selector (June-May): FY 2022-2023 means June 2022 to May 2023
+    const fyEl = document.getElementById('ytdFY');
+    fyEl.innerHTML = '';
+    for (let s = now; s >= now - 4; s--) {
+      const label = s + '-' + (s + 1);
+      fyEl.innerHTML += '<option value="' + label + '"' + (s === now - 1 ? ' selected' : '') + '>' + label + '</option>';
+    }
   }
 
   function setDefaults() {
     const now = new Date();
-    ['sumMonth','empRepMonth','statMonth'].forEach(id => {
+    ['sumMonth','empRepMonth','statMonth','dlMonth','ecrMonth'].forEach(id => {
       document.getElementById(id).value = MONTHS[now.getMonth()];
     });
+  }
+
+  // Populate location dropdowns (Downloads tab)
+  async function populateDownloadLocations() {
+    try {
+      const res  = await fetch('/api/settings');
+      const data = await res.json();
+      const locs = (data.settings && data.settings.locationSettings)
+                   ? data.settings.locationSettings.map(ls => ls.location) : [];
+      ['dlLocation','ecrLocation','ytdLocation'].forEach(id => {
+        const el = document.getElementById(id);
+        el.innerHTML = '<option value="">All Locations</option>';
+        locs.forEach(l => { el.innerHTML += '<option value="' + l + '">' + l + '</option>'; });
+      });
+    } catch (e) { /* silently skip — optional filter */ }
   }
 
   function switchTab(tab) {
@@ -315,6 +444,92 @@
     document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
     document.getElementById('tab' + tab).classList.add('active');
     document.getElementById('section' + tab).classList.add('active');
+  }
+
+  // ── DOWNLOAD FUNCTIONS ──────────────────────────────────────
+
+  async function downloadBankAdvice() {
+    const month    = document.getElementById('dlMonth').value;
+    const year     = document.getElementById('dlYear').value;
+    const location = document.getElementById('dlLocation').value;
+    if (!month || !year) { alert('Please select month and year'); return; }
+
+    const btn = document.getElementById('dlBankBtn');
+    btn.disabled = true; btn.textContent = '⏳ Generating…';
+    try {
+      let url = '/api/reports/bank-advice?month=' + month + '&year=' + year;
+      if (location) url += '&location=' + encodeURIComponent(location);
+      const res = await fetch(url);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(err.message || 'Failed to generate bank advice');
+        return;
+      }
+      const blob = await res.blob();
+      triggerDownload(blob, 'Bank_Advice_' + month + '_' + year + '.xlsx');
+    } catch (e) {
+      alert('Error: ' + e.message);
+    } finally {
+      btn.disabled = false; btn.textContent = '⬇️ Download Excel';
+    }
+  }
+
+  async function downloadPFECR() {
+    const month    = document.getElementById('ecrMonth').value;
+    const year     = document.getElementById('ecrYear').value;
+    const location = document.getElementById('ecrLocation').value;
+    if (!month || !year) { alert('Please select month and year'); return; }
+
+    const btn = document.getElementById('dlEcrBtn');
+    btn.disabled = true; btn.textContent = '⏳ Generating…';
+    try {
+      let url = '/api/reports/pf-ecr?month=' + month + '&year=' + year;
+      if (location) url += '&location=' + encodeURIComponent(location);
+      const res = await fetch(url);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(err.message || 'Failed to generate PF ECR');
+        return;
+      }
+      const blob = await res.blob();
+      triggerDownload(blob, 'PF_ECR_' + month + '_' + year + '.txt');
+    } catch (e) {
+      alert('Error: ' + e.message);
+    } finally {
+      btn.disabled = false; btn.textContent = '⬇️ Download ECR';
+    }
+  }
+
+  async function downloadYTD() {
+    const fy       = document.getElementById('ytdFY').value;
+    const location = document.getElementById('ytdLocation').value;
+    if (!fy) { alert('Please select a financial year'); return; }
+
+    const btn = document.getElementById('dlYtdBtn');
+    btn.disabled = true; btn.textContent = '⏳ Generating…';
+    try {
+      let url = '/api/reports/ytd?financialYear=' + fy;
+      if (location) url += '&location=' + encodeURIComponent(location);
+      const res = await fetch(url);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(err.message || 'Failed to generate YTD summary');
+        return;
+      }
+      const blob = await res.blob();
+      triggerDownload(blob, 'YTD_Summary_FY' + fy + '.xlsx');
+    } catch (e) {
+      alert('Error: ' + e.message);
+    } finally {
+      btn.disabled = false; btn.textContent = '⬇️ Download Excel';
+    }
+  }
+
+  function triggerDownload(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a   = document.createElement('a');
+    a.href = url; a.download = filename; document.body.appendChild(a);
+    a.click(); a.remove(); URL.revokeObjectURL(url);
   }
 
   // ── TAB 1: MONTHLY SUMMARY ──────────────────────────────

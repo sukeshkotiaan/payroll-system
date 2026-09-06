@@ -23,6 +23,49 @@ function getFYForMonth(month, year) {
   return fyStart + '-' + String(fyStart + 1).slice(2);
 }
 
+// "2025-26" → "2024-25"
+function getPrevFY(fy) {
+  const start = parseInt(fy.split('-')[0]);
+  return (start - 1) + '-' + String(start).slice(2);
+}
+
+// Builds an appraisal map for (location, section, profile) for the given FY,
+// automatically carrying forward the previous FY's salary for employees who
+// have no current-FY appraisal yet.
+// Returns { appraisalMap, carriedForwardEINs }
+async function buildAppraisalMap(location, section, profile, currentFY, employees) {
+  // 1. Fetch current FY appraisals
+  const appraisals = await Appraisal.find({ location, section, profile, financialYear: currentFY });
+  const appraisalMap = {};
+  appraisals.forEach(a => { appraisalMap[a.ein] = a.toObject ? a.toObject() : a; });
+
+  // 2. Find which employees have no valid current-FY salary
+  const needCarry = employees.filter(emp => {
+    const ap = appraisalMap[emp.ein];
+    return !ap || !(ap.monthlySalary > 0);
+  });
+
+  const carriedForwardEINs = new Set();
+
+  if (needCarry.length > 0) {
+    const prevFY = getPrevFY(currentFY);
+    const prevAppraisals = await Appraisal.find({
+      location, section, profile, financialYear: prevFY,
+      ein: { $in: needCarry.map(e => e.ein) }
+    });
+    prevAppraisals.forEach(a => {
+      const obj = a.toObject ? a.toObject() : a;
+      if (obj.monthlySalary > 0) {
+        // Mark as carry-forward so the caller can note it in remarks
+        appraisalMap[obj.ein] = { ...obj, _carriedForward: true, _fromFY: prevFY };
+        carriedForwardEINs.add(obj.ein);
+      }
+    });
+  }
+
+  return { appraisalMap, carriedForwardEINs };
+}
+
 function getGroupName(section, location, profile) {
   if (section === 'State') return 'Xaviers ' + location;
   if (section === 'Global' && profile === 'Teaching') return 'Global Teaching';
@@ -225,15 +268,13 @@ router.post('/process', isLoggedIn, isAdmin, async (req, res) => {
       );
     }
 
-    // Fetch Appraisal records for current FY for this group
+    // Build appraisal map — carries forward prev-FY salary when no current-FY record exists
     const currentFY = getFYForMonth(month, year);
-    const appraisals = await Appraisal.find({
-      location, section, profile, financialYear: currentFY
-    });
-    const appraisalMap = {};
-    appraisals.forEach(a => { appraisalMap[a.ein] = a; });
+    const { appraisalMap, carriedForwardEINs } = await buildAppraisalMap(
+      location, section, profile, currentFY, employees
+    );
 
-    // Check for employees missing a valid appraisal for current FY
+    // Block only if an employee has NEITHER a current nor a previous FY appraisal
     const missingAppraisal = [];
     for (const emp of employees) {
       const ap = appraisalMap[emp.ein];
@@ -251,7 +292,7 @@ router.post('/process', isLoggedIn, isAdmin, async (req, res) => {
     if (missingAppraisal.length > 0) {
       return res.status(400).json({
         success: false,
-        message: 'Cannot process payroll: ' + missingAppraisal.length + ' employee(s) missing appraisal for FY ' + currentFY,
+        message: 'Cannot process payroll: ' + missingAppraisal.length + ' employee(s) have no appraisal for FY ' + currentFY + ' (and no previous FY salary to carry forward from)',
         appraisalMissing: true,
         financialYear: currentFY,
         missingList: missingAppraisal
@@ -272,7 +313,7 @@ router.post('/process', isLoggedIn, isAdmin, async (req, res) => {
       const attRecord = attendance.records.find(r => r.ein === emp.ein);
       if (!attRecord) continue;
 
-      // Use appraisal salary as the source of truth for current FY
+      // Use appraisal salary as the source of truth; carry-forward noted in remarks
       const ap = appraisalMap[emp.ein];
       const empForCalc = { ...emp.toObject(), monthlySalary: ap.monthlySalary };
 
@@ -288,6 +329,9 @@ router.post('/process', isLoggedIn, isAdmin, async (req, res) => {
         pfApplicable: emp.pfApplicable,
         esicApplicable: emp.esicApplicable,
         ptApplicable: emp.ptApplicable,
+        remarks: carriedForwardEINs.has(emp.ein)
+          ? '[Salary carried fwd from FY ' + ap._fromFY + ']'
+          : '',
         ...calc
       });
 
@@ -658,14 +702,12 @@ router.post('/process-all', isLoggedIn, isAdmin, async (req, res) => {
           );
         }
 
-        // Fetch Appraisal records for current FY for this group
+        // Build appraisal map — carries forward prev-FY salary when no current-FY record exists
         const groupFY = getFYForMonth(month, year);
-        const groupAppraisals = await Appraisal.find({
-          location, section, profile, financialYear: groupFY
-        });
-        const groupAppraisalMap = {};
-        groupAppraisals.forEach(a => { groupAppraisalMap[a.ein] = a; });
+        const { appraisalMap: groupAppraisalMap, carriedForwardEINs: groupCarriedEINs } =
+          await buildAppraisalMap(location, section, profile, groupFY, employees);
 
+        // Skip this group only if some employees have NO salary record at all (not even prev FY)
         const groupMissing = employees.filter(emp => {
           const ap = groupAppraisalMap[emp.ein];
           return !ap || !ap.monthlySalary || ap.monthlySalary <= 0;
@@ -674,7 +716,7 @@ router.post('/process-all', isLoggedIn, isAdmin, async (req, res) => {
         if (groupMissing.length > 0) {
           results.push({
             group: getGroupName(section, location, profile),
-            status: 'Skipped - ' + groupMissing.length + ' employee(s) missing appraisal for FY ' + groupFY,
+            status: 'Skipped — ' + groupMissing.length + ' employee(s) have no appraisal for FY ' + groupFY + ' (and no previous FY to carry forward from)',
             missingList: groupMissing.map(e => ({ ein: e.ein, employeeName: e.employeeName }))
           });
           continue;
@@ -695,7 +737,11 @@ router.post('/process-all', isLoggedIn, isAdmin, async (req, res) => {
             employeeName: emp.employeeName, designation: emp.designation,
             gender: emp.gender || '', department: emp.department || '',
             pfApplicable: emp.pfApplicable, esicApplicable: emp.esicApplicable,
-            ptApplicable: emp.ptApplicable, ...calc
+            ptApplicable: emp.ptApplicable,
+            remarks: groupCarriedEINs.has(emp.ein)
+              ? '[Salary carried fwd from FY ' + ap._fromFY + ']'
+              : '',
+            ...calc
           });
           totalGross += calc.grossSalary;
           totalPF += calc.pfDeduction;

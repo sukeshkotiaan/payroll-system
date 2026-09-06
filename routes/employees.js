@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Employee    = require('../models/Employee');
 const ReservedEIN = require('../models/ReservedEIN');
-const { isLoggedIn, isAdmin, isSystemAdmin } = require('../middleware/auth');
+const { isLoggedIn, isAdmin, isSystemAdmin, isAccountantOrAdmin } = require('../middleware/auth');
 const { logAudit } = require('./security');
 const multer = require('multer');
 const path = require('path');
@@ -44,6 +44,20 @@ const excelUpload = multer({
     cb(new Error('Only .xlsx files are allowed'));
   }
 });
+
+// ── PII projection — which sensitive fields each role may see ─────────────────
+// Returns a Mongoose exclusion string, or null for full access.
+function piiProjection(role) {
+  if (role === 'admin' || role === 'management') return null; // unrestricted
+  if (role === 'accountant') {
+    // Accountants handle payroll/bank — hide government IDs only
+    return '-panNumber -aadhaarNumber';
+  }
+  // supervisor / any other authenticated role: work fields only
+  return '-panNumber -aadhaarNumber -bankName -accountNumber -ifscCode ' +
+         '-accountHolderName -bankVerificationStatus -bankVerifiedBy -bankVerifiedAt ' +
+         '-monthlySalary -ctcAnnual -ctcMonthly -basic -hraAllowance -pf -pt';
+}
 
 // ─── EIN HELPERS (mirrors /api/reserved-eins logic) ──────────────────────────
 
@@ -173,17 +187,54 @@ router.get('/', isLoggedIn, async (req, res) => {
   try {
     const user = req.session.user;
     let filter = {};
+
+    // Role-based data scope
     if (user.role === 'accountant') {
       filter.location = user.branch;
       filter.isRestricted = false;
     }
-    if (req.query.location) filter.location = req.query.location;
-    if (req.query.section) filter.section = req.query.section;
-    if (req.query.profile) filter.profile = req.query.profile;
+
+    // Standard filters
+    if (req.query.location)   filter.location   = req.query.location;
+    if (req.query.section)    filter.section    = req.query.section;
+    if (req.query.profile)    filter.profile    = req.query.profile;
     if (req.query.department) filter.department = req.query.department;
-    if (req.query.status) filter.isActive = req.query.status === 'active';
-    const employees = await Employee.find(filter).sort({ ein: 1 });
-    return res.json({ success: true, employees });
+    if (req.query.status)     filter.isActive   = req.query.status === 'active';
+
+    // Server-side search across EIN and name
+    if (req.query.search) {
+      const q = req.query.search.trim();
+      if (q.length >= 1) {
+        filter.$or = [
+          { ein: { $regex: '^' + q, $options: 'i' } },
+          { employeeName: { $regex: q, $options: 'i' } }
+        ];
+      }
+    }
+
+    // Pagination: skip when the caller pins all three group dimensions
+    // (attendance/payroll pages need every employee in a group).
+    // Otherwise default to 50 per page so large all-employee queries are bounded.
+    const isGroupScoped = req.query.location && req.query.section && req.query.profile;
+    const page  = Math.max(1, parseInt(req.query.page)  || 1);
+    const limit = isGroupScoped ? 0 : Math.min(500, parseInt(req.query.limit) || 50);
+    const skip  = isGroupScoped ? 0 : (page - 1) * limit;
+
+    const projection = piiProjection(user.role);
+    let q = Employee.find(filter).sort({ ein: 1 });
+    if (projection) q = q.select(projection);
+    if (!isGroupScoped) q = q.skip(skip).limit(limit);
+
+    const [employees, total] = await Promise.all([
+      q,
+      Employee.countDocuments(filter)
+    ]);
+
+    return res.json({
+      success: true,
+      employees,
+      pagination: { page, limit: isGroupScoped ? total : limit, total, pages: isGroupScoped ? 1 : Math.ceil(total / (limit || 1)) }
+    });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
@@ -220,7 +271,10 @@ router.get('/search', isLoggedIn, async (req, res) => {
 
 router.get('/:id', isLoggedIn, async (req, res) => {
   try {
-    const employee = await Employee.findById(req.params.id);
+    const projection = piiProjection(req.session.user.role);
+    let q = Employee.findById(req.params.id);
+    if (projection) q = q.select(projection);
+    const employee = await q;
     if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
     return res.json({ success: true, employee });
   } catch (err) {
@@ -288,7 +342,7 @@ router.post('/', isLoggedIn, isAdmin, (req, res, next) => {
 // When the client sends JSON, express.json() has already parsed req.body
 // and multer.single() is a no-op (non-multipart request passes through).
 // When the client sends FormData (photo upload), multer parses req.body.
-router.put('/:id', isLoggedIn, isAdmin, (req, res, next) => {
+router.put('/:id', isLoggedIn, isAccountantOrAdmin, (req, res, next) => {
   // Only run multer if the request is multipart (has a photo)
   if (req.is('multipart/form-data')) {
     return upload.single('photo')(req, res, next);
