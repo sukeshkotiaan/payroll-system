@@ -61,11 +61,13 @@
     .table-card-header h3 { font-size: 15px; color: #333; }
     table { width: 100%; border-collapse: collapse; font-size: 12px; }
     th {
-      background: #f8f9fa; padding: 10px 12px; text-align: left;
-      font-weight: 600; color: #555; border-bottom: 1px solid #eee; white-space: nowrap;
+      background: #f0f2f5; padding: 9px 11px; text-align: left;
+      font-weight: 600; color: #444; border: 1px solid #dde1e7; white-space: nowrap;
     }
-    td { padding: 10px 12px; border-bottom: 1px solid #f5f5f5; color: #333; }
-    tr:hover { background: #f8f9ff; }
+    td { padding: 8px 11px; border: 1px solid #e8eaed; color: #333; vertical-align: middle; }
+    tr:hover td { background: #f0f4ff; }
+    tbody tr:nth-child(even) td { background: #fafbfc; }
+    tbody tr:nth-child(even):hover td { background: #f0f4ff; }
     .badge { padding: 3px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
     .badge-active { background: #e6f4ea; color: #34a853; }
     .badge-inactive { background: #fce8e6; color: #ea4335; }
@@ -317,32 +319,34 @@
         </div>
       </div>
 
-      <div class="section-title">🏦 Bank Details <span id="bankStatusBadge" style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;margin-left:8px;"></span></div>
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Bank Name</label>
-          <input type="text" id="bankName" placeholder="e.g. HDFC Bank">
+      <div id="bankDetailsSection">
+        <div class="section-title">🏦 Bank Details <span id="bankStatusBadge" style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;margin-left:8px;"></span></div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Bank Name</label>
+            <input type="text" id="bankName" placeholder="e.g. HDFC Bank">
+          </div>
+          <div class="form-group">
+            <label>Account Number</label>
+            <input type="text" id="accountNumber" placeholder="e.g. 50100123456789" onblur="checkDuplicateAccount()">
+            <div id="duplicateAccountWarning" style="display:none;font-size:11px;color:#d97706;background:#fef3c7;padding:4px 8px;border-radius:4px;margin-top:4px;"></div>
+          </div>
+          <div class="form-group">
+            <label>IFSC Code</label>
+            <input type="text" id="ifscCode" placeholder="e.g. HDFC0001234" style="text-transform:uppercase;">
+          </div>
+          <div class="form-group">
+            <label>Account Holder Name</label>
+            <input type="text" id="accountHolderName" placeholder="As per bank records">
+          </div>
         </div>
-        <div class="form-group">
-          <label>Account Number</label>
-          <input type="text" id="accountNumber" placeholder="e.g. 50100123456789" onblur="checkDuplicateAccount()">
-          <div id="duplicateAccountWarning" style="display:none;font-size:11px;color:#d97706;background:#fef3c7;padding:4px 8px;border-radius:4px;margin-top:4px;"></div>
+        <div id="bankVerifySection" style="display:none;margin-top:10px;padding:10px 15px;background:#f8f9fa;border-radius:8px;">
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
+            <input type="checkbox" id="bankVerifyCheckbox" onchange="toggleBankVerify()">
+            <span>Mark bank details as Verified</span>
+          </label>
+          <div id="bankVerifyInfo" style="font-size:12px;color:#666;margin-top:5px;"></div>
         </div>
-        <div class="form-group">
-          <label>IFSC Code</label>
-          <input type="text" id="ifscCode" placeholder="e.g. HDFC0001234" style="text-transform:uppercase;">
-        </div>
-        <div class="form-group">
-          <label>Account Holder Name</label>
-          <input type="text" id="accountHolderName" placeholder="As per bank records">
-        </div>
-      </div>
-      <div id="bankVerifySection" style="display:none;margin-top:10px;padding:10px 15px;background:#f8f9fa;border-radius:8px;">
-        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
-          <input type="checkbox" id="bankVerifyCheckbox" onchange="toggleBankVerify()">
-          <span>Mark bank details as Verified</span>
-        </label>
-        <div id="bankVerifyInfo" style="font-size:12px;color:#666;margin-top:5px;"></div>
       </div>
 
       <div class="section-title">🎓 Education Qualifications</div>
@@ -370,9 +374,13 @@
         </div>
       </div>
       <div class="form-group" style="max-width:280px;margin-bottom:10px;">
-        <label>Salary in Cash (₹)</label>
-        <input type="number" id="salaryInCash" placeholder="0" min="0">
-        <div class="hint">Portion of salary paid in cash (if any)</div>
+        <label>Payment Mode</label>
+        <select id="paymentMode" onchange="onPaymentModeChange()">
+          <option value="Bank Transfer">Bank Transfer</option>
+          <option value="Cash">Cash</option>
+          <option value="Cheque">Cheque</option>
+        </select>
+        <div class="hint">How the salary is disbursed each month</div>
       </div>
       <div class="salary-preview" id="salaryPreview" style="display:none;">
         <div style="font-size:13px;font-weight:600;color:#333;">Monthly Breakdown — Editable</div>
@@ -647,7 +655,6 @@
       '<td>' + profileCompletionHTML(emp) + '</td>' +
       '<td>' +
       '<button class="btn-edit" onclick="editEmployee(\'' + emp._id + '\')">Edit</button>' +
-      '<button class="btn-secondary" style="margin-left:4px;padding:5px 10px;font-size:12px;" onclick="goToPayslip(\'' + emp.ein + '\')">Payslip</button>' +
       (emp.isActive && currentUser.role !== 'supervisor' ? '<button class="btn-secondary" style="margin-left:4px;padding:5px 10px;font-size:12px;" onclick="goToOfferLetterPopup(\'' + emp._id + '\')">Offer Letter</button>' : '') +
       (!emp.isActive ? '<button class="btn-secondary" style="margin-left:4px;padding:5px 10px;font-size:12px;" onclick="goToExperienceLetterPopup(\'' + emp._id + '\')">Exp. Letter</button>' : '') +
       (emp.isActive && (currentUser.role === 'admin' || currentUser.role === 'management') ? '<button class="btn-danger" onclick="goToExit()" style="margin-left:4px;">Exit</button>' : '') +
@@ -768,6 +775,12 @@
     return quals;
   }
 
+  function onPaymentModeChange() {
+    const mode = document.getElementById('paymentMode').value;
+    const bankSection = document.getElementById('bankDetailsSection');
+    bankSection.style.display = (mode === 'Bank Transfer') ? '' : 'none';
+  }
+
   function onMonthlyChange() {
     const monthly = parseFloat(document.getElementById('monthlySalary').value) || 0;
     if (monthly > 0) { document.getElementById('ctcAnnual').value = Math.round(monthly * 12); calculateSalary(); }
@@ -874,8 +887,10 @@
       'designationSelect','designationCustom','designation','employeeName',
       'dateOfBirth','dateOfJoining','panNumber','aadhaarNumber',
       'phoneNumber','email','address','uanNumber',
-      'monthlySalary','salaryInCash','ctcAnnual','ctcMonthly','basic','hraAllowance','pf','pt','ein'];
+      'monthlySalary','ctcAnnual','ctcMonthly','basic','hraAllowance','pf','pt','ein'];
     ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    document.getElementById('paymentMode').value = 'Bank Transfer';
+    document.getElementById('bankDetailsSection').style.display = '';
     document.getElementById('ageDisplay').textContent = '';
     document.getElementById('pfApplicable').checked = false;
     document.getElementById('esicApplicable').checked = false;
@@ -920,8 +935,9 @@
       document.getElementById('address').value = emp.address || '';
       document.getElementById('uanNumber').value = emp.uanNumber || '';
       document.getElementById('monthlySalary').value = emp.monthlySalary || Math.round(emp.ctcAnnual / 12) || '';
-      document.getElementById('salaryInCash').value = emp.salaryInCash || '';
       document.getElementById('ctcAnnual').value = emp.ctcAnnual || '';
+      document.getElementById('paymentMode').value = emp.paymentMode || 'Bank Transfer';
+      onPaymentModeChange();
       document.getElementById('pfApplicable').checked = emp.pfApplicable || false;
       document.getElementById('esicApplicable').checked = emp.esicApplicable || false;
       document.getElementById('ptApplicable').checked = emp.ptApplicable || false;
@@ -1069,16 +1085,20 @@
     // Collect all text/number fields into a plain object
     const textFields = ['location','section','profile','department','title','gender','designation',
       'employeeName','dateOfBirth','dateOfJoining','panNumber','aadhaarNumber',
-      'phoneNumber','email','address','uanNumber','monthlySalary','salaryInCash','ctcAnnual',
+      'phoneNumber','email','address','uanNumber','monthlySalary','ctcAnnual',
       'ctcMonthly','basic','hraAllowance','pf','pt','ein',
       'bankName','accountNumber','ifscCode','accountHolderName'];
     const payload = {};
     textFields.forEach(f => { const el = document.getElementById(f); if (el) payload[f] = el.value; });
+    payload.paymentMode = document.getElementById('paymentMode').value;
 
     // Bank verification status logic
-    const bankHasData = document.getElementById('bankName').value.trim() ||
+    const isBankTransfer = payload.paymentMode === 'Bank Transfer';
+    const bankHasData = isBankTransfer && (
+      document.getElementById('bankName').value.trim() ||
       document.getElementById('accountNumber').value.trim() ||
-      document.getElementById('ifscCode').value.trim();
+      document.getElementById('ifscCode').value.trim()
+    );
     let bankStatus = 'Not Filled';
     if (bankHasData) {
       bankStatus = window.currentBankStatus || 'Pending';

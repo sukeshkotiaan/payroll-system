@@ -31,7 +31,7 @@ const employeeSchema = new mongoose.Schema({
   uanNumber: { type: String, trim: true, default: '' },
   qualifications: { type: [qualificationSchema], default: [] },
   monthlySalary: { type: Number, default: 0 },
-  salaryInCash: { type: Number, default: 0 },
+  paymentMode: { type: String, enum: ['Bank Transfer', 'Cash', 'Cheque'], default: 'Bank Transfer' },
   ctcAnnual: { type: Number, required: true },
   ctcMonthly: { type: Number, default: 0 },
   basic: { type: Number, default: 0 },
