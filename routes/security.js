@@ -76,7 +76,7 @@ router.post('/generate-otp', isLoggedIn, async (req, res) => {
   }
 });
 
-// VERIFY OTP
+// VERIFY OTP (with brute-force protection — max 5 attempts)
 router.post('/verify-otp', async (req, res) => {
   try {
     const { userId, code } = req.body;
@@ -84,7 +84,23 @@ router.post('/verify-otp', async (req, res) => {
 
     if (!otp) return res.status(400).json({ success: false, message: 'No OTP found. Please try logging in again.' });
     if (otp.expiresAt < new Date()) return res.status(400).json({ success: false, message: 'OTP has expired. Please login again.' });
-    if (otp.code !== code) return res.status(400).json({ success: false, message: 'Invalid OTP. Please check with Management.' });
+
+    const MAX_OTP_ATTEMPTS = 5;
+    if (otp.attempts >= MAX_OTP_ATTEMPTS) {
+      otp.used = true;
+      await otp.save();
+      return res.status(429).json({ success: false, message: 'Too many incorrect attempts. Please request a new OTP.' });
+    }
+
+    if (otp.code !== code) {
+      otp.attempts = (otp.attempts || 0) + 1;
+      await otp.save();
+      const remaining = MAX_OTP_ATTEMPTS - otp.attempts;
+      return res.status(400).json({
+        success: false,
+        message: `Invalid OTP. ${remaining} attempt${remaining === 1 ? '' : 's'} remaining.`
+      });
+    }
 
     otp.used = true;
     await otp.save();

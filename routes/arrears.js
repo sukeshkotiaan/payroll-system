@@ -2,7 +2,8 @@ const express = require('express');
 const router = express.Router();
 const Arrear = require('../models/Arrear');
 const Employee = require('../models/Employee');
-const { isLoggedIn } = require('../middleware/auth');
+const { isLoggedIn, isAccountantOrAdmin } = require('../middleware/auth');
+const { logAudit } = require('./security');
 
 // GET all arrears
 router.get('/', isLoggedIn, async (req, res) => {
@@ -39,8 +40,8 @@ router.get('/find-employee/:ein', isLoggedIn, async (req, res) => {
   }
 });
 
-// ADD arrear
-router.post('/', isLoggedIn, async (req, res) => {
+// ADD arrear (accountant/admin/management only)
+router.post('/', isLoggedIn, isAccountantOrAdmin, async (req, res) => {
   try {
     const { ein, month, year, type, amount, remarks } = req.body;
     if (!ein || !month || !year || !type || amount === undefined) {
@@ -62,14 +63,17 @@ router.post('/', isLoggedIn, async (req, res) => {
       remarks: remarks || '',
       addedBy: req.session.user.username
     });
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+    await logAudit(req.session.user.id, req.session.user.username, req.session.user.fullName, req.session.user.role,
+      'ARREAR_ADDED', `Added ${type} arrear ₹${amount} for ${ein} (${month} ${year})`, ip);
     return res.json({ success: true, message: 'Arrear added successfully', arrear });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
 });
 
-// UPDATE arrear
-router.put('/:id', isLoggedIn, async (req, res) => {
+// UPDATE arrear (accountant/admin/management only)
+router.put('/:id', isLoggedIn, isAccountantOrAdmin, async (req, res) => {
   try {
     const arrear = await Arrear.findById(req.params.id);
     if (!arrear) {
@@ -94,8 +98,8 @@ router.put('/:id', isLoggedIn, async (req, res) => {
   }
 });
 
-// DELETE arrear
-router.delete('/:id', isLoggedIn, async (req, res) => {
+// DELETE arrear (accountant/admin/management only)
+router.delete('/:id', isLoggedIn, isAccountantOrAdmin, async (req, res) => {
   try {
     const arrear = await Arrear.findById(req.params.id);
     if (!arrear) {

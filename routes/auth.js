@@ -13,7 +13,9 @@ const seedAdmin = async () => {
   try {
     const adminExists = await User.findOne({ role: 'admin' });
     if (!adminExists) {
-      const hashedPassword = await bcrypt.hash('Admin@1234', 12);
+      const crypto = require('crypto');
+      const rawPassword = crypto.randomBytes(10).toString('base64url'); // e.g. "a3Fk9mXqZp"
+      const hashedPassword = await bcrypt.hash(rawPassword, 12);
       await User.create({
         username: 'admin',
         password: hashedPassword,
@@ -21,7 +23,13 @@ const seedAdmin = async () => {
         role: 'admin',
         branch: 'all'
       });
-      console.log('✅ Default admin created → username: admin (change the password on first login)');
+      console.log('');
+      console.log('═══════════════════════════════════════════════════════');
+      console.log('  DEFAULT ADMIN CREATED — CHANGE THIS PASSWORD NOW');
+      console.log('  Username : admin');
+      console.log(`  Password : ${rawPassword}`);
+      console.log('═══════════════════════════════════════════════════════');
+      console.log('');
     } else {
       console.log('✅ Admin already exists');
     }

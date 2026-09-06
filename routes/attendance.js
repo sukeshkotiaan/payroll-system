@@ -2,7 +2,8 @@ const express = require('express');
 const router = express.Router();
 const Attendance = require('../models/Attendance');
 const Employee = require('../models/Employee');
-const { isLoggedIn } = require('../middleware/auth');
+const { isLoggedIn, isAdmin } = require('../middleware/auth');
+const { logAudit } = require('./security');
 
 const MONTHS = ['January','February','March','April','May','June',
   'July','August','September','October','November','December'];
@@ -201,13 +202,16 @@ router.patch('/:id/submit', isLoggedIn, async (req, res) => {
   }
 });
 
-// LOCK attendance
-router.patch('/:id/lock', isLoggedIn, async (req, res) => {
+// LOCK attendance (admin/management only)
+router.patch('/:id/lock', isLoggedIn, isAdmin, async (req, res) => {
   try {
     const attendance = await Attendance.findById(req.params.id);
     if (!attendance) return res.status(404).json({ success: false, message: 'Not found' });
     attendance.status = 'Locked';
     await attendance.save();
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+    await logAudit(req.session.user.id, req.session.user.username, req.session.user.fullName, req.session.user.role,
+      'ATTENDANCE_LOCKED', `Locked attendance for ${attendance.groupName} ${attendance.month} ${attendance.year}`, ip);
     return res.json({ success: true, message: 'Attendance locked' });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
@@ -235,28 +239,34 @@ router.delete('/:id', isLoggedIn, async (req, res) => {
 // REJECT attendance
 
 
-// APPROVE attendance
-router.patch('/:id/approve', isLoggedIn, async (req, res) => {
+// APPROVE attendance (admin/management only)
+router.patch('/:id/approve', isLoggedIn, isAdmin, async (req, res) => {
   try {
     const attendance = await Attendance.findById(req.params.id);
     if (!attendance) return res.status(404).json({ success: false, message: 'Not found' });
     attendance.status = 'Approved';
     attendance.updatedAt = new Date();
     await attendance.save();
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+    await logAudit(req.session.user.id, req.session.user.username, req.session.user.fullName, req.session.user.role,
+      'ATTENDANCE_APPROVED', `Approved attendance for ${attendance.groupName} ${attendance.month} ${attendance.year}`, ip);
     return res.json({ success: true, message: 'Attendance approved successfully' });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
 });
 
-// REJECT attendance - returns to Draft
-router.patch('/:id/reject', isLoggedIn, async (req, res) => {
+// REJECT attendance - returns to Draft (admin/management only)
+router.patch('/:id/reject', isLoggedIn, isAdmin, async (req, res) => {
   try {
     const attendance = await Attendance.findById(req.params.id);
     if (!attendance) return res.status(404).json({ success: false, message: 'Not found' });
     attendance.status = 'Draft';
     attendance.updatedAt = new Date();
     await attendance.save();
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+    await logAudit(req.session.user.id, req.session.user.username, req.session.user.fullName, req.session.user.role,
+      'ATTENDANCE_REJECTED', `Rejected attendance for ${attendance.groupName} ${attendance.month} ${attendance.year}`, ip);
     return res.json({ success: true, message: 'Attendance rejected and returned to Draft' });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });

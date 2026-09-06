@@ -12,19 +12,35 @@ const express = require('express');
 const mongoose = require('mongoose');
 const session = require('express-session');
 const MongoStore = require('connect-mongo');
+const rateLimit = require('express-rate-limit');
 const path = require('path');
 
 const app = express();
+
+// Trust Render.com / reverse-proxy so that req.ip resolves correctly
+app.set('trust proxy', 1);
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('✅ MongoDB Connected Successfully'))
   .catch(err => console.log('❌ MongoDB Connection Error:', err));
 
+// Rate limiting — login endpoint: max 10 attempts per IP per 15 minutes
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many login attempts. Please try again in 15 minutes.' }
+});
+
 // Middleware
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Apply login rate limiter early (before session middleware to save DB round-trips on blocked requests)
+app.use('/api/auth/login', loginLimiter);
 
 // Session
 app.use(session({

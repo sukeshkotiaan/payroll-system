@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const TDS = require('../models/TDS');
 const Employee = require('../models/Employee');
-const { isLoggedIn, isAdmin } = require('../middleware/auth');
+const { isLoggedIn, isAdmin, isAccountantOrAdmin } = require('../middleware/auth');
 
 // GET all TDS records
 router.get('/', isLoggedIn, async (req, res) => {
@@ -47,8 +47,8 @@ router.get('/for-payroll', isLoggedIn, async (req, res) => {
   }
 });
 
-// ADD or UPDATE TDS (upsert per employee per month)
-router.post('/', isLoggedIn, async (req, res) => {
+// ADD or UPDATE TDS (accountant/admin/management only)
+router.post('/', isLoggedIn, isAccountantOrAdmin, async (req, res) => {
   try {
     const { ein, month, year, amount, remarks } = req.body;
     if (!ein || !month || !year || amount === undefined) {

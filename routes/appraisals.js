@@ -3,6 +3,7 @@ const router = express.Router();
 const Appraisal = require('../models/Appraisal');
 const Employee = require('../models/Employee');
 const { isLoggedIn, isAdmin } = require('../middleware/auth');
+const { logAudit } = require('./security');
 
 // GET all appraisal records
 router.get('/', isLoggedIn, async (req, res) => {
@@ -35,8 +36,8 @@ router.get('/find-employee/:search', isLoggedIn, async (req, res) => {
   }
 });
 
-// ADD or UPDATE appraisal (upsert per employee per financial year)
-router.post('/', isLoggedIn, async (req, res) => {
+// ADD or UPDATE appraisal (admin/management only — salary change)
+router.post('/', isLoggedIn, isAdmin, async (req, res) => {
   try {
     const { ein, financialYear, monthlySalary, ctcAnnual, remarks } = req.body;
     if (!ein || !financialYear || monthlySalary === undefined || ctcAnnual === undefined) {
@@ -63,6 +64,9 @@ router.post('/', isLoggedIn, async (req, res) => {
       },
       { upsert: true, new: true }
     );
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+    await logAudit(req.session.user.id, req.session.user.username, req.session.user.fullName, req.session.user.role,
+      'SALARY_CHANGED', `Appraisal saved for ${ein} FY ${financialYear} — ₹${monthlySalary}/month`, ip);
     return res.json({ success: true, message: 'Appraisal record saved successfully', appraisal });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
