@@ -51,4 +51,10 @@ const attendanceSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 });
 
+// Prevent duplicate attendance records for the same group and month
+attendanceSchema.index(
+  { month: 1, year: 1, location: 1, section: 1, profile: 1 },
+  { unique: true, name: 'unique_attendance_group_month' }
+);
+
 module.exports = mongoose.model('Attendance', attendanceSchema);

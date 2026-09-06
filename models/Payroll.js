@@ -63,4 +63,10 @@ const payrollSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 });
 
+// Prevent duplicate payroll runs for the same group and month
+payrollSchema.index(
+  { month: 1, year: 1, location: 1, section: 1, profile: 1 },
+  { unique: true, name: 'unique_payroll_group_month' }
+);
+
 module.exports = mongoose.model('Payroll', payrollSchema);

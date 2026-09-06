@@ -2,7 +2,8 @@ const express = require('express');
 const router = express.Router();
 const Employee    = require('../models/Employee');
 const ReservedEIN = require('../models/ReservedEIN');
-const { isLoggedIn, isAdmin } = require('../middleware/auth');
+const { isLoggedIn, isAdmin, isSystemAdmin } = require('../middleware/auth');
+const { logAudit } = require('./security');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -428,7 +429,7 @@ router.post('/bulk-import', isLoggedIn, isAdmin, async (req, res) => {
 //   managementDesignations  — comma-separated list of designations that should get
 //                             reserved MGT EINs, e.g. "Principal,Director,Vice Principal"
 //
-router.post('/upload-excel', isLoggedIn, isAdmin, excelUpload.single('file'), async (req, res) => {
+router.post('/upload-excel', isLoggedIn, isSystemAdmin, excelUpload.single('file'), async (req, res) => {
   const tmpPath = req.file ? req.file.path : null;
 
   // Normalise a header string to a plain lowercase key for matching
@@ -468,6 +469,9 @@ router.post('/upload-excel', isLoggedIn, isAdmin, excelUpload.single('file'), as
       const deleted = await Employee.deleteMany({ ein: { $not: /^MGT-/i } });
       deletedCount = deleted.deletedCount;
       console.log('clearFirst: deleted', deletedCount, 'non-MGT employees');
+      const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+      await logAudit(req.session.user.id, req.session.user.username, req.session.user.fullName, req.session.user.role,
+        'EMPLOYEE_BULK_DELETE', `Clear & Re-import triggered — deleted ${deletedCount} non-MGT employees before import`, ip);
     }
 
     const workbook = new ExcelJS.Workbook();

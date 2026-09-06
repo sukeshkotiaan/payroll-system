@@ -5,6 +5,7 @@ const Attendance = require('../models/Attendance');
 const Employee = require('../models/Employee');
 const Settings = require('../models/Settings');
 const { isLoggedIn, isAdmin } = require('../middleware/auth');
+const { logAudit } = require('./security');
 const Arrear = require('../models/Arrear');
 const TDS = require('../models/TDS');
 const Loan = require('../models/Loan');
@@ -80,8 +81,11 @@ function calculatePayroll(emp, attendance, rules, month) {
     const pfAgeExempt = rules.pfAgeExemption === 'Yes';
     let ageExempt = false;
     if (pfAgeExempt && emp.dateOfBirth) {
-      const age = new Date().getFullYear() - new Date(emp.dateOfBirth).getFullYear();
-      if (age >= pfAge) ageExempt = true;
+      // Use exact birthdate — year subtraction can be off by up to 11 months
+      const dob = new Date(emp.dateOfBirth);
+      const retirementDate = new Date(dob);
+      retirementDate.setFullYear(retirementDate.getFullYear() + pfAge);
+      if (new Date() >= retirementDate) ageExempt = true;
     }
     if (!ageExempt) {
       pfDeduction = Math.min(parseFloat((basic * pfRate / 100).toFixed(2)), pfCap);
@@ -194,6 +198,30 @@ router.post('/process', isLoggedIn, isAdmin, async (req, res) => {
         success: false,
         message: 'Payroll is locked and cannot be reprocessed'
       });
+    }
+
+    // If reprocessing: reset any loan EMIs that were marked Paid in the previous run
+    // so they are included correctly in this run and not double-counted or skipped
+    if (payroll) {
+      const existingLoans = await Loan.find({ location, section, profile, status: { $in: ['Active', 'Closed'] } });
+      for (const loan of existingLoans) {
+        if (!loan.schedule) continue;
+        const sItem = loan.schedule.find(s => s.month === month && s.year === parseInt(year) && s.status === 'Paid' && String(s.paidInPayrollId) === String(payroll._id));
+        if (sItem) {
+          sItem.status = 'Pending';
+          sItem.paidInPayrollId = null;
+          loan.totalPaid = Math.max(0, parseFloat((loan.totalPaid - sItem.emiAmount).toFixed(2)));
+          loan.outstandingBalance = parseFloat((loan.outstandingBalance + sItem.emiAmount).toFixed(2));
+          if (loan.status === 'Closed') loan.status = 'Active';
+          loan.markModified('schedule');
+          await loan.save();
+        }
+      }
+      // Reset arrears that were pulled in the previous run back to unpulled
+      await Arrear.updateMany(
+        { location, section, profile, month, year: parseInt(year), pulledToPayroll: true, payrollId: payroll._id },
+        { pulledToPayroll: false, payrollId: null }
+      );
     }
 
     // Fetch Appraisal records for current FY for this group
@@ -339,10 +367,16 @@ router.post('/process', isLoggedIn, isAdmin, async (req, res) => {
         (record.pfDeduction + record.ptDeduction +
           record.esicDeduction + record.tdsDeduction + record.advance).toFixed(2)
       );
-      record.netSalary = parseFloat(
+      const rawNet = parseFloat(
         (record.grossSalary - record.totalDeductions +
           record.otAmount + record.arrear).toFixed(2)
       );
+      // Floor at zero — deductions cannot exceed gross in a monthly payroll run
+      if (rawNet < 0) {
+        record.remarks = (record.remarks ? record.remarks + '; ' : '') +
+          'NOTE: Excess deductions ₹' + Math.abs(rawNet).toFixed(2) + ' — carry forward manually';
+      }
+      record.netSalary = Math.max(0, rawNet);
     }
     totalNet = records.reduce((s, r) => s + (r.netSalary || 0), 0);
 
@@ -403,6 +437,10 @@ router.post('/process', isLoggedIn, isAdmin, async (req, res) => {
       await loan.save();
     }
 
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+    await logAudit(req.session.user.id, req.session.user.username, req.session.user.fullName, req.session.user.role,
+      'PAYROLL_PROCESSED', `Processed payroll for ${groupName} ${month} ${year} (${records.length} employees)`, ip);
+
     return res.json({
       success: true,
       message: 'Payroll processed for ' + records.length + ' employees',
@@ -440,10 +478,10 @@ router.patch('/:id/record', isLoggedIn, isAdmin, async (req, res) => {
         (record.pfDeduction + record.ptDeduction +
           record.esicDeduction + record.tdsDeduction + record.advance).toFixed(2)
       );
-      record.netSalary = parseFloat(
+      record.netSalary = Math.max(0, parseFloat(
         (record.grossSalary - record.totalDeductions +
           record.otAmount + record.arrear).toFixed(2)
-      );
+      ));
     }
 
     // Recalculate totals
@@ -486,6 +524,9 @@ router.patch('/:id/approve', isLoggedIn, isAdmin, async (req, res) => {
     payroll.approvedAt = new Date();
     payroll.updatedAt = new Date();
     await payroll.save();
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+    await logAudit(req.session.user.id, req.session.user.username, req.session.user.fullName, req.session.user.role,
+      'PAYROLL_APPROVED', `Approved payroll: ${payroll.groupName} ${payroll.month} ${payroll.year}`, ip);
     return res.json({ success: true, message: 'Payroll approved' });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
@@ -500,6 +541,9 @@ router.patch('/:id/lock', isLoggedIn, isAdmin, async (req, res) => {
     payroll.status = 'Locked';
     payroll.updatedAt = new Date();
     await payroll.save();
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+    await logAudit(req.session.user.id, req.session.user.username, req.session.user.fullName, req.session.user.role,
+      'PAYROLL_LOCKED', `Locked payroll: ${payroll.groupName} ${payroll.month} ${payroll.year}`, ip);
     return res.json({ success: true, message: 'Payroll locked' });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
@@ -563,6 +607,28 @@ router.post('/process-all', isLoggedIn, isAdmin, async (req, res) => {
         if (existingPayroll && existingPayroll.status === 'Locked') {
           results.push({ group: getGroupName(section, location, profile), status: 'Skipped - Locked' });
           continue;
+        }
+
+        // If reprocessing: reset loan EMIs and arrears from the previous run
+        if (existingPayroll) {
+          const prevLoans = await Loan.find({ location, section, profile, status: { $in: ['Active', 'Closed'] } });
+          for (const loan of prevLoans) {
+            if (!loan.schedule) continue;
+            const sItem = loan.schedule.find(s => s.month === month && s.year === parseInt(year) && s.status === 'Paid' && String(s.paidInPayrollId) === String(existingPayroll._id));
+            if (sItem) {
+              sItem.status = 'Pending';
+              sItem.paidInPayrollId = null;
+              loan.totalPaid = Math.max(0, parseFloat((loan.totalPaid - sItem.emiAmount).toFixed(2)));
+              loan.outstandingBalance = parseFloat((loan.outstandingBalance + sItem.emiAmount).toFixed(2));
+              if (loan.status === 'Closed') loan.status = 'Active';
+              loan.markModified('schedule');
+              await loan.save();
+            }
+          }
+          await Arrear.updateMany(
+            { location, section, profile, month, year: parseInt(year), pulledToPayroll: true, payrollId: existingPayroll._id },
+            { pulledToPayroll: false, payrollId: null }
+          );
         }
 
         // Fetch Appraisal records for current FY for this group
@@ -658,16 +724,21 @@ router.post('/process-all', isLoggedIn, isAdmin, async (req, res) => {
           }
         }
 
-        // Recalculate totals
+        // Recalculate totals with net salary floor
         for (const record of records) {
           record.totalDeductions = parseFloat(
             (record.pfDeduction + record.ptDeduction +
               record.esicDeduction + record.tdsDeduction + record.advance).toFixed(2)
           );
-          record.netSalary = parseFloat(
+          const rawNet = parseFloat(
             (record.grossSalary - record.totalDeductions +
               record.otAmount + record.arrear).toFixed(2)
           );
+          if (rawNet < 0) {
+            record.remarks = (record.remarks ? record.remarks + '; ' : '') +
+              'NOTE: Excess deductions ₹' + Math.abs(rawNet).toFixed(2) + ' — carry forward manually';
+          }
+          record.netSalary = Math.max(0, rawNet);
         }
         totalNet = records.reduce((s, r) => s + (r.netSalary || 0), 0);
 
