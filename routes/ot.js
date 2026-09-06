@@ -2,8 +2,8 @@ const express = require('express');
 const router = express.Router();
 const OT = require('../models/OT');
 const Employee = require('../models/Employee');
-const Settings = require('../models/Settings');
 const { isLoggedIn, isAdmin, isAccountantOrAdmin } = require('../middleware/auth');
+const { getSettings } = require('../lib/settingsCache');
 
 // GET all OT records
 router.get('/', isLoggedIn, async (req, res) => {
@@ -24,7 +24,7 @@ router.get('/', isLoggedIn, async (req, res) => {
 router.get('/default-rate', isLoggedIn, async (req, res) => {
   try {
     const { location } = req.query;
-    const settings = await Settings.findOne();
+    const settings = await getSettings();
     let rate = 0;
     if (settings && location) {
       const locSetting = settings.locationSettings.find(ls => ls.location === location);

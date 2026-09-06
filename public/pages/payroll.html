@@ -528,6 +528,8 @@
       return;
     }
 
+    const btn = document.querySelector('button[onclick="processPayroll()"]');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Processing…'; }
     showAlert('processAlertWarning', '⏳ Processing payroll...');
     try {
       const res = await fetch('/api/payroll/process', {
@@ -538,20 +540,25 @@
       });
       const data = await res.json();
       if (data.success) {
-        showAlert('processAlertSuccess', '✅ ' + data.message);
-        setTimeout(() => {
-          viewPayroll(data.payroll._id);
-        }, 1000);
+        let msg = '✅ ' + data.message;
+        if (data.warnings && data.warnings.length) {
+          data.warnings.forEach(w => { msg += '\n⚠ ' + w.message; });
+        }
+        showAlert('processAlertSuccess', msg);
+        setTimeout(() => { viewPayroll(data.payroll._id); }, 1200);
       } else if (data.appraisalMissing) {
         showMissingAppraisalPrompt(data.missingList, data.financialYear);
       } else {
         showAlert('processAlertError', data.message);
       }
     } catch(e) { showAlert('processAlertError', 'Error: ' + e.message); }
+    finally { if (btn) { btn.disabled = false; btn.textContent = '⚙️ Calculate Payroll'; } }
   }
 
   async function processAllGroups(month, year) {
-    showAlert('processAlertWarning', '⏳ Processing payroll for all groups - this may take a moment...');
+    const btn = document.querySelector('button[onclick="processPayroll()"]');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Processing all groups…'; }
+    showAlert('processAlertWarning', '⏳ Processing payroll for all groups — this may take 20–30 seconds. Please wait...');
     try {
       const res = await fetch('/api/payroll/process-all', {
         method: 'POST',
@@ -566,6 +573,7 @@
         showAlert('processAlertError', data.message);
       }
     } catch(e) { showAlert('processAlertError', 'Error: ' + e.message); }
+    finally { if (btn) { btn.disabled = false; btn.textContent = '⚙️ Calculate Payroll'; } }
   }
 
   let currentBulkResults = [];

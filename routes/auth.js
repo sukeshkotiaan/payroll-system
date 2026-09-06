@@ -122,6 +122,16 @@ router.post('/login', async (req, res) => {
         sessionUser,
         emp: emp ? emp._id.toString() : null
       };
+      // Check that at least one L1 manager has a registered email before generating OTP
+      const l1Users = await User.find({ role: 'management', managementLevel: 'L1', isActive: true });
+      const l1Emails = l1Users.map(u => u.email).filter(Boolean);
+      if (!l1Emails.length) {
+        return res.status(503).json({
+          success: false,
+          message: 'Login is temporarily unavailable: no Management (L1) contact has an email address registered. Please ask your system administrator to add an email to an L1 management user account before logging in.'
+        });
+      }
+
       // Generate and send OTP
       const OTP = require('../models/OTP');
       const crypto = require('crypto');
@@ -134,7 +144,7 @@ router.post('/login', async (req, res) => {
       return res.json({
         success: false,
         otpRequired: true,
-        message: 'OTP has been sent to Management. Please enter the OTP to complete login.'
+        message: 'OTP sent to Management (' + l1Emails.length + ' contact' + (l1Emails.length > 1 ? 's' : '') + '). Please enter the OTP to complete login.'
       });
     }
 

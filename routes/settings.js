@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const { isLoggedIn, isAdmin } = require('../middleware/auth');
 const Settings = require('../models/Settings');
 const Master = require('../models/Master');
+const { invalidateCache } = require('../lib/settingsCache');
 
 const defaultRules = (location, month, year, username) => ({
   effectiveMonth: month,
@@ -140,6 +141,11 @@ router.put('/calc-rules/:location', isLoggedIn, isAdmin, async (req, res) => {
       const current = settings.locationSettings[lsIndex].currentRules;
       if (current) {
         settings.locationSettings[lsIndex].ruleHistory.push(current);
+        // Cap history to last 50 entries — prevents unbounded document growth
+        const history = settings.locationSettings[lsIndex].ruleHistory;
+        if (history.length > 50) {
+          settings.locationSettings[lsIndex].ruleHistory = history.slice(-50);
+        }
       }
       settings.locationSettings[lsIndex].currentRules = newRule;
     } else {
@@ -152,6 +158,7 @@ router.put('/calc-rules/:location', isLoggedIn, isAdmin, async (req, res) => {
     settings.markModified('locationSettings');
     settings.updatedAt = new Date();
     await settings.save();
+    invalidateCache(); // flush 60-second in-process cache
     return res.json({
       success: true,
       message: req.params.location + ' rules saved for ' + effectiveMonth + ' ' + effectiveYear,

@@ -34,6 +34,17 @@ const payrollRecordSchema = new mongoose.Schema({
   remarks: { type: String, default: '' }
 }, { _id: false });
 
+// Lightweight version snapshot — stored before any reprocess overwrites
+const payrollVersionSchema = new mongoose.Schema({
+  snapshotAt: { type: Date, default: Date.now },
+  processedBy: { type: String, default: '' },
+  status: { type: String, default: '' },
+  totalGross: { type: Number, default: 0 },
+  totalNet: { type: Number, default: 0 },
+  employeeCount: { type: Number, default: 0 },
+  records: { type: [payrollRecordSchema], default: [] }
+}, { _id: false });
+
 const payrollSchema = new mongoose.Schema({
   month: { type: String, required: true },
   year: { type: Number, required: true },
@@ -48,6 +59,8 @@ const payrollSchema = new mongoose.Schema({
     default: 'Draft'
   },
   records: { type: [payrollRecordSchema], default: [] },
+  // Keeps last 3 snapshots of records before reprocessing — for audit/dispute purposes
+  versionHistory: { type: [payrollVersionSchema], default: [] },
   totalGross: { type: Number, default: 0 },
   totalPF: { type: Number, default: 0 },
   totalPT: { type: Number, default: 0 },

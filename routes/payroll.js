@@ -6,6 +6,7 @@ const Employee = require('../models/Employee');
 const Settings = require('../models/Settings');
 const { isLoggedIn, isAdmin } = require('../middleware/auth');
 const { logAudit } = require('./security');
+const { getSettings } = require('../lib/settingsCache');
 const Arrear = require('../models/Arrear');
 const TDS = require('../models/TDS');
 const Loan = require('../models/Loan');
@@ -177,8 +178,8 @@ router.post('/process', isLoggedIn, isAdmin, async (req, res) => {
       });
     }
 
-    // Get calculation rules for location
-    const settings = await Settings.findOne();
+    // Get calculation rules for location (cached — avoids DB round-trip on every run)
+    const settings = await getSettings();
     const locationRules = settings ?
       settings.locationSettings.find(ls => ls.location === location) : null;
     const rules = locationRules ? locationRules.currentRules : {};
@@ -256,6 +257,11 @@ router.post('/process', isLoggedIn, isAdmin, async (req, res) => {
         missingList: missingAppraisal
       });
     }
+
+    // Cross-check: employees in master not found in attendance records
+    const notInAttendance = employees.filter(
+      emp => !attendance.records.some(r => r.ein === emp.ein)
+    );
 
     // Calculate payroll for each employee
     const records = [];
@@ -383,6 +389,18 @@ router.post('/process', isLoggedIn, isAdmin, async (req, res) => {
     const groupName = getGroupName(section, location, profile);
 
     if (payroll) {
+      // Snapshot the existing state before overwriting (keep last 3 versions)
+      const snapshot = {
+        snapshotAt: new Date(),
+        processedBy: payroll.processedBy || '',
+        status: payroll.status,
+        totalGross: payroll.totalGross,
+        totalNet: payroll.totalNet,
+        employeeCount: payroll.records.length,
+        records: payroll.records
+      };
+      payroll.versionHistory = [...(payroll.versionHistory || []), snapshot].slice(-3);
+
       payroll.records = records;
       payroll.attendanceId = attendance._id;
       payroll.totalGross = parseFloat(totalGross.toFixed(2));
@@ -396,6 +414,7 @@ router.post('/process', isLoggedIn, isAdmin, async (req, res) => {
       payroll.processedAt = new Date();
       payroll.updatedAt = new Date();
       payroll.markModified('records');
+      payroll.markModified('versionHistory');
       await payroll.save();
     } else {
       payroll = await Payroll.create({
@@ -441,11 +460,19 @@ router.post('/process', isLoggedIn, isAdmin, async (req, res) => {
     await logAudit(req.session.user.id, req.session.user.username, req.session.user.fullName, req.session.user.role,
       'PAYROLL_PROCESSED', `Processed payroll for ${groupName} ${month} ${year} (${records.length} employees)`, ip);
 
-    return res.json({
+    const response = {
       success: true,
       message: 'Payroll processed for ' + records.length + ' employees',
       payroll
-    });
+    };
+    if (notInAttendance.length > 0) {
+      response.warnings = [{
+        type: 'MISSING_FROM_ATTENDANCE',
+        message: notInAttendance.length + ' employee(s) are in the employee master but have no attendance record this month — they were excluded from payroll.',
+        employees: notInAttendance.map(e => ({ ein: e.ein, employeeName: e.employeeName }))
+      }];
+    }
+    return res.json(response);
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
@@ -587,7 +614,7 @@ router.post('/process-all', isLoggedIn, isAdmin, async (req, res) => {
     }
 
     const results = [];
-    const settings = await Settings.findOne();
+    const settings = await getSettings();
 
     for (const attendance of attendances) {
       try {
