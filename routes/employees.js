@@ -584,10 +584,11 @@ router.post('/upload-excel', isLoggedIn, isAdmin, excelUpload.single('file'), as
           isRestricted:   col(row, 'Restricted').toLowerCase()      === 'yes',
           uanNumber:      col(row, 'UAN Number')     || '',
           accountNumber,
-          // Auto-fill bank details when an account number is present
-          bankName:              accountNumber ? 'IDBI'          : '',
-          ifscCode:              accountNumber ? 'IBKL0000430'   : '',
-          accountHolderName:     accountNumber ? employeeName    : '',
+          // Read bank details from file; fall back to defaults when blank
+          bankName:          col(row, 'Bank Name')   || (accountNumber ? 'IDBI' : ''),
+          ifscCode:         (col(row, 'IFSC Code')   || (accountNumber ? 'IBKL0000430' : '')).toUpperCase(),
+          accountHolderName: col(row, 'Account Holder Name') || (accountNumber ? employeeName : ''),
+          paymentMode:       col(row, 'Payment Mode') || 'Bank Transfer',
           bankVerificationStatus: accountNumber ? 'Pending' : 'Not Filled',
           isActive:       true,
           createdBy:      req.session.user.username,
