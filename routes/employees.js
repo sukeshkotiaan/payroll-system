@@ -340,6 +340,7 @@ router.post('/', isLoggedIn, isAdmin, (req, res, next) => {
       partTranType: data.partTranType || 'C',
       accountType: data.accountType || '',
       senderAccountNo: data.senderAccountNo || '',
+      originatorName: data.originatorName || '',
       photo: req.file ? '/uploads/' + req.file.filename : '',
       createdBy: req.session.user.username
     });

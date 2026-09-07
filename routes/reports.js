@@ -76,7 +76,7 @@ router.get('/bank-advice', isLoggedIn, isAdmin, async (req, res) => {
     // Fetch employee bank details (include new IDBI + NEFT fields)
     const eins = [...new Set(allRecords.map(r => r.ein))];
     const employees = await Employee.find({ ein: { $in: eins } })
-      .select('ein paymentMode bankName accountNumber ifscCode accountHolderName currencyCode serviceOutlet partTranType accountType senderAccountNo address')
+      .select('ein paymentMode bankName accountNumber ifscCode accountHolderName currencyCode serviceOutlet partTranType accountType senderAccountNo originatorName address')
       .lean();
     const empMap = new Map(employees.map(e => [e.ein, e]));
 
@@ -147,7 +147,7 @@ router.get('/bank-advice', isLoggedIn, isAdmin, async (req, res) => {
             emp.accountHolderName || r.employeeName || '', // Beneficiary A/C Name
             emp.address || '',                            // Ben Current Address
             'SALARY',                                     // Sender to Remitter Info
-            originatorName(emp.senderAccountNo)           // Originator of Remittance
+            emp.originatorName || originatorName(emp.senderAccountNo) // Originator of Remittance
           ]);
           dataRow.getCell(1).numFmt = '#,##0.00';
           dataRow.getCell(1).alignment = { horizontal: 'right' };

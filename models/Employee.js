@@ -52,6 +52,7 @@ const employeeSchema = new mongoose.Schema({
   partTranType: { type: String, default: 'C' },
   accountType: { type: String, enum: ['Saving', 'Current', ''], default: '' },
   senderAccountNo: { type: String, default: '' },
+  originatorName: { type: String, default: '' },
   bankVerificationStatus: { type: String, enum: ['Not Filled', 'Pending', 'Verified'], default: 'Not Filled' },
   bankVerifiedBy: { type: String, default: '' },
   bankVerifiedAt: { type: Date, default: null },

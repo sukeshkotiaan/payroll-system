@@ -360,8 +360,12 @@
             </select>
           </div>
           <div class="form-group" id="senderAccountNoGroup">
-            <label>Sender A/C No. <span style="font-size:11px;color:#888;">(Originator of remittance)</span></label>
+            <label>Sender A/C No.</label>
             <input type="text" id="senderAccountNo" placeholder="Institution's sending account">
+          </div>
+          <div class="form-group" id="originatorNameGroup">
+            <label>Originator of Remittance</label>
+            <input type="text" id="originatorName" placeholder="e.g. St. Xavier's Global Academy">
           </div>
         </div>
         <div id="bankVerifySection" style="display:none;margin-top:10px;padding:10px 15px;background:#f8f9fa;border-radius:8px;">
@@ -851,8 +855,8 @@
       if (el) el.style.display = isIDBI ? '' : 'none';
     });
 
-    // NEFT-only fields: Account Type, Sender A/C No.
-    const neftOnly = ['accountTypeGroup', 'senderAccountNoGroup'];
+    // NEFT-only fields: Account Type, Sender A/C No., Originator of Remittance
+    const neftOnly = ['accountTypeGroup', 'senderAccountNoGroup', 'originatorNameGroup'];
     neftOnly.forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = isNEFT ? '' : 'none';
@@ -986,11 +990,12 @@
     ['currencyCodeGroup','serviceOutletGroup','partTranTypeGroup'].forEach(id => {
       const el = document.getElementById(id); if (el) el.style.display = '';
     });
-    ['accountTypeGroup','senderAccountNoGroup'].forEach(id => {
+    ['accountTypeGroup','senderAccountNoGroup','originatorNameGroup'].forEach(id => {
       const el = document.getElementById(id); if (el) el.style.display = 'none';
     });
     document.getElementById('accountType').value = '';
     document.getElementById('senderAccountNo').value = '';
+    document.getElementById('originatorName').value = '';
     document.getElementById('ageDisplay').textContent = '';
     document.getElementById('pfApplicable').checked = false;
     document.getElementById('esicApplicable').checked = false;
@@ -1066,6 +1071,7 @@
       document.getElementById('partTranType').value = emp.partTranType || 'C';
       document.getElementById('accountType').value = emp.accountType || '';
       document.getElementById('senderAccountNo').value = emp.senderAccountNo || '';
+      document.getElementById('originatorName').value = emp.originatorName || '';
       window.currentBankStatus = emp.bankVerificationStatus || 'Not Filled';
       renderBankStatusBadge(window.currentBankStatus, emp.bankVerifiedBy, emp.bankVerifiedAt);
 
@@ -1194,7 +1200,7 @@
       'ctcMonthly','basic','hraAllowance','pf','pt','ein',
       'bankName','accountNumber','ifscCode','accountHolderName',
       'currencyCode','serviceOutlet','partTranType',
-      'accountType','senderAccountNo'];
+      'accountType','senderAccountNo','originatorName'];
     const payload = {};
     textFields.forEach(f => { const el = document.getElementById(f); if (el) payload[f] = el.value; });
     payload.paymentMode = document.getElementById('paymentMode').value;
