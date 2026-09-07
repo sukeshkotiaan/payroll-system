@@ -310,8 +310,19 @@ router.post('/process', isLoggedIn, isAdmin, async (req, res) => {
       totalESIC = 0, totalTDS = 0, totalNet = 0;
 
     for (const emp of employees) {
-      const attRecord = attendance.records.find(r => r.ein === emp.ein);
+      let attRecord = attendance.records.find(r => r.ein === emp.ein);
       if (!attRecord) continue;
+
+      // Full-attendance exception: override LOP/payable days to 100% regardless of sheet
+      if (emp.fullAttendance) {
+        const dim = attRecord.daysInMonth || 30;
+        attRecord = {
+          ...attRecord,
+          presentDays: dim, cl: 0, sl: 0, pl: 0, spL: 0,
+          absent: 0, lopDays: 0, payableDays: dim,
+          halfDays: 0
+        };
+      }
 
       // Use appraisal salary as the source of truth; carry-forward noted in remarks
       const ap = appraisalMap[emp.ein];
@@ -329,9 +340,9 @@ router.post('/process', isLoggedIn, isAdmin, async (req, res) => {
         pfApplicable: emp.pfApplicable,
         esicApplicable: emp.esicApplicable,
         ptApplicable: emp.ptApplicable,
-        remarks: carriedForwardEINs.has(emp.ein)
-          ? '[Salary carried fwd from FY ' + ap._fromFY + ']'
-          : '',
+        remarks: emp.fullAttendance
+          ? '[Full attendance exception]' + (carriedForwardEINs.has(emp.ein) ? ' [Salary carried fwd from FY ' + ap._fromFY + ']' : '')
+          : (carriedForwardEINs.has(emp.ein) ? '[Salary carried fwd from FY ' + ap._fromFY + ']' : ''),
         ...calc
       });
 
@@ -727,8 +738,17 @@ router.post('/process-all', isLoggedIn, isAdmin, async (req, res) => {
           totalESIC = 0, totalTDS = 0, totalNet = 0;
 
         for (const emp of employees) {
-          const attRecord = attendance.records.find(r => r.ein === emp.ein);
+          let attRecord = attendance.records.find(r => r.ein === emp.ein);
           if (!attRecord) continue;
+          // Full-attendance exception: override LOP/payable days to 100%
+          if (emp.fullAttendance) {
+            const dim = attRecord.daysInMonth || 30;
+            attRecord = {
+              ...attRecord,
+              presentDays: dim, cl: 0, sl: 0, pl: 0, spL: 0,
+              absent: 0, lopDays: 0, payableDays: dim, halfDays: 0
+            };
+          }
           const ap = groupAppraisalMap[emp.ein];
           const empForCalc = { ...emp.toObject(), monthlySalary: ap.monthlySalary };
           const calc = calculatePayroll(empForCalc, attRecord, rules, month);
@@ -738,9 +758,9 @@ router.post('/process-all', isLoggedIn, isAdmin, async (req, res) => {
             gender: emp.gender || '', department: emp.department || '',
             pfApplicable: emp.pfApplicable, esicApplicable: emp.esicApplicable,
             ptApplicable: emp.ptApplicable,
-            remarks: groupCarriedEINs.has(emp.ein)
-              ? '[Salary carried fwd from FY ' + ap._fromFY + ']'
-              : '',
+            remarks: emp.fullAttendance
+              ? '[Full attendance exception]' + (groupCarriedEINs.has(emp.ein) ? ' [Salary carried fwd from FY ' + ap._fromFY + ']' : '')
+              : (groupCarriedEINs.has(emp.ein) ? '[Salary carried fwd from FY ' + ap._fromFY + ']' : ''),
             ...calc
           });
           totalGross += calc.grossSalary;
