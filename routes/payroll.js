@@ -76,9 +76,10 @@ function getGroupName(section, location, profile) {
 function getPT(grossSalary, gender, month, rules) {
   if (!rules.ptApplicable || rules.ptApplicable === 'No') return 0;
   const allSlabs = rules.ptSlabs || [];
-  // Filter slabs to match employee's gender (default to Male slabs if not set, for backward compatibility)
+  // A slab with no gender set applies to ALL employees.
+  // A slab with an explicit gender applies only to that gender.
   const genderKey = gender === 'Female' ? 'Female' : 'Male';
-  const slabs = allSlabs.filter(s => (s.gender || 'Male') === genderKey);
+  const slabs = allSlabs.filter(s => !s.gender || s.gender === genderKey);
 
   let matchedAmount = 0;
   for (const slab of slabs) {
