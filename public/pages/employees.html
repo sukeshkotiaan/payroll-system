@@ -339,7 +339,7 @@
             <label>Account Holder Name</label>
             <input type="text" id="accountHolderName" placeholder="As per bank records">
           </div>
-          <div class="form-group">
+          <div class="form-group" id="currencyCodeGroup">
             <label>Currency Code</label>
             <input type="text" id="currencyCode" placeholder="INR" maxlength="5" style="text-transform:uppercase;">
           </div>
@@ -347,7 +347,7 @@
             <label>Service Outlet <span style="font-size:11px;color:#888;">(IDBI branch code)</span></label>
             <input type="text" id="serviceOutlet" placeholder="430">
           </div>
-          <div class="form-group">
+          <div class="form-group" id="partTranTypeGroup">
             <label>Part Tran Type</label>
             <input type="text" id="partTranType" placeholder="C" maxlength="2" style="text-transform:uppercase;">
           </div>
@@ -825,20 +825,29 @@
 
   function onPaymentModeChange() {
     const mode = document.getElementById('paymentMode').value;
-    const bankSection = document.getElementById('bankDetailsSection');
-    const isBankMode = (mode === 'Bank Transfer' || mode === 'NEFT');
-    bankSection.style.display = isBankMode ? '' : 'none';
-    // Service Outlet (IDBI branch code) is only for IDBI Bank Transfer
-    const soGroup = document.getElementById('serviceOutletGroup');
-    if (soGroup) soGroup.style.display = (mode === 'Bank Transfer') ? '' : 'none';
-    // Auto-fill defaults when switching modes
-    const currEl = document.getElementById('currencyCode');
-    const soEl   = document.getElementById('serviceOutlet');
-    const ptEl   = document.getElementById('partTranType');
-    if (currEl && !currEl.value) currEl.value = 'INR';
-    if (soEl  && mode === 'Bank Transfer' && !soEl.value) soEl.value = '430';
-    if (soEl  && mode === 'NEFT') soEl.value = '';
-    if (ptEl  && !ptEl.value) ptEl.value = 'C';
+    const isIDBI = mode === 'Bank Transfer';
+    const isNEFT = mode === 'NEFT';
+    const isBankMode = isIDBI || isNEFT;
+
+    // Show/hide whole bank section
+    document.getElementById('bankDetailsSection').style.display = isBankMode ? '' : 'none';
+
+    // IDBI-only fields: Currency Code, Service Outlet, Part Tran Type
+    const idbiOnly = ['currencyCodeGroup', 'serviceOutletGroup', 'partTranTypeGroup'];
+    idbiOnly.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = isIDBI ? '' : 'none';
+    });
+
+    // Auto-fill IDBI defaults when switching to Bank Transfer
+    if (isIDBI) {
+      const currEl = document.getElementById('currencyCode');
+      const soEl   = document.getElementById('serviceOutlet');
+      const ptEl   = document.getElementById('partTranType');
+      if (currEl && !currEl.value) currEl.value = 'INR';
+      if (soEl   && !soEl.value)   soEl.value   = '430';
+      if (ptEl   && !ptEl.value)   ptEl.value   = 'C';
+    }
   }
 
   function onMonthlyChange() {
@@ -954,8 +963,10 @@
     document.getElementById('currencyCode').value = 'INR';
     document.getElementById('serviceOutlet').value = '430';
     document.getElementById('partTranType').value = 'C';
-    const soGroup = document.getElementById('serviceOutletGroup');
-    if (soGroup) soGroup.style.display = '';
+    // Show all IDBI fields (default mode is Bank Transfer)
+    ['currencyCodeGroup','serviceOutletGroup','partTranTypeGroup'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.style.display = '';
+    });
     document.getElementById('ageDisplay').textContent = '';
     document.getElementById('pfApplicable').checked = false;
     document.getElementById('esicApplicable').checked = false;
