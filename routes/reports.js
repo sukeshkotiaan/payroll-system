@@ -73,10 +73,10 @@ router.get('/bank-advice', isLoggedIn, isAdmin, async (req, res) => {
       }
     }
 
-    // Fetch employee bank details (include new IDBI fields)
+    // Fetch employee bank details (include new IDBI + NEFT fields)
     const eins = [...new Set(allRecords.map(r => r.ein))];
     const employees = await Employee.find({ ein: { $in: eins } })
-      .select('ein paymentMode bankName accountNumber ifscCode accountHolderName currencyCode serviceOutlet partTranType')
+      .select('ein paymentMode bankName accountNumber ifscCode accountHolderName currencyCode serviceOutlet partTranType accountType senderAccountNo address')
       .lean();
     const empMap = new Map(employees.map(e => [e.ein, e]));
 
@@ -92,11 +92,21 @@ router.get('/bank-advice', isLoggedIn, isAdmin, async (req, res) => {
       return res.status(404).json({ success: false, message: 'No employees with Bank Transfer or NEFT payment mode in the selected payroll' });
     }
 
+    // Derive originator name from sender account number
+    function originatorName(senderAcct) {
+      if (!senderAcct) return '';
+      if (senderAcct === '0430102000015570') return "St. Xavier's Global Academy";
+      if (senderAcct === '0430102000010025') return "Rammurti Education Society";
+      return senderAcct; // fallback: show account
+    }
+
     // ── Helper: build one sheet ──────────────────────────────────────────────
     function buildBankSheet(wb, sheetName, rows, empMap, month, year, isNEFT) {
       const ws = wb.addWorksheet(sheetName);
+
+      // NEFT columns match the bank-required NEFT file format exactly
       const COLS = isNEFT
-        ? ['Sr.No', 'Name', 'Account No.', 'Bank Name', 'IFSC Code', 'Currency Code', 'Part Tran Type', 'Transaction Amt', 'Transaction Particulars']
+        ? ['Amount', 'Sender A/C No.', 'IFSC Code', 'Beneficiary A/C No.', 'Ben A/C Type', 'Beneficiary A/C Name', 'Ben Current Address', 'Sender to Remitter Info', 'Originator of Remittance']
         : ['Sr.No', 'Name', 'Account No.', 'Currency Code', 'Service Outlet', 'Part Tran Type', 'Transaction Amt', 'Transaction Particulars'];
       const numCols = COLS.length;
       const lastCol = String.fromCharCode(64 + numCols);
@@ -127,19 +137,20 @@ router.get('/bank-advice', isLoggedIn, isAdmin, async (req, res) => {
         total += net;
         let dataRow;
         if (isNEFT) {
+          // Exact column order matching NEFT bank file format
           dataRow = ws.addRow([
-            sl++,
-            r.employeeName || '',
-            emp.accountNumber || '',
-            emp.bankName || '',
-            emp.ifscCode || '',
-            emp.currencyCode || 'INR',
-            emp.partTranType || 'C',
-            net,
-            'SALARY CREDIT'
+            net,                                          // Amount
+            emp.senderAccountNo || '',                    // Sender A/C No.
+            emp.ifscCode || '',                           // IFSC Code
+            emp.accountNumber || '',                      // Beneficiary A/C No.
+            emp.accountType || 'Saving',                  // Ben A/C Type
+            emp.accountHolderName || r.employeeName || '', // Beneficiary A/C Name
+            emp.address || '',                            // Ben Current Address
+            'SALARY',                                     // Sender to Remitter Info
+            originatorName(emp.senderAccountNo)           // Originator of Remittance
           ]);
-          dataRow.getCell(8).numFmt = '#,##0.00';
-          dataRow.getCell(8).alignment = { horizontal: 'right' };
+          dataRow.getCell(1).numFmt = '#,##0.00';
+          dataRow.getCell(1).alignment = { horizontal: 'right' };
         } else {
           dataRow = ws.addRow([
             sl++,
@@ -157,10 +168,15 @@ router.get('/bank-advice', isLoggedIn, isAdmin, async (req, res) => {
       }
 
       // Total row
-      const totalCol = isNEFT ? 8 : 7;
+      const totalCol = isNEFT ? 1 : 7;
       const totRow = ws.addRow(Array(numCols).fill(''));
-      totRow.getCell(totalCol - 1).value = 'TOTAL';
-      totRow.getCell(totalCol).value = round2(total);
+      if (isNEFT) {
+        totRow.getCell(1).value = round2(total);
+        totRow.getCell(2).value = 'TOTAL';
+      } else {
+        totRow.getCell(totalCol - 1).value = 'TOTAL';
+        totRow.getCell(totalCol).value = round2(total);
+      }
       applyTotalStyle(totRow);
       totRow.getCell(totalCol).numFmt = '#,##0.00';
       totRow.getCell(totalCol).alignment = { horizontal: 'right' };
@@ -171,7 +187,7 @@ router.get('/bank-advice', isLoggedIn, isAdmin, async (req, res) => {
 
       // Column widths
       if (isNEFT) {
-        [7, 28, 22, 18, 14, 14, 12, 16, 18].forEach((w, i) => ws.getColumn(i + 1).width = w);
+        [14, 22, 14, 22, 12, 28, 30, 22, 30].forEach((w, i) => ws.getColumn(i + 1).width = w);
       } else {
         [7, 28, 22, 14, 14, 12, 16, 18].forEach((w, i) => ws.getColumn(i + 1).width = w);
       }

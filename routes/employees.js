@@ -338,6 +338,8 @@ router.post('/', isLoggedIn, isAdmin, (req, res, next) => {
       currencyCode: data.currencyCode || 'INR',
       serviceOutlet: data.serviceOutlet || (data.paymentMode === 'NEFT' ? '' : '430'),
       partTranType: data.partTranType || 'C',
+      accountType: data.accountType || '',
+      senderAccountNo: data.senderAccountNo || '',
       photo: req.file ? '/uploads/' + req.file.filename : '',
       createdBy: req.session.user.username
     });
