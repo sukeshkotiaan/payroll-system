@@ -168,6 +168,10 @@ app.get('/masters', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'pages', 'masters.html'));
 });
 
+app.get('/attendance-exceptions', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'pages', 'attendance-exceptions.html'));
+});
+
 // Health check — used by load balancers and uptime monitors
 app.get('/healthz', (req, res) => {
   const dbState = mongoose.connection.readyState;

@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Attendance Exceptions — Payroll System</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; }
+
+    .header {
+      background: #1a73e8;
+      color: white;
+      padding: 15px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header h1 { font-size: 20px; }
+    .btn-back {
+      background: white; color: #1a73e8;
+      border: none; padding: 8px 16px;
+      border-radius: 6px; cursor: pointer; font-weight: 600;
+    }
+    .btn-back:hover { background: #e8f0fe; }
+
+    .container { padding: 25px; max-width: 960px; margin: 0 auto; }
+
+    .info-banner {
+      background: #e8f0fe; border: 1px solid #c5d8f8; border-radius: 10px;
+      padding: 14px 18px; margin-bottom: 22px; color: #1a3c6e; font-size: 14px;
+      display: flex; align-items: flex-start; gap: 10px;
+    }
+    .info-banner .icon { font-size: 18px; flex-shrink: 0; }
+
+    /* ── Active exceptions card ── */
+    .card {
+      background: white; border-radius: 10px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+      margin-bottom: 24px; overflow: hidden;
+    }
+    .card-header {
+      padding: 16px 20px; border-bottom: 1px solid #eee;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .card-header h2 { font-size: 15px; color: #333; }
+    .badge-count {
+      background: #1a73e8; color: white;
+      border-radius: 12px; padding: 2px 10px; font-size: 12px; font-weight: 700;
+    }
+
+    /* exception list */
+    .exc-list { padding: 0; }
+    .exc-row {
+      display: flex; align-items: center; gap: 16px;
+      padding: 14px 20px; border-bottom: 1px solid #f3f3f3;
+      transition: background .15s;
+    }
+    .exc-row:last-child { border-bottom: none; }
+    .exc-row:hover { background: #fafbff; }
+    .exc-avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: #e8f0fe; display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 15px; color: #1a73e8; flex-shrink: 0;
+    }
+    .exc-info { flex: 1; min-width: 0; }
+    .exc-name { font-weight: 600; color: #1a1a1a; font-size: 14px; }
+    .exc-sub { font-size: 12px; color: #888; margin-top: 2px; }
+    .exc-ein {
+      font-size: 11px; font-weight: 700; color: #1a73e8;
+      background: #e8f0fe; border-radius: 4px; padding: 2px 7px;
+    }
+    .btn-remove {
+      background: #fff0f0; color: #d93025;
+      border: 1px solid #f5c6c4; border-radius: 6px;
+      padding: 6px 14px; cursor: pointer; font-size: 13px; font-weight: 600;
+      transition: background .15s;
+    }
+    .btn-remove:hover { background: #fce8e6; }
+
+    .empty-state {
+      text-align: center; padding: 40px; color: #999; font-size: 14px;
+    }
+    .empty-state .big { font-size: 36px; margin-bottom: 8px; }
+
+    /* ── Search & Add card ── */
+    .search-row {
+      display: flex; gap: 10px; padding: 16px 20px; border-bottom: 1px solid #eee;
+    }
+    .search-row input {
+      flex: 1; border: 1px solid #ddd; border-radius: 8px;
+      padding: 9px 14px; font-size: 14px; outline: none;
+    }
+    .search-row input:focus { border-color: #1a73e8; }
+    .btn-search {
+      background: #1a73e8; color: white; border: none;
+      border-radius: 8px; padding: 9px 18px; cursor: pointer; font-weight: 600;
+    }
+    .btn-search:hover { background: #1557b0; }
+
+    .result-list { max-height: 380px; overflow-y: auto; }
+    .result-row {
+      display: flex; align-items: center; gap: 14px;
+      padding: 12px 20px; border-bottom: 1px solid #f3f3f3;
+      cursor: default;
+    }
+    .result-row:last-child { border-bottom: none; }
+    .result-row:hover { background: #fafbff; }
+    .result-info { flex: 1; min-width: 0; }
+    .result-name { font-size: 14px; font-weight: 600; color: #222; }
+    .result-sub { font-size: 12px; color: #888; }
+    .btn-add {
+      background: #e6f4ea; color: #188038;
+      border: 1px solid #b7dfc0; border-radius: 6px;
+      padding: 6px 14px; cursor: pointer; font-size: 13px; font-weight: 600;
+      transition: background .15s;
+    }
+    .btn-add:hover { background: #ceead6; }
+    .btn-add:disabled { opacity: .45; cursor: default; }
+
+    /* toast */
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: #333; color: #fff; border-radius: 8px;
+      padding: 10px 22px; font-size: 14px; z-index: 1000;
+      opacity: 0; transition: opacity .3s; pointer-events: none;
+    }
+    .toast.show { opacity: 1; }
+    .toast.success { background: #188038; }
+    .toast.error   { background: #d93025; }
+
+    /* note label */
+    .note {
+      font-size: 12px; color: #888; padding: 10px 20px 14px;
+      border-top: 1px solid #f0f0f0;
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📅 Attendance Exceptions</h1>
+  <button class="btn-back" onclick="location.href='/payroll'">← Back</button>
+</div>
+
+<div class="container">
+
+  <div class="info-banner">
+    <span class="icon">ℹ️</span>
+    <div>
+      Employees on this list always receive <strong>100% attendance</strong> when payroll is processed —
+      regardless of what is recorded in the attendance sheet.
+      Removing someone from this list restores normal attendance calculation for future payroll runs.
+    </div>
+  </div>
+
+  <!-- Exceptions currently active -->
+  <div class="card">
+    <div class="card-header">
+      <h2>✅ Currently Active Exceptions</h2>
+      <span class="badge-count" id="exceptionCount">0</span>
+    </div>
+    <div class="exc-list" id="exceptionList">
+      <div class="empty-state">
+        <div class="big">🎉</div>
+        <div>No exceptions configured</div>
+      </div>
+    </div>
+    <div class="note">
+      These employees will always be calculated with full attendance (0 LOP days) during payroll processing.
+    </div>
+  </div>
+
+  <!-- Search & Add -->
+  <div class="card">
+    <div class="card-header">
+      <h2>➕ Add Employee to Exception List</h2>
+    </div>
+    <div class="search-row">
+      <input type="text" id="searchInput" placeholder="Search by name or EIN (e.g. Dinesh Shetty or STN-1002)"
+             onkeydown="if(event.key==='Enter') searchEmployees()">
+      <button class="btn-search" onclick="searchEmployees()">Search</button>
+    </div>
+    <div class="result-list" id="resultList"></div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  let exceptions = [];   // employees with fullAttendance:true
+  let searchResults = [];
+
+  // ── Helpers ──────────────────────────────────────────────────────────────
+  function showToast(msg, type = 'success') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show ' + type;
+    setTimeout(() => { t.className = 'toast'; }, 3000);
+  }
+
+  function initials(name) {
+    return (name || '').split(' ').filter(Boolean).slice(0, 2)
+      .map(w => w[0]).join('').toUpperCase();
+  }
+
+  function groupLabel(emp) {
+    const loc = emp.location || '?';
+    const sec = emp.section || '?';
+    const prof = emp.profile || '?';
+    if (sec === 'State') return 'Xaviers ' + loc;
+    if (sec === 'Global' && prof === 'Teaching') return 'Global Teaching';
+    if (sec === 'Global' && prof === 'Non-Teaching') return 'Global Non-Teaching';
+    return sec + ' ' + loc + ' ' + prof;
+  }
+
+  // ── Load current exceptions ───────────────────────────────────────────────
+  async function loadExceptions() {
+    try {
+      const res = await fetch('/api/employees?isActive=true&fullAttendance=true&limit=200');
+      const data = await res.json();
+      exceptions = (data.employees || []).filter(e => e.fullAttendance);
+      renderExceptions();
+    } catch (e) {
+      showToast('Failed to load exceptions', 'error');
+    }
+  }
+
+  function renderExceptions() {
+    const list = document.getElementById('exceptionList');
+    document.getElementById('exceptionCount').textContent = exceptions.length;
+
+    if (!exceptions.length) {
+      list.innerHTML = '<div class="empty-state"><div class="big">🎉</div><div>No exceptions configured</div></div>';
+      return;
+    }
+    list.innerHTML = exceptions.map(emp => `
+      <div class="exc-row" id="exc-${emp._id}">
+        <div class="exc-avatar">${initials(emp.employeeName)}</div>
+        <div class="exc-info">
+          <div class="exc-name">${emp.employeeName}</div>
+          <div class="exc-sub">${emp.designation || '—'} &bull; ${groupLabel(emp)}</div>
+        </div>
+        <span class="exc-ein">${emp.ein || '—'}</span>
+        <button class="btn-remove" onclick="removeException('${emp._id}', '${emp.employeeName.replace(/'/g, "\\'")}')">
+          Remove
+        </button>
+      </div>
+    `).join('');
+  }
+
+  // ── Remove ────────────────────────────────────────────────────────────────
+  async function removeException(id, name) {
+    if (!confirm(`Remove "${name}" from the full-attendance exception list?`)) return;
+    try {
+      const res = await fetch('/api/employees/' + id, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fullAttendance: false })
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message || 'Update failed');
+      exceptions = exceptions.filter(e => e._id !== id);
+      renderExceptions();
+      // Refresh search results to un-disable any re-add button for this employee
+      renderResults();
+      showToast(`${name} removed from exception list`, 'success');
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
+  }
+
+  // ── Search ────────────────────────────────────────────────────────────────
+  async function searchEmployees() {
+    const q = document.getElementById('searchInput').value.trim();
+    if (!q) return;
+    const list = document.getElementById('resultList');
+    list.innerHTML = '<div style="padding:14px 20px;color:#888;font-size:13px;">Searching…</div>';
+    try {
+      const res = await fetch('/api/employees?isActive=true&search=' + encodeURIComponent(q) + '&limit=30');
+      const data = await res.json();
+      searchResults = data.employees || [];
+      renderResults();
+    } catch (e) {
+      showToast('Search failed', 'error');
+      list.innerHTML = '';
+    }
+  }
+
+  function renderResults() {
+    const list = document.getElementById('resultList');
+    if (!searchResults.length) {
+      list.innerHTML = '<div style="padding:14px 20px;color:#888;font-size:13px;">No employees found.</div>';
+      return;
+    }
+    const excIds = new Set(exceptions.map(e => e._id));
+    list.innerHTML = searchResults.map(emp => {
+      const already = excIds.has(emp._id) || emp.fullAttendance;
+      return `
+        <div class="result-row">
+          <div class="exc-avatar" style="background:#f1f3f4;color:#555">${initials(emp.employeeName)}</div>
+          <div class="result-info">
+            <div class="result-name">${emp.employeeName}
+              ${emp.ein ? '<span class="exc-ein" style="margin-left:6px">' + emp.ein + '</span>' : ''}
+            </div>
+            <div class="result-sub">${emp.designation || '—'} &bull; ${groupLabel(emp)}</div>
+          </div>
+          <button class="btn-add" ${already ? 'disabled' : ''}
+            onclick="addException('${emp._id}', '${emp.employeeName.replace(/'/g, "\\'")}', this)">
+            ${already ? 'Already added' : '+ Add'}
+          </button>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // ── Add ───────────────────────────────────────────────────────────────────
+  async function addException(id, name, btn) {
+    btn.disabled = true;
+    btn.textContent = '…';
+    try {
+      const res = await fetch('/api/employees/' + id, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fullAttendance: true })
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message || 'Update failed');
+      btn.textContent = 'Already added';
+      showToast(`${name} added to exception list`, 'success');
+      // Reload exception panel
+      await loadExceptions();
+    } catch (e) {
+      btn.disabled = false;
+      btn.textContent = '+ Add';
+      showToast(e.message, 'error');
+    }
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  loadExceptions();
+</script>
+</body>
+</html>

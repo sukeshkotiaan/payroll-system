@@ -200,6 +200,10 @@ router.get('/', isLoggedIn, async (req, res) => {
     if (req.query.profile)    filter.profile    = req.query.profile;
     if (req.query.department) filter.department = req.query.department;
     if (req.query.status)     filter.isActive   = req.query.status === 'active';
+    if (req.query.isActive !== undefined && req.query.isActive !== '')
+      filter.isActive = req.query.isActive === 'true';
+    if (req.query.fullAttendance !== undefined && req.query.fullAttendance !== '')
+      filter.fullAttendance = req.query.fullAttendance === 'true';
 
     // Server-side search across EIN and name
     if (req.query.search) {
