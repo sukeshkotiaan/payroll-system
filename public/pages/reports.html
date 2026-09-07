@@ -559,7 +559,7 @@
     let totEmp=0, totGross=0, totPF=0, totPT=0, totESIC=0, totTDS=0, totOther=0, totDed=0, totNet=0;
 
     tbody.innerHTML = records.map(r => {
-      const emp = r.records ? r.records.length : 0;
+      const emp = r.employeeCount || (r.records ? r.records.length : 0);
       const gross = r.totalGross || 0;
       const pf = r.totalPF || 0;
       const pt = r.totalPT || 0;
@@ -752,7 +752,7 @@
     const year = document.getElementById('sumYear').value;
     let csv = 'Group,Employees,Gross,PF,PT,ESIC,TDS,Other Deductions,Total Deductions,Net Pay\n';
     summaryData.forEach(r => {
-      const emp = r.records ? r.records.length : 0;
+      const emp = r.employeeCount || (r.records ? r.records.length : 0);
       const other = (r.records||[]).reduce((s,e) => s+(e.advance||0), 0);
       const ded = (r.totalPF||0)+(r.totalPT||0)+(r.totalESIC||0)+(r.totalTDS||0)+other;
       csv += [r.groupName||r.section+' '+r.location, emp, r.totalGross||0,

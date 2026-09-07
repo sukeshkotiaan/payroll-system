@@ -92,6 +92,32 @@ function getPT(grossSalary, gender, month, rules) {
   return matchedAmount;
 }
 
+// Build calculation rules for a location.
+// Prefers locationSettings[location].currentRules; falls back to the
+// global top-level fields that were saved before locationSettings was introduced.
+function getRules(settings, location) {
+  if (!settings) return {};
+  const locEntry = (settings.locationSettings || []).find(ls => ls.location === location);
+  if (locEntry && locEntry.currentRules) return locEntry.currentRules;
+  // ── Global-settings fallback ──────────────────────────────────────────────
+  return {
+    basicPercent:     settings.basicPercent     || 76.923,
+    hraPercent:       settings.hraPercent       || 23.077,
+    pfRate:           settings.pfRate           || 12,
+    pfCap:            settings.pfCap            || 1800,
+    pfAgeExemption:   settings.pfAgeExemption   || 'Yes',
+    pfAgeLimit:       settings.pfAgeLimit       || 58,
+    esicApplicable:   settings.esicRate         ? 'Yes' : 'No',
+    esicEmployeeRate: settings.esicRate         || 0.75,
+    esicSalaryLimit:  settings.esicLimit        || 21000,
+    ptApplicable:     (settings.ptSlabs && settings.ptSlabs.length > 0) ? 'Yes' : 'No',
+    ptSlabs:          settings.ptSlabs          || [],
+    februaryPT:       settings.februaryPT       || 300,
+    lopBase:          settings.lopBase          || 'total_salary',
+    lopDivisor:       settings.lopDivisor       || 'actual_days_in_month',
+  };
+}
+
 function calculatePayroll(emp, attendance, rules, month) {
   const monthlySalary = emp.monthlySalary || 0;
   const daysInMonth = attendance.daysInMonth || 30;
@@ -223,9 +249,7 @@ router.post('/process', isLoggedIn, isAdmin, async (req, res) => {
 
     // Get calculation rules for location (cached — avoids DB round-trip on every run)
     const settings = await getSettings();
-    const locationRules = settings ?
-      settings.locationSettings.find(ls => ls.location === location) : null;
-    const rules = locationRules ? locationRules.currentRules : {};
+    const rules = getRules(settings, location);
 
     // Get employees
     const employees = await Employee.find({
@@ -458,6 +482,7 @@ router.post('/process', isLoggedIn, isAdmin, async (req, res) => {
 
       payroll.records = records;
       payroll.attendanceId = attendance._id;
+      payroll.employeeCount = records.length;
       payroll.totalGross = parseFloat(totalGross.toFixed(2));
       payroll.totalPF = parseFloat(totalPF.toFixed(2));
       payroll.totalPT = parseFloat(totalPT.toFixed(2));
@@ -476,6 +501,7 @@ router.post('/process', isLoggedIn, isAdmin, async (req, res) => {
         month, year: parseInt(year), location, section, profile,
         groupName, attendanceId: attendance._id,
         records, status: 'Draft',
+        employeeCount: records.length,
         totalGross: parseFloat(totalGross.toFixed(2)),
         totalPF: parseFloat(totalPF.toFixed(2)),
         totalPT: parseFloat(totalPT.toFixed(2)),
@@ -674,9 +700,7 @@ router.post('/process-all', isLoggedIn, isAdmin, async (req, res) => {
     for (const attendance of attendances) {
       try {
         const { location, section, profile } = attendance;
-        const locationRules = settings ?
-          settings.locationSettings.find(ls => ls.location === location) : null;
-        const rules = locationRules ? locationRules.currentRules : {};
+        const rules = getRules(settings, location);
 
         const employees = await Employee.find({
           location, section, profile, isActive: true
@@ -840,6 +864,7 @@ router.post('/process-all', isLoggedIn, isAdmin, async (req, res) => {
           month, year: parseInt(year), location, section, profile,
           groupName, attendanceId: attendance._id, records,
           status: 'Draft',
+          employeeCount: records.length,
           totalGross: parseFloat(totalGross.toFixed(2)),
           totalPF: parseFloat(totalPF.toFixed(2)),
           totalPT: parseFloat(totalPT.toFixed(2)),
