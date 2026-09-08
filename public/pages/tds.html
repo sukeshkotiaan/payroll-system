@@ -333,7 +333,7 @@
       if (!tdsData.success) return;
       allTDS = tdsData.records;
 
-      let empUrl = '/api/employees?';
+      let empUrl = '/api/employees?all=true&';
       if (location) empUrl += 'location=' + encodeURIComponent(location) + '&';
       const empRes = await fetch(empUrl);
       const empData = await empRes.json();
