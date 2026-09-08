@@ -413,6 +413,9 @@ router.post('/process', isLoggedIn, isAdmin, async (req, res) => {
     for (const tds of tdsRecords) {
       const record = records.find(r => r.ein === tds.ein);
       if (record) {
+        // Only apply TDS if employee has tdsApplicable flag set
+        const emp = employees.find(e => e.ein === tds.ein);
+        if (!emp || !emp.tdsApplicable) continue;
         record.tdsDeduction = parseFloat(tds.amount) || 0;
         record.tdsType = 'manual';
         if (record.remarks) {
@@ -821,6 +824,8 @@ router.post('/process-all', isLoggedIn, isAdmin, async (req, res) => {
         for (const tds of tdsRecs) {
           const record = records.find(r => r.ein === tds.ein);
           if (record) {
+            const emp = employees.find(e => e.ein === tds.ein);
+            if (!emp || !emp.tdsApplicable) continue;
             record.tdsDeduction = parseFloat(tds.amount) || 0;
             record.tdsType = 'manual';
             record.remarks = record.remarks ? record.remarks + ', TDS: ' + tds.amount : 'TDS: ' + tds.amount;

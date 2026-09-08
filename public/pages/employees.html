@@ -427,6 +427,7 @@
         <div class="flag-item"><input type="checkbox" id="pfApplicable" onchange="calculateSalary()"><label for="pfApplicable">PF Applicable</label></div>
         <div class="flag-item"><input type="checkbox" id="esicApplicable" onchange="calculateSalary()"><label for="esicApplicable">ESIC Applicable</label></div>
         <div class="flag-item"><input type="checkbox" id="ptApplicable" onchange="calculateSalary()"><label for="ptApplicable">PT Applicable</label></div>
+        <div class="flag-item"><input type="checkbox" id="tdsApplicable"><label for="tdsApplicable">TDS Applicable</label></div>
         <div class="flag-item" id="restrictedFlag"><input type="checkbox" id="isRestricted"><label for="isRestricted">🔒 Restricted</label></div>
         <div class="flag-item"><input type="checkbox" id="fullAttendance"><label for="fullAttendance">📅 Full Attendance Always</label></div>
       </div>
@@ -1001,6 +1002,7 @@
     document.getElementById('pfApplicable').checked = false;
     document.getElementById('esicApplicable').checked = false;
     document.getElementById('ptApplicable').checked = false;
+    document.getElementById('tdsApplicable').checked = false;
     document.getElementById('isRestricted').checked = false;
     document.getElementById('fullAttendance').checked = false;
     document.getElementById('einBox').style.display = 'none';
@@ -1048,6 +1050,7 @@
       document.getElementById('pfApplicable').checked = emp.pfApplicable || false;
       document.getElementById('esicApplicable').checked = emp.esicApplicable || false;
       document.getElementById('ptApplicable').checked = emp.ptApplicable || false;
+      document.getElementById('tdsApplicable').checked = emp.tdsApplicable || false;
       document.getElementById('isRestricted').checked = emp.isRestricted || false;
       document.getElementById('fullAttendance').checked = emp.fullAttendance || false;
       document.getElementById('einValue').textContent = emp.ein || '—';
@@ -1226,6 +1229,7 @@
     payload.pfApplicable   = document.getElementById('pfApplicable').checked;
     payload.esicApplicable = document.getElementById('esicApplicable').checked;
     payload.ptApplicable   = document.getElementById('ptApplicable').checked;
+    payload.tdsApplicable  = document.getElementById('tdsApplicable').checked;
     payload.isRestricted   = document.getElementById('isRestricted').checked;
     payload.fullAttendance = document.getElementById('fullAttendance').checked;
     payload.qualifications = getQualifications();
