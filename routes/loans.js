@@ -211,6 +211,69 @@ router.patch('/:id/pre-close', isLoggedIn, isAdmin, async (req, res) => {
   }
 });
 
+// SKIP EMI for a month
+router.patch('/:id/skip-emi', isLoggedIn, isAdmin, async (req, res) => {
+  try {
+    const { month, year, skipType } = req.body; // skipType: 'add_to_next' | 'extend_tenure'
+    if (!month || !year || !skipType) {
+      return res.status(400).json({ success: false, message: 'month, year and skipType are required' });
+    }
+    const loan = await Loan.findById(req.params.id);
+    if (!loan) return res.status(404).json({ success: false, message: 'Loan not found' });
+
+    const idx = loan.schedule.findIndex(s =>
+      s.month === month && s.year === parseInt(year) && s.status === 'Pending'
+    );
+    if (idx === -1) {
+      return res.status(400).json({ success: false, message: 'No pending EMI found for ' + month + ' ' + year });
+    }
+
+    const skippedItem = loan.schedule[idx];
+    const skippedEMI = skippedItem.emiAmount;
+    skippedItem.status = 'Skipped';
+
+    if (skipType === 'add_to_next') {
+      // Find the next Pending entry after the skipped one
+      const nextPending = loan.schedule.find((s, i) => i > idx && s.status === 'Pending');
+      if (!nextPending) {
+        return res.status(400).json({
+          success: false,
+          message: 'No next pending EMI exists to add to. Please use "Extend Tenure" instead.'
+        });
+      }
+      nextPending.emiAmount = parseFloat((nextPending.emiAmount + skippedEMI).toFixed(2));
+      nextPending.principal = parseFloat((nextPending.principal + skippedEMI).toFixed(2));
+
+    } else if (skipType === 'extend_tenure') {
+      // Add a new entry one month after the current last schedule entry
+      const last = loan.schedule[loan.schedule.length - 1];
+      let newMonthIdx = MONTHS.indexOf(last.month) + 1;
+      let newYear = last.year;
+      if (newMonthIdx > 11) { newMonthIdx = 0; newYear++; }
+      loan.schedule.push({
+        month: MONTHS[newMonthIdx],
+        year: newYear,
+        emiAmount: loan.emiAmount,
+        principal: loan.emiAmount,
+        interest: 0,
+        balance: 0,
+        status: 'Pending'
+      });
+      loan.endMonth = MONTHS[newMonthIdx];
+      loan.endYear = newYear;
+    } else {
+      return res.status(400).json({ success: false, message: 'Invalid skipType' });
+    }
+
+    loan.markModified('schedule');
+    loan.updatedAt = new Date();
+    await loan.save();
+    return res.json({ success: true, message: 'EMI skipped successfully', loan });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // DELETE loan
 router.delete('/:id', isLoggedIn, isAdmin, async (req, res) => {
   try {

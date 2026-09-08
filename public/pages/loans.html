@@ -42,6 +42,20 @@
     .badge-pre-closed { background: #fef3c7; color: #d97706; }
     .badge-pending { background: #fef3c7; color: #d97706; }
     .badge-paid { background: #e6f4ea; color: #34a853; }
+    .badge-skipped { background: #f0e6ff; color: #7c3aed; }
+    .skipped-row td { background: #faf5ff !important; color: #999; }
+    .btn-skip { background: #7c3aed; color: white; border: none; padding: 4px 10px; border-radius: 5px; cursor: pointer; font-size: 11px; font-weight: 600; }
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal-box { background: white; border-radius: 12px; padding: 24px; width: 420px; max-width: 95vw; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
+    .modal-box h3 { font-size: 16px; margin-bottom: 6px; }
+    .modal-box p { font-size: 13px; color: #666; margin-bottom: 18px; }
+    .skip-option { border: 2px solid #e0e0e0; border-radius: 8px; padding: 14px; margin-bottom: 10px; cursor: pointer; transition: border-color 0.15s; }
+    .skip-option:hover { border-color: #7c3aed; }
+    .skip-option.selected { border-color: #7c3aed; background: #faf5ff; }
+    .skip-option input[type=radio] { margin-right: 8px; accent-color: #7c3aed; }
+    .skip-option strong { font-size: 13px; display: block; margin-bottom: 4px; }
+    .skip-option span { font-size: 12px; color: #666; }
     .emp-info-bar { background: #e8f0fe; border-radius: 8px; padding: 12px 15px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 15px; }
     .emp-info-item label { font-size: 11px; color: #666; font-weight: 600; display: block; }
     .emp-info-item span { font-size: 14px; font-weight: 700; color: #1a73e8; }
@@ -291,7 +305,7 @@
       </div>
       <table class="schedule-table">
         <thead>
-          <tr><th>#</th><th>Month</th><th>EMI</th><th>Principal</th><th>Interest</th><th>Balance</th><th>Status</th></tr>
+          <tr><th>#</th><th>Month</th><th>EMI</th><th>Principal</th><th>Interest</th><th>Balance</th><th>Status</th><th></th></tr>
         </thead>
         <tbody id="scheduleTable"></tbody>
       </table>
@@ -585,13 +599,18 @@
       document.getElementById('preCloseBtn').style.display = loan.status === 'Active' ? 'inline-block' : 'none';
       const tbody = document.getElementById('scheduleTable');
       tbody.innerHTML = loan.schedule.map(function(s, i) {
-        return '<tr class="' + (s.status === 'Paid' ? 'paid-row' : '') + '">' +
+        const rowClass = s.status === 'Paid' ? 'paid-row' : s.status === 'Skipped' ? 'skipped-row' : '';
+        const skipBtn = s.status === 'Pending'
+          ? '<button class="btn-skip" onclick="skipEMI(\'' + s.month + '\',' + s.year + ')">Skip</button>'
+          : '';
+        return '<tr class="' + rowClass + '">' +
           '<td>' + (i+1) + '</td><td>' + s.month + ' ' + s.year + '</td>' +
           '<td>₹' + s.emiAmount.toLocaleString('en-IN') + '</td>' +
           '<td>₹' + s.principal.toLocaleString('en-IN') + '</td>' +
           '<td>₹' + s.interest.toLocaleString('en-IN') + '</td>' +
           '<td>₹' + s.balance.toLocaleString('en-IN') + '</td>' +
           '<td><span class="badge badge-' + s.status.toLowerCase() + '">' + s.status + '</span></td>' +
+          '<td>' + skipBtn + '</td>' +
           '</tr>';
       }).join('');
       switchView('detailView');
@@ -649,7 +668,80 @@
     el.textContent = msg; el.style.display = 'block';
     setTimeout(function() { el.style.display = 'none'; }, 4000);
   }
+
+  // ── Skip EMI ──────────────────────────────────────────────────────────────
+  function skipEMI(month, year) {
+    document.getElementById('skipMonth').value = month;
+    document.getElementById('skipYear').value = year;
+    document.getElementById('skipModalDesc').textContent =
+      'Skipping EMI for ' + month + ' ' + year + '. Choose what to do with this installment:';
+    // Reset to default option
+    selectSkipOption('add_to_next');
+    document.getElementById('skipModal').classList.add('open');
+  }
+
+  function selectSkipOption(type) {
+    document.querySelectorAll('.skip-option').forEach(function(el) { el.classList.remove('selected'); });
+    document.getElementById(type === 'add_to_next' ? 'optAddToNext' : 'optExtendTenure').classList.add('selected');
+    document.querySelector('input[value="' + type + '"]').checked = true;
+  }
+
+  function closeSkipModal() {
+    document.getElementById('skipModal').classList.remove('open');
+  }
+
+  async function confirmSkip() {
+    const month = document.getElementById('skipMonth').value;
+    const year = document.getElementById('skipYear').value;
+    const skipType = document.querySelector('input[name="skipType"]:checked').value;
+    try {
+      const res = await fetch('/api/loans/' + currentLoanId + '/skip-emi', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ month, year: parseInt(year), skipType })
+      });
+      const data = await res.json();
+      closeSkipModal();
+      if (data.success) {
+        alert('✅ EMI for ' + month + ' ' + year + ' skipped successfully.');
+        viewLoan(currentLoanId); // refresh detail view
+      } else {
+        alert('Error: ' + data.message);
+      }
+    } catch (e) {
+      closeSkipModal();
+      alert('Error: ' + e.message);
+    }
+  }
 </script>
+<!-- SKIP EMI MODAL -->
+<div id="skipModal" class="modal-overlay">
+  <div class="modal-box">
+    <h3>⏭️ Skip EMI</h3>
+    <p id="skipModalDesc">Choose what to do with the skipped EMI amount:</p>
+    <input type="hidden" id="skipMonth">
+    <input type="hidden" id="skipYear">
+
+    <label class="skip-option selected" id="optAddToNext" onclick="selectSkipOption('add_to_next')">
+      <input type="radio" name="skipType" value="add_to_next" checked>
+      <strong>Add to next month</strong>
+      <span>Next month's EMI will be doubled. Loan closes on same date.</span>
+    </label>
+
+    <label class="skip-option" id="optExtendTenure" onclick="selectSkipOption('extend_tenure')">
+      <input type="radio" name="skipType" value="extend_tenure">
+      <strong>Extend tenure by 1 month</strong>
+      <span>EMI stays the same. One extra installment added at the end.</span>
+    </label>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+      <button class="btn-secondary" onclick="closeSkipModal()">Cancel</button>
+      <button class="btn-skip" style="padding:9px 18px;font-size:13px;" onclick="confirmSkip()">Confirm Skip</button>
+    </div>
+  </div>
+</div>
+
 <script src="/js/emp-search.js?v=2"></script>
 </body>
 </html>
