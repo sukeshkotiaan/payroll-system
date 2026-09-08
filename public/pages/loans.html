@@ -598,11 +598,19 @@
         '<div class="loan-summary-card"><label>Total Paid</label><span style="color:#34a853;">₹' + loan.totalPaid.toLocaleString('en-IN') + '</span></div>';
       document.getElementById('preCloseBtn').style.display = loan.status === 'Active' ? 'inline-block' : 'none';
       const tbody = document.getElementById('scheduleTable');
+      const now = new Date();
       tbody.innerHTML = loan.schedule.map(function(s, i) {
         const rowClass = s.status === 'Paid' ? 'paid-row' : s.status === 'Skipped' ? 'skipped-row' : '';
-        const skipBtn = s.status === 'Pending'
-          ? '<button class="btn-skip" onclick="skipEMI(\'' + s.month + '\',' + s.year + ')">Skip</button>'
-          : '';
+        let actionBtns = '';
+        if (s.status === 'Pending') {
+          const MONTHS_LIST = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+          const emiDate = new Date(s.year, MONTHS_LIST.indexOf(s.month), 1);
+          const isPast = emiDate < new Date(now.getFullYear(), now.getMonth(), 1);
+          if (isPast) {
+            actionBtns += '<button class="btn-success" style="padding:4px 10px;font-size:11px;margin-right:4px;" onclick="markEMIPaid(\'' + s.month + '\',' + s.year + ')">Mark Paid</button>';
+          }
+          actionBtns += '<button class="btn-skip" onclick="skipEMI(\'' + s.month + '\',' + s.year + ')">Skip</button>';
+        }
         return '<tr class="' + rowClass + '">' +
           '<td>' + (i+1) + '</td><td>' + s.month + ' ' + s.year + '</td>' +
           '<td>₹' + s.emiAmount.toLocaleString('en-IN') + '</td>' +
@@ -610,7 +618,7 @@
           '<td>₹' + s.interest.toLocaleString('en-IN') + '</td>' +
           '<td>₹' + s.balance.toLocaleString('en-IN') + '</td>' +
           '<td><span class="badge badge-' + s.status.toLowerCase() + '">' + s.status + '</span></td>' +
-          '<td>' + skipBtn + '</td>' +
+          '<td style="white-space:nowrap;">' + actionBtns + '</td>' +
           '</tr>';
       }).join('');
       switchView('detailView');
@@ -667,6 +675,27 @@
     const el = document.getElementById(id);
     el.textContent = msg; el.style.display = 'block';
     setTimeout(function() { el.style.display = 'none'; }, 4000);
+  }
+
+  // ── Mark EMI as Paid manually ─────────────────────────────────────────────
+  async function markEMIPaid(month, year) {
+    if (!confirm('Mark ' + month + ' ' + year + ' EMI as paid?\n\nUse this for months where salary was already disbursed but EMI was not auto-deducted.')) return;
+    try {
+      const res = await fetch('/api/loans/' + currentLoanId + '/pay-emi', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ month, year: parseInt(year) })
+      });
+      const data = await res.json();
+      if (data.success) {
+        viewLoan(currentLoanId); // refresh
+      } else {
+        alert('Error: ' + data.message);
+      }
+    } catch (e) {
+      alert('Error: ' + e.message);
+    }
   }
 
   // ── Skip EMI ──────────────────────────────────────────────────────────────
