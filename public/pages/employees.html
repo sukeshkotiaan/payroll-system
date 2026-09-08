@@ -602,7 +602,7 @@
 
   async function loadEmployees() {
     try {
-      const res = await fetch('/api/employees', { credentials: 'include' });
+      const res = await fetch('/api/employees?all=true', { credentials: 'include' });
       const data = await res.json();
       if (data.success) {
         allEmployees = data.employees;
@@ -1292,7 +1292,7 @@
 
   async function exportEmployees() {
     try {
-      const res = await fetch('/api/employees');
+      const res = await fetch('/api/employees?all=true');
       const data = await res.json();
       if (!data.success) return;
       const employees = data.employees;
