@@ -79,6 +79,7 @@ app.use('/api/schoolinfo', require('./routes/schoolinfo'));
 app.use('/api/email', require('./routes/email'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/loans', require('./routes/loans'));
+app.use('/api/extra-pay', require('./routes/extra-pay'));
 app.use('/api/reports', require('./routes/reports'));
 
 // Page Routes
@@ -147,6 +148,10 @@ app.get('/tds', (req, res) => {
 
 app.get('/loans', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'pages', 'loans.html'));
+});
+
+app.get('/extra-pay', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'pages', 'extra-pay.html'));
 });
 
 app.get('/reports', (req, res) => {

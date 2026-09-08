@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Extra Pay Register — Payroll System</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; }
+    .header { background: #0f9d58; color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+    .header h1 { font-size: 20px; }
+    .btn-back { background: white; color: #0f9d58; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+    .container { padding: 20px; max-width: 1200px; margin: 0 auto; }
+    .card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 20px; }
+    .card-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+    .card-header h3 { font-size: 15px; color: #333; }
+    .card-body { padding: 20px; }
+    .btn-primary { background: #0f9d58; color: white; border: none; padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
+    .btn-secondary { background: #f0f2f5; color: #333; border: none; padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
+    .btn-danger { background: #ea4335; color: white; border: none; padding: 5px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 600; }
+    .btn-export { background: #1a73e8; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group label { font-size: 13px; font-weight: 600; color: #555; }
+    .form-group select, .form-group input { padding: 9px 11px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; outline: none; }
+    .form-group select:focus, .form-group input:focus { border-color: #0f9d58; }
+    .alert { padding: 10px 14px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; display: none; }
+    .alert-success { background: #e6f4ea; color: #0f9d58; }
+    .alert-error { background: #fce8e6; color: #ea4335; }
+    .empty-state { text-align: center; padding: 40px; color: #999; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: #f8f9fa; padding: 11px 14px; text-align: left; font-weight: 600; color: #555; border-bottom: 1px solid #eee; }
+    td { padding: 11px 14px; border-bottom: 1px solid #f5f5f5; color: #333; }
+    tr:hover { background: #f8fff8; }
+    .summary-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
+    .summary-card { background: white; border-radius: 10px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center; }
+    .summary-card label { font-size: 11px; color: #666; display: block; margin-bottom: 5px; font-weight: 600; }
+    .summary-card span { font-size: 20px; font-weight: 700; color: #0f9d58; }
+    .emp-info-bar { background: #e6f4ea; border-radius: 8px; padding: 12px 15px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 15px; }
+    .emp-info-item label { font-size: 11px; color: #555; font-weight: 600; display: block; }
+    .emp-info-item span { font-size: 14px; font-weight: 700; color: #0f9d58; }
+    .search-bar { display: flex; gap: 10px; margin-bottom: 15px; }
+    .search-bar input { flex: 1; max-width: 350px; padding: 10px; border: 2px solid #0f9d58; border-radius: 6px; font-size: 14px; outline: none; }
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal-box { background: white; border-radius: 12px; padding: 28px; width: 500px; max-width: 95vw; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
+    .modal-box h3 { font-size: 16px; margin-bottom: 20px; color: #0f9d58; }
+    .hint { font-size: 11px; color: #999; margin-top: 3px; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>💰 Extra Pay Register</h1>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span id="headerUser" style="font-size:13px;"></span>
+    <button class="btn-back" onclick="window.location.href='/adjustments'">← Adjustments</button>
+  </div>
+</div>
+
+<div class="container">
+  <div class="alert alert-success" id="alertSuccess"></div>
+  <div class="alert alert-error" id="alertError"></div>
+
+  <!-- SUMMARY -->
+  <div class="summary-bar">
+    <div class="summary-card"><label>Total Entries</label><span id="sumCount">0</span></div>
+    <div class="summary-card"><label>Total Amount</label><span id="sumAmount">₹0</span></div>
+    <div class="summary-card"><label>Employees</label><span id="sumEmp">0</span></div>
+    <div class="summary-card"><label>This Month</label><span id="sumMonth">₹0</span></div>
+  </div>
+
+  <!-- FILTERS -->
+  <div class="card">
+    <div class="card-body">
+      <div style="display:flex;gap:15px;flex-wrap:wrap;align-items:end;">
+        <div class="form-group">
+          <label>Month</label>
+          <select id="filterMonth" onchange="loadEntries()">
+            <option value="">All Months</option>
+            <option>January</option><option>February</option><option>March</option>
+            <option>April</option><option>May</option><option>June</option>
+            <option>July</option><option>August</option><option>September</option>
+            <option>October</option><option>November</option><option>December</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Year</label>
+          <select id="filterYear" onchange="loadEntries()"></select>
+        </div>
+        <div class="form-group">
+          <label>Location</label>
+          <select id="filterLocation" onchange="loadEntries()">
+            <option value="">All Locations</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Search EIN / Name</label>
+          <input type="text" id="filterSearch" placeholder="EIN or Name" oninput="filterTable()">
+        </div>
+        <div class="form-group" style="align-self:end;display:flex;gap:8px;">
+          <button class="btn-primary" onclick="openAddModal()">+ Add Entry</button>
+          <button class="btn-export" onclick="exportExcel()">⬇ Export Excel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="card">
+    <div class="card-header">
+      <h3>Extra Pay Entries <span id="tableCount" style="color:#666;font-weight:400;font-size:13px;"></span></h3>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>EIN</th><th>Name</th><th>Location</th>
+          <th>Month / Year</th><th>Amount</th><th>Reason</th>
+          <th>Payment Mode</th><th>Payment Date</th><th>Added By</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="entryTable">
+        <tr><td colspan="10"><div class="empty-state">Loading...</div></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ADD ENTRY MODAL -->
+<div id="addModal" class="modal-overlay">
+  <div class="modal-box">
+    <h3>💰 Add Extra Pay Entry</h3>
+
+    <div class="search-bar">
+      <input type="text" id="empSearch" placeholder="Search EIN or Employee Name"
+        onkeypress="if(event.key==='Enter') searchEmployee()">
+      <button class="btn-primary" onclick="searchEmployee()">🔍</button>
+    </div>
+    <div id="empInfoBar" style="display:none;margin-bottom:15px;">
+      <div class="emp-info-bar">
+        <div class="emp-info-item"><label>EIN</label><span id="infoEIN">—</span></div>
+        <div class="emp-info-item"><label>Name</label><span id="infoName">—</span></div>
+        <div class="emp-info-item"><label>Location</label><span id="infoLocation">—</span></div>
+        <div class="emp-info-item"><label>Profile</label><span id="infoProfile">—</span></div>
+      </div>
+    </div>
+    <input type="hidden" id="selectedEIN">
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+      <div class="form-group">
+        <label>Month *</label>
+        <select id="entryMonth">
+          <option value="">Select Month</option>
+          <option>January</option><option>February</option><option>March</option>
+          <option>April</option><option>May</option><option>June</option>
+          <option>July</option><option>August</option><option>September</option>
+          <option>October</option><option>November</option><option>December</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Year *</label>
+        <select id="entryYear"></select>
+      </div>
+      <div class="form-group">
+        <label>Amount (₹) *</label>
+        <input type="number" id="entryAmount" placeholder="e.g. 2500" min="0">
+      </div>
+      <div class="form-group">
+        <label>Payment Mode</label>
+        <select id="entryPaymentMode">
+          <option>Bank Transfer</option>
+          <option>Cash</option>
+          <option>Cheque</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Reason *</label>
+        <select id="entryReason" onchange="toggleReasonDetail()">
+          <option value="">Select Reason</option>
+          <option>Extra Classes</option>
+          <option>Special Duty</option>
+          <option>Event / Function</option>
+          <option>Exam Duty</option>
+          <option>Sports Duty</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Payment Date</label>
+        <input type="date" id="entryPaymentDate">
+      </div>
+      <div class="form-group" id="reasonDetailGroup" style="display:none;grid-column:1/-1;">
+        <label>Reason Details</label>
+        <input type="text" id="entryReasonDetail" placeholder="Describe the extra work">
+      </div>
+      <div class="form-group" style="grid-column:1/-1;">
+        <label>Remarks</label>
+        <input type="text" id="entryRemarks" placeholder="Any additional notes">
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button class="btn-secondary" onclick="closeAddModal()">Cancel</button>
+      <button class="btn-primary" onclick="saveEntry()">💾 Save Entry</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const MONTHS = ['January','February','March','April','May','June',
+    'July','August','September','October','November','December'];
+  let currentUser = {};
+  let allEntries = [];
+
+  window.onload = async () => {
+    await checkAuth();
+    await loadLocations();
+    populateYears();
+    setDefaults();
+    await loadEntries();
+  };
+
+  async function checkAuth() {
+    const res = await fetch('/api/auth/me');
+    const data = await res.json();
+    if (!data.success) { window.location.href = '/'; return; }
+    currentUser = data.user;
+    document.getElementById('headerUser').textContent = data.user.fullName;
+  }
+
+  async function loadLocations() {
+    try {
+      const res = await fetch('/api/masters/location');
+      const data = await res.json();
+      if (data.success) {
+        const el = document.getElementById('filterLocation');
+        data.masters.forEach(m => {
+          el.innerHTML += '<option value="' + m.value + '">' + m.value + '</option>';
+        });
+      }
+    } catch(e) {}
+  }
+
+  function populateYears() {
+    const now = new Date().getFullYear();
+    ['filterYear','entryYear'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.innerHTML = '<option value="">All Years</option>';
+      for (let y = now - 1; y <= now + 1; y++) {
+        el.innerHTML += '<option value="' + y + '"' + (y === now ? ' selected' : '') + '>' + y + '</option>';
+      }
+    });
+    const ey = document.getElementById('entryYear');
+    if (ey) ey.querySelector('option[value=""]').textContent = 'Select Year';
+  }
+
+  function setDefaults() {
+    const now = new Date();
+    const fm = document.getElementById('filterMonth');
+    if (fm) fm.value = MONTHS[now.getMonth()];
+  }
+
+  async function loadEntries() {
+    try {
+      const month    = document.getElementById('filterMonth').value;
+      const year     = document.getElementById('filterYear').value;
+      const location = document.getElementById('filterLocation').value;
+      let url = '/api/extra-pay?';
+      if (month)    url += 'month=' + encodeURIComponent(month) + '&';
+      if (year)     url += 'year=' + year + '&';
+      if (location) url += 'location=' + encodeURIComponent(location) + '&';
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.success) {
+        allEntries = data.entries;
+        updateSummary(data.entries);
+        filterTable();
+      }
+    } catch(e) {}
+  }
+
+  function updateSummary(entries) {
+    const total = entries.reduce((s, e) => s + e.amount, 0);
+    const uniqueEmp = new Set(entries.map(e => e.ein)).size;
+    const now = new Date();
+    const thisMonth = entries.filter(e => e.month === MONTHS[now.getMonth()] && e.year === now.getFullYear());
+    const thisMonthTotal = thisMonth.reduce((s, e) => s + e.amount, 0);
+    document.getElementById('sumCount').textContent = entries.length;
+    document.getElementById('sumAmount').textContent = '₹' + total.toLocaleString('en-IN');
+    document.getElementById('sumEmp').textContent = uniqueEmp;
+    document.getElementById('sumMonth').textContent = '₹' + thisMonthTotal.toLocaleString('en-IN');
+  }
+
+  function filterTable() {
+    const search = document.getElementById('filterSearch').value.toLowerCase();
+    const filtered = search ? allEntries.filter(e =>
+      (e.ein && e.ein.toLowerCase().includes(search)) ||
+      (e.employeeName && e.employeeName.toLowerCase().includes(search))
+    ) : allEntries;
+    renderTable(filtered);
+  }
+
+  function renderTable(entries) {
+    document.getElementById('tableCount').textContent = '(' + entries.length + ' entries)';
+    const tbody = document.getElementById('entryTable');
+    if (!entries.length) {
+      tbody.innerHTML = '<tr><td colspan="10"><div class="empty-state">No extra pay entries found</div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = entries.map(function(e) {
+      const pd = e.paymentDate ? new Date(e.paymentDate).toLocaleDateString('en-IN') : '—';
+      const isAdmin = currentUser.role === 'admin' || currentUser.role === 'management_l1';
+      return '<tr>' +
+        '<td><strong>' + e.ein + '</strong></td>' +
+        '<td>' + e.employeeName + '</td>' +
+        '<td>' + e.location + '</td>' +
+        '<td>' + e.month + ' ' + e.year + '</td>' +
+        '<td><strong style="color:#0f9d58;">₹' + e.amount.toLocaleString('en-IN') + '</strong></td>' +
+        '<td>' + e.reason + (e.reasonDetail ? ' — ' + e.reasonDetail : '') + '</td>' +
+        '<td>' + e.paymentMode + '</td>' +
+        '<td>' + pd + '</td>' +
+        '<td style="font-size:11px;color:#666;">' + (e.addedBy || '—') + '</td>' +
+        '<td>' + (isAdmin ? '<button class="btn-danger" onclick="deleteEntry(\'' + e._id + '\')">Delete</button>' : '—') + '</td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  async function searchEmployee() {
+    const search = document.getElementById('empSearch').value.trim();
+    if (!search) return;
+    try {
+      const res = await fetch('/api/loans/find-employee/' + encodeURIComponent(search));
+      const data = await res.json();
+      if (data.success) {
+        const emp = data.employee;
+        document.getElementById('selectedEIN').value = emp.ein;
+        document.getElementById('infoEIN').textContent = emp.ein;
+        document.getElementById('infoName').textContent = emp.employeeName;
+        document.getElementById('infoLocation').textContent = emp.location;
+        document.getElementById('infoProfile').textContent = emp.profile;
+        document.getElementById('empInfoBar').style.display = 'block';
+      } else {
+        alert('Employee not found');
+        document.getElementById('empInfoBar').style.display = 'none';
+        document.getElementById('selectedEIN').value = '';
+      }
+    } catch(e) { alert('Search error: ' + e.message); }
+  }
+
+  function toggleReasonDetail() {
+    const reason = document.getElementById('entryReason').value;
+    const grp = document.getElementById('reasonDetailGroup');
+    grp.style.display = (reason === 'Other' || reason === 'Event / Function') ? 'block' : 'none';
+  }
+
+  async function saveEntry() {
+    const ein = document.getElementById('selectedEIN').value;
+    const month = document.getElementById('entryMonth').value;
+    const year = document.getElementById('entryYear').value;
+    const amount = document.getElementById('entryAmount').value;
+    const reason = document.getElementById('entryReason').value;
+    if (!ein) { alert('Please search and select an employee'); return; }
+    if (!month || !year) { alert('Please select month and year'); return; }
+    if (!amount || parseFloat(amount) <= 0) { alert('Please enter a valid amount'); return; }
+    if (!reason) { alert('Please select a reason'); return; }
+    try {
+      const res = await fetch('/api/extra-pay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          ein, month, year: parseInt(year),
+          amount: parseFloat(amount),
+          reason,
+          reasonDetail: document.getElementById('entryReasonDetail').value,
+          paymentDate: document.getElementById('entryPaymentDate').value || null,
+          paymentMode: document.getElementById('entryPaymentMode').value,
+          remarks: document.getElementById('entryRemarks').value
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        closeAddModal();
+        showAlert('alertSuccess', '✅ ' + data.message);
+        await loadEntries();
+      } else {
+        alert('Error: ' + data.message);
+      }
+    } catch(e) { alert('Error: ' + e.message); }
+  }
+
+  async function deleteEntry(id) {
+    if (!confirm('Delete this extra pay entry?')) return;
+    try {
+      const res = await fetch('/api/extra-pay/' + id, { method: 'DELETE', credentials: 'include' });
+      const data = await res.json();
+      if (data.success) { showAlert('alertSuccess', data.message); await loadEntries(); }
+      else alert('Error: ' + data.message);
+    } catch(e) {}
+  }
+
+  function exportExcel() {
+    const month    = document.getElementById('filterMonth').value;
+    const year     = document.getElementById('filterYear').value;
+    const location = document.getElementById('filterLocation').value;
+    const search   = document.getElementById('filterSearch').value.toLowerCase();
+    const filtered = allEntries.filter(e =>
+      (!search || e.ein.toLowerCase().includes(search) || e.employeeName.toLowerCase().includes(search))
+    );
+    if (!filtered.length) { alert('No entries to export'); return; }
+
+    let csv = 'EIN,Name,Location,Section,Profile,Month,Year,Amount,Reason,Reason Detail,Payment Mode,Payment Date,Remarks,Added By\n';
+    filtered.forEach(e => {
+      const pd = e.paymentDate ? new Date(e.paymentDate).toLocaleDateString('en-IN') : '';
+      csv += [e.ein, '"' + e.employeeName + '"', e.location, e.section, e.profile,
+        e.month, e.year, e.amount, '"' + e.reason + '"', '"' + (e.reasonDetail||'') + '"',
+        e.paymentMode, pd, '"' + (e.remarks||'') + '"', e.addedBy||''].join(',') + '\n';
+    });
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'ExtraPay_' + (month || 'All') + '_' + (year || 'All') + '.csv';
+    a.click();
+  }
+
+  function openAddModal() {
+    // reset
+    document.getElementById('empSearch').value = '';
+    document.getElementById('selectedEIN').value = '';
+    document.getElementById('empInfoBar').style.display = 'none';
+    document.getElementById('entryMonth').value = MONTHS[new Date().getMonth()];
+    document.getElementById('entryYear').value = new Date().getFullYear();
+    document.getElementById('entryAmount').value = '';
+    document.getElementById('entryReason').value = '';
+    document.getElementById('entryReasonDetail').value = '';
+    document.getElementById('entryPaymentDate').value = '';
+    document.getElementById('entryPaymentMode').value = 'Bank Transfer';
+    document.getElementById('entryRemarks').value = '';
+    document.getElementById('reasonDetailGroup').style.display = 'none';
+    document.getElementById('addModal').classList.add('open');
+  }
+
+  function closeAddModal() {
+    document.getElementById('addModal').classList.remove('open');
+  }
+
+  function showAlert(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg; el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, 4000);
+  }
+</script>
+</body>
+</html>
