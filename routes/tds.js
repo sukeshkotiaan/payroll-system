@@ -48,7 +48,7 @@ router.get('/for-payroll', isLoggedIn, notSupervisor, async (req, res) => {
     const records = await TDS.find({ location, section, profile, month, year: parseInt(year) });
     return res.json({ success: true, records });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'tds for-payroll') });
   }
 });
 
@@ -81,7 +81,7 @@ router.post('/', isLoggedIn, isAccountantOrAdmin, async (req, res) => {
     );
     return res.json({ success: true, message: 'TDS saved successfully', tds });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'tds post') });
   }
 });
 
@@ -91,7 +91,7 @@ router.delete('/:id', isLoggedIn, isAdmin, async (req, res) => {
     await TDS.findByIdAndDelete(req.params.id);
     return res.json({ success: true, message: 'Deleted successfully' });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'tds delete') });
   }
 });
 

@@ -3,6 +3,7 @@ const router = express.Router();
 const ExcelJS = require('exceljs');
 const Employee = require('../models/Employee');
 const { isLoggedIn } = require('../middleware/auth');
+const { safeError } = require('../middleware/security');
 
 const MONTHS = ['January','February','March','April','May','June',
   'July','August','September','October','November','December'];
@@ -225,7 +226,7 @@ router.get('/download', isLoggedIn, async (req, res) => {
     res.end();
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'attendance-template download') });
   }
 });
 

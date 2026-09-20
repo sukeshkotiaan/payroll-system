@@ -3,6 +3,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const { isLoggedIn } = require('../middleware/auth');
+const { safeError } = require('../middleware/security');
 const Employee = require('../models/Employee');
 const Attendance = require('../models/Attendance');
 const Settings = require('../models/Settings');
@@ -215,7 +216,8 @@ router.post('/verify-otp', async (req, res) => {
 
     return res.json({ success: true, message: 'Login successful', user: req.session.user });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error('[verify-otp]', err.message);
+    return res.status(500).json({ success: false, message: safeError(err, 'auth verify-otp') });
   }
 });
 

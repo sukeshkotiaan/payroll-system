@@ -3,6 +3,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const { isLoggedIn, isAdmin } = require('../middleware/auth');
+const { safeError } = require('../middleware/security');
 
 // GET all users
 router.get('/', isLoggedIn, isAdmin, async (req, res) => {
@@ -10,7 +11,7 @@ router.get('/', isLoggedIn, isAdmin, async (req, res) => {
     const users = await User.find({}, { password: 0 }).sort({ createdAt: -1 });
     return res.json({ success: true, users });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'users list') });
   }
 });
 
@@ -21,7 +22,7 @@ router.get('/:id', isLoggedIn, isAdmin, async (req, res) => {
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
     return res.json({ success: true, user });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'users get') });
   }
 });
 
@@ -36,8 +37,8 @@ router.post('/', isLoggedIn, isAdmin, async (req, res) => {
     if (existing) {
       return res.status(400).json({ success: false, message: 'Username already exists' });
     }
-    if (password.length < 6) {
-      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
+    if (password.length < 8) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 8 characters' });
     }
     const hashedPassword = await bcrypt.hash(password, 12);
     const user = await User.create({
@@ -56,7 +57,7 @@ router.post('/', isLoggedIn, isAdmin, async (req, res) => {
       user: { ...user.toObject(), password: undefined }
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'users create') });
   }
 });
 
@@ -88,7 +89,7 @@ router.put('/:id', isLoggedIn, isAdmin, async (req, res) => {
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
     return res.json({ success: true, message: 'User updated successfully', user });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'users update') });
   }
 });
 
@@ -96,17 +97,17 @@ router.put('/:id', isLoggedIn, isAdmin, async (req, res) => {
 router.patch('/:id/reset-password', isLoggedIn, isAdmin, async (req, res) => {
   try {
     const { newPassword } = req.body;
-    if (!newPassword || newPassword.length < 6) {
+    if (!newPassword || newPassword.length < 8) {
       return res.status(400).json({
         success: false,
-        message: 'Password must be at least 6 characters'
+        message: 'Password must be at least 8 characters'
       });
     }
     const hashedPassword = await bcrypt.hash(newPassword, 12);
     await User.findByIdAndUpdate(req.params.id, { password: hashedPassword });
     return res.json({ success: true, message: 'Password reset successfully' });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'users reset-password') });
   }
 });
 
@@ -130,7 +131,7 @@ router.patch('/:id/toggle', isLoggedIn, isAdmin, async (req, res) => {
       user
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'users toggle') });
   }
 });
 

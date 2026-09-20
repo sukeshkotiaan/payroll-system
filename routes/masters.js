@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Master = require('../models/Master');
 const { isLoggedIn, isAdmin } = require('../middleware/auth');
+const { safeError } = require('../middleware/security');
 
 const ALL_MENUS = [
   { key: 'dashboard', label: '📊 Dashboard' },
@@ -74,7 +75,7 @@ router.get('/public/:type', async (req, res) => {
     const masters = await Master.find({ type: req.params.type, isActive: { $ne: false } }).sort({ value: 1 });
     return res.json({ success: true, masters });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'masters public') });
   }
 });
 
@@ -85,7 +86,7 @@ router.get('/:type', isLoggedIn, async (req, res) => {
     const masters = await Master.find(filter).sort({ value: 1 });
     return res.json({ success: true, masters });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'masters by-type') });
   }
 });
 
@@ -95,7 +96,7 @@ router.get('/', isLoggedIn, async (req, res) => {
     const masters = await Master.find().sort({ type: 1, value: 1 });
     return res.json({ success: true, masters });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'masters list') });
   }
 });
 
@@ -116,7 +117,7 @@ router.post('/', isLoggedIn, isAdmin, async (req, res) => {
     });
     return res.json({ success: true, message: 'Added successfully', master });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'masters post') });
   }
 });
 
@@ -130,7 +131,7 @@ router.put('/:id', isLoggedIn, isAdmin, async (req, res) => {
     );
     return res.json({ success: true, message: 'Updated successfully', master });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'masters put') });
   }
 });
 
@@ -146,7 +147,7 @@ router.patch('/:id/toggle', isLoggedIn, isAdmin, async (req, res) => {
       master
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'masters toggle') });
   }
 });
 

@@ -11,6 +11,7 @@ const Arrear = require('../models/Arrear');
 const TDS = require('../models/TDS');
 const Loan = require('../models/Loan');
 const Appraisal = require('../models/Appraisal');
+const { safeError } = require('../middleware/security');
 
 const MONTHS = ['January','February','March','April','May','June',
   'July','August','September','October','November','December'];
@@ -235,7 +236,7 @@ router.get('/', isLoggedIn, notSupervisor, async (req, res) => {
       .sort({ year: -1, month: -1 });
     return res.json({ success: true, records });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'payroll list') });
   }
 });
 
@@ -280,7 +281,7 @@ router.get('/month-overview', isLoggedIn, notSupervisor, async (req, res) => {
 
     return res.json({ success: true, groups: result, month, year: yr });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'payroll month-overview') });
   }
 });
 
@@ -305,7 +306,7 @@ router.get('/:id', isLoggedIn, notSupervisor, async (req, res) => {
 
     return res.json({ success: true, payroll });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'payroll get') });
   }
 });
 
@@ -640,7 +641,7 @@ router.post('/process', isLoggedIn, isAdmin, async (req, res) => {
     }
     return res.json(response);
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'payroll process') });
   }
 });
 
@@ -689,7 +690,7 @@ router.patch('/:id/record', isLoggedIn, isAdmin, async (req, res) => {
     await payroll.save();
     return res.json({ success: true, message: 'Updated', record });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'payroll update-record') });
   }
 });
 
@@ -703,7 +704,7 @@ router.patch('/:id/submit', isLoggedIn, isAdmin, async (req, res) => {
     await payroll.save();
     return res.json({ success: true, message: 'Payroll submitted for approval' });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'payroll submit') });
   }
 });
 
@@ -725,7 +726,7 @@ router.patch('/:id/approve', isLoggedIn, isAdmin, async (req, res) => {
       'PAYROLL_APPROVED', `Approved payroll: ${payroll.groupName} ${payroll.month} ${payroll.year}`, ip);
     return res.json({ success: true, message: 'Payroll approved' });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'payroll approve') });
   }
 });
 
@@ -763,7 +764,7 @@ router.patch('/:id/lock', isLoggedIn, isAdmin, async (req, res) => {
       'PAYROLL_LOCKED', `Locked payroll: ${payroll.groupName} ${payroll.month} ${payroll.year}`, ip);
     return res.json({ success: true, message: 'Payroll locked and loan EMIs updated' });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'payroll lock') });
   }
 });
 
@@ -778,7 +779,7 @@ router.delete('/:id', isLoggedIn, isAdmin, async (req, res) => {
     await Payroll.findByIdAndDelete(req.params.id);
     return res.json({ success: true, message: 'Deleted' });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'payroll delete') });
   }
 });
 
@@ -1038,7 +1039,7 @@ router.post('/process-all', isLoggedIn, isAdmin, async (req, res) => {
       results
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'payroll process-all') });
   }
 });
 
@@ -1065,7 +1066,7 @@ router.patch('/batch-approve', isLoggedIn, isAdmin, async (req, res) => {
     }
     return res.json({ success: true, message: `Approved ${payrolls.length} payroll group(s)`, count: payrolls.length });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'payroll batch-approve') });
   }
 });
 
@@ -1103,7 +1104,7 @@ router.patch('/batch-lock', isLoggedIn, isAdmin, async (req, res) => {
     }
     return res.json({ success: true, message: `Locked ${payrolls.length} payroll group(s) and updated loan EMIs`, count: payrolls.length });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'payroll batch-lock') });
   }
 });
 

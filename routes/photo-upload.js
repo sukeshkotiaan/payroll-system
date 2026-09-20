@@ -8,6 +8,7 @@ const Employee = require('../models/Employee');
 const Token    = require('../models/PhotoUploadToken');
 const SchoolInfo = require('../models/SchoolInfo');
 const { isLoggedIn } = require('../middleware/auth');
+const { safeError } = require('../middleware/security');
 
 const uploadsDir = path.join(__dirname, '../public/uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
@@ -88,7 +89,7 @@ router.get('/status', isLoggedIn, async (req, res) => {
 
     return res.json({ success: true, employees: result, counts });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'photo-upload status') });
   }
 });
 
@@ -120,7 +121,7 @@ router.post('/generate-link', isLoggedIn, async (req, res) => {
 
     return res.json({ success: true, token, expiresAt, employeeName: emp.employeeName, phone: emp.phoneNumber });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'photo-upload generate-link') });
   }
 });
 
@@ -151,7 +152,7 @@ router.get('/validate/:token', async (req, res) => {
       expiresAt: tok.expiresAt
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'photo-upload validate') });
   }
 });
 
@@ -182,7 +183,7 @@ router.post('/submit/:token', upload.single('photo'), async (req, res) => {
     return res.json({ success: true, message: 'Photo uploaded successfully! Your supervisor will review it.' });
   } catch (err) {
     if (req.file) fs.unlink(path.join(uploadsDir, req.file.filename), () => {});
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'photo-upload submit') });
   }
 });
 
@@ -215,7 +216,7 @@ router.patch('/review/:employeeId', isLoggedIn, async (req, res) => {
 
     return res.json({ success: true, message: action === 'approve' ? 'Photo approved.' : 'Photo rejected — employee notified on re-upload.' });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'photo-upload review') });
   }
 });
 

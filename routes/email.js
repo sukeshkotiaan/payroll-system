@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const nodemailer = require('nodemailer');
-const { isLoggedIn } = require('../middleware/auth');
+const { isLoggedIn, isAccountantOrAdmin } = require('../middleware/auth');
+const { safeError } = require('../middleware/security');
 
-// SEND PAYSLIP EMAIL
-router.post('/send-payslip', isLoggedIn, async (req, res) => {
+// SEND PAYSLIP EMAIL — accountant/admin/management only; supervisors cannot send emails
+router.post('/send-payslip', isLoggedIn, isAccountantOrAdmin, async (req, res) => {
   try {
     const { to, subject, html, employeeName, month, year } = req.body;
     if (!to || !html) return res.status(400).json({ success: false, message: 'Email and payslip content required' });
@@ -43,7 +44,7 @@ router.post('/send-payslip', isLoggedIn, async (req, res) => {
 
     return res.json({ success: true, message: 'Payslip sent to ' + to });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'email send-payslip') });
   }
 });
 

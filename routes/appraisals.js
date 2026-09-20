@@ -3,6 +3,7 @@ const router = express.Router();
 const Appraisal = require('../models/Appraisal');
 const Employee = require('../models/Employee');
 const { isLoggedIn, isAdmin } = require('../middleware/auth');
+const { sanitizeRegex, safeError } = require('../middleware/security');
 const { logAudit } = require('./security');
 
 // GET all appraisal records
@@ -26,7 +27,7 @@ router.get('/', isLoggedIn, async (req, res) => {
     const records = await Appraisal.find(filter).sort({ financialYear: -1, ein: 1 });
     return res.json({ success: true, records });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'appraisals list') });
   }
 });
 
@@ -38,17 +39,18 @@ router.get('/find-employee/:search', isLoggedIn, async (req, res) => {
       return res.status(403).json({ success: false, message: 'You do not have permission to view appraisal records.' });
     }
     const search = req.params.search.trim();
+    const safe = sanitizeRegex(search);
     let employee = await Employee.findOne({ ein: search.toUpperCase(), isActive: true });
     if (!employee) {
       employee = await Employee.findOne({
-        employeeName: { $regex: search, $options: 'i' }, isActive: true
+        employeeName: { $regex: safe, $options: 'i' }, isActive: true
       });
     }
-    if (!employee) return res.status(404).json({ success: false, message: 'Employee not found: ' + search });
+    if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
 
     return res.json({ success: true, employee });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'appraisals find-employee') });
   }
 });
 
@@ -85,7 +87,7 @@ router.post('/', isLoggedIn, isAdmin, async (req, res) => {
       'SALARY_CHANGED', `Appraisal saved for ${ein} FY ${financialYear} — ₹${monthlySalary}/month`, ip);
     return res.json({ success: true, message: 'Appraisal record saved successfully', appraisal });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'appraisals post') });
   }
 });
 
@@ -164,7 +166,7 @@ router.post('/seed-from-employees', isLoggedIn, isAdmin, async (req, res) => {
       seeded, skipped, noSalary, errors
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'appraisals seed') });
   }
 });
 
@@ -209,7 +211,7 @@ router.post('/bulk-import', isLoggedIn, isAdmin, async (req, res) => {
     }
     return res.json({ success: true, message: 'Import complete', imported, skipped, errors });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'appraisals bulk-import') });
   }
 });
 
@@ -219,7 +221,7 @@ router.delete('/:id', isLoggedIn, isAdmin, async (req, res) => {
     await Appraisal.findByIdAndDelete(req.params.id);
     return res.json({ success: true, message: 'Deleted successfully' });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'appraisals delete') });
   }
 });
 

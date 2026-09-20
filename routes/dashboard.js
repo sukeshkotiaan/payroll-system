@@ -5,6 +5,7 @@ const Payroll = require('../models/Payroll');
 const Attendance = require('../models/Attendance');
 const Loan = require('../models/Loan');
 const { isLoggedIn, isAdmin } = require('../middleware/auth');
+const { safeError } = require('../middleware/security');
 
 // Financial stats — admin and management only (supervisors and accountants excluded)
 router.get('/stats', isLoggedIn, isAdmin, async (req, res) => {
@@ -47,7 +48,7 @@ router.get('/stats', isLoggedIn, isAdmin, async (req, res) => {
       }
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'dashboard stats') });
   }
 });
 

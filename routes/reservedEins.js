@@ -3,6 +3,7 @@ const router = express.Router();
 const ReservedEIN = require('../models/ReservedEIN');
 const Employee    = require('../models/Employee');
 const { isLoggedIn, isAdmin } = require('../middleware/auth');
+const { safeError } = require('../middleware/security');
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 
@@ -30,7 +31,7 @@ router.get('/', isLoggedIn, isAdmin, async (req, res) => {
     const assigned  = total - available;
     return res.json({ success: true, eins, summary: { total, available, assigned } });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'reservedEins list') });
   }
 });
 
@@ -86,7 +87,7 @@ router.post('/seed', isLoggedIn, isAdmin, async (req, res) => {
       skipped
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'reservedEins seed') });
   }
 });
 
@@ -134,7 +135,7 @@ router.post('/assign', isLoggedIn, isAdmin, async (req, res) => {
       employee
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'reservedEins assign') });
   }
 });
 
@@ -160,7 +161,7 @@ router.post('/release', isLoggedIn, isAdmin, async (req, res) => {
 
     return res.json({ success: true, message: `${ein} released (was assigned to ${prevEmployee})` });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'reservedEins release') });
   }
 });
 
@@ -180,7 +181,7 @@ router.delete('/:ein', isLoggedIn, isAdmin, async (req, res) => {
     await ReservedEIN.deleteOne({ ein });
     return res.json({ success: true, message: `${ein} removed from the reserved pool` });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'reservedEins delete') });
   }
 });
 

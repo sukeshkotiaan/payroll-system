@@ -104,7 +104,7 @@ router.post('/calculate-emi', isLoggedIn, async (req, res) => {
     const totalInterest = parseFloat((totalPayable - loanAmount).toFixed(2));
     return res.json({ success: true, emi, totalPayable, totalInterest });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'loans calculate-emi') });
   }
 });
 
@@ -129,7 +129,7 @@ router.get('/for-payroll/active', isLoggedIn, async (req, res) => {
     }).filter(Boolean);
     return res.json({ success: true, loans: result });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'loans for-payroll') });
   }
 });
 
@@ -173,7 +173,7 @@ router.post('/', isLoggedIn, isAdmin, async (req, res) => {
     });
     return res.json({ success: true, message: 'Loan created successfully', loan });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'loans create') });
   }
 });
 
@@ -202,7 +202,7 @@ router.patch('/:id/pay-emi', isLoggedIn, isAdmin, async (req, res) => {
     await loan.save();
     return res.json({ success: true, message: 'EMI marked as paid', loan });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'loans pay-emi') });
   }
 });
 
@@ -217,7 +217,7 @@ router.patch('/:id/pre-close', isLoggedIn, isAdmin, async (req, res) => {
     await loan.save();
     return res.json({ success: true, message: 'Loan pre-closed' });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'loans pre-close') });
   }
 });
 
@@ -280,7 +280,7 @@ router.patch('/:id/skip-emi', isLoggedIn, isAdmin, async (req, res) => {
     await loan.save();
     return res.json({ success: true, message: 'EMI skipped successfully', loan });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'loans skip-emi') });
   }
 });
 
@@ -295,7 +295,7 @@ router.delete('/:id', isLoggedIn, isAdmin, async (req, res) => {
     await Loan.findByIdAndDelete(req.params.id);
     return res.json({ success: true, message: 'Deleted successfully' });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'loans delete') });
   }
 });
 

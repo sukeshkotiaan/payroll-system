@@ -31,29 +31,29 @@ router.get('/find-employee/:ein', isLoggedIn, async (req, res) => {
   }
 });
 
-// LIST exits
+// LIST exits — all filtering done at DB level
 router.get('/', isLoggedIn, async (req, res) => {
   try {
     const user = req.session.user;
     let filter = {};
 
+    // Supervisors see only exits they submitted (DB-level, not in-memory)
+    if (user.role === 'supervisor') {
+      filter.submittedBy = user.username;
+    }
+
+    // Accountants scoped to their branch
     if (user.role === 'accountant') filter.location = user.branch;
+
+    // Non-admin/management must not see management employee exits
+    if (user.role !== 'admin' && user.role !== 'management') {
+      filter.ein = { $not: /^MGT-/i };
+    }
 
     if (req.query.status) filter.status = req.query.status;
     if (req.query.employeeId) filter.employeeId = req.query.employeeId;
 
-    let exits = await Exit.find(filter).sort({ submittedAt: -1 });
-
-    // Supervisors see only exits they submitted for their team
-    if (user.role === 'supervisor') {
-      exits = exits.filter(e => e.submittedBy === user.username);
-    }
-
-    // Accountants and supervisors must not see management exits
-    if (user.role !== 'admin' && user.role !== 'management') {
-      exits = exits.filter(e => !e.ein || !/^MGT-/i.test(e.ein));
-    }
-
+    const exits = await Exit.find(filter).sort({ submittedAt: -1 });
     return res.json({ success: true, exits });
   } catch (err) {
     return res.status(500).json({ success: false, message: safeError(err, 'exits list') });

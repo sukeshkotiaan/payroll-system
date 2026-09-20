@@ -34,7 +34,7 @@ router.get('/default-rate', isLoggedIn, async (req, res) => {
     }
     return res.json({ success: true, rate });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'ot default-rate') });
   }
 });
 
@@ -65,7 +65,7 @@ router.get('/for-payroll', isLoggedIn, async (req, res) => {
     const records = await OT.find({ location, section, profile, month, year: parseInt(year) });
     return res.json({ success: true, records });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'ot for-payroll') });
   }
 });
 
@@ -102,7 +102,7 @@ router.post('/', isLoggedIn, isAccountantOrAdmin, async (req, res) => {
     );
     return res.json({ success: true, message: 'OT saved successfully', ot });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'ot post') });
   }
 });
 
@@ -112,7 +112,7 @@ router.delete('/:id', isLoggedIn, isAdmin, async (req, res) => {
     await OT.findByIdAndDelete(req.params.id);
     return res.json({ success: true, message: 'Deleted successfully' });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'ot delete') });
   }
 });
 

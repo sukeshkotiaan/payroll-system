@@ -67,7 +67,7 @@ router.post('/', isLoggedIn, isAccountantOrAdmin, async (req, res) => {
       'ARREAR_ADDED', `Added ${type} arrear ₹${amount} for ${ein} (${month} ${year})`, ip);
     return res.json({ success: true, message: 'Arrear added successfully', arrear });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'arrears post') });
   }
 });
 
@@ -93,7 +93,7 @@ router.put('/:id', isLoggedIn, isAccountantOrAdmin, async (req, res) => {
     await arrear.save();
     return res.json({ success: true, message: 'Updated successfully', arrear });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'arrears put') });
   }
 });
 
@@ -113,7 +113,7 @@ router.delete('/:id', isLoggedIn, isAccountantOrAdmin, async (req, res) => {
     await Arrear.findByIdAndDelete(req.params.id);
     return res.json({ success: true, message: 'Deleted successfully' });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'arrears delete') });
   }
 });
 
@@ -128,7 +128,7 @@ router.get('/for-payroll', isLoggedIn, async (req, res) => {
     });
     return res.json({ success: true, arrears });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'arrears for-payroll') });
   }
 });
 

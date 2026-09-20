@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const { isLoggedIn, isAdmin, notSupervisor } = require('../middleware/auth');
+const { safeError } = require('../middleware/security');
 const Settings = require('../models/Settings');
 const Master = require('../models/Master');
 const { invalidateCache } = require('../lib/settingsCache');
@@ -69,7 +70,7 @@ router.get('/calc-rules', isLoggedIn, notSupervisor, async (req, res) => {
     }));
     return res.json({ success: true, rules });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'settings calc-rules list') });
   }
 });
 
@@ -94,7 +95,7 @@ router.get('/calc-rules/:location', isLoggedIn, notSupervisor, async (req, res) 
     }
     return res.json({ success: true, rules: ls.currentRules });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'settings calc-rules get') });
   }
 });
 
@@ -111,7 +112,7 @@ router.get('/rule-history/:location', isLoggedIn, isAdmin, async (req, res) => {
       .sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt));
     return res.json({ success: true, history });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'settings rule-history') });
   }
 });
 
@@ -165,7 +166,7 @@ router.put('/calc-rules/:location', isLoggedIn, isAdmin, async (req, res) => {
       rules: newRule
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'settings save-rules') });
   }
 });
 
@@ -185,7 +186,7 @@ router.post('/correction-password', isLoggedIn, isAdmin, async (req, res) => {
     await settings.save();
     return res.json({ success: true, message: 'Correction password set successfully' });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'settings correction-password') });
   }
 });
 
@@ -280,7 +281,7 @@ router.post('/verify-correction-password', isLoggedIn, isAdmin, async (req, res)
     await settings.save();
     return res.json({ success: true, message: 'Password verified' });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'settings verify-correction-password') });
   }
 });
 

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const SchoolInfo = require('../models/SchoolInfo');
 const { isLoggedIn, isAdmin } = require('../middleware/auth');
+const { safeError } = require('../middleware/security');
 
 // GET all school info
 router.get('/', isLoggedIn, async (req, res) => {
@@ -9,7 +10,7 @@ router.get('/', isLoggedIn, async (req, res) => {
     const schools = await SchoolInfo.find();
     return res.json({ success: true, schools });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'schoolinfo list') });
   }
 });
 
@@ -19,7 +20,7 @@ router.get('/:type', isLoggedIn, async (req, res) => {
     const school = await SchoolInfo.findOne({ schoolType: req.params.type });
     return res.json({ success: true, school });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'schoolinfo get') });
   }
 });
 
@@ -35,7 +36,7 @@ router.post('/', isLoggedIn, isAdmin, async (req, res) => {
     );
     return res.json({ success: true, message: 'School info saved', school });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'schoolinfo post') });
   }
 });
 

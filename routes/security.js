@@ -7,6 +7,7 @@ const User = require('../models/User');
 const Settings = require('../models/Settings');
 const nodemailer = require('nodemailer');
 const { isLoggedIn, notSupervisor } = require('../middleware/auth');
+const { safeError } = require('../middleware/security');
 
 // Helper: generate cryptographically secure 6-digit OTP
 function generateOTP() {
@@ -53,33 +54,42 @@ async function logAudit(userId, username, fullName, role, action, details, ip) {
   }
 }
 
-// GENERATE OTP for accountant login (called from auth.js after password verified)
+// GENERATE OTP for accountant login — admin-only internal route (not used by the login flow,
+// which calls sendOTPToL1 directly from auth.js).  Restricted to admin to prevent misuse.
 router.post('/generate-otp', isLoggedIn, async (req, res) => {
   try {
+    const user = req.session.user;
+    // Only admin may trigger a manual OTP generation to prevent social-engineering abuse
+    if (user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
     const { userId, username, fullName } = req.body;
     if (!userId) return res.status(400).json({ success: false, message: 'User ID required' });
 
-    // Invalidate any existing OTPs for this user
     await OTP.deleteMany({ userId, used: false });
-
     const code = generateOTP();
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
-
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
     await OTP.create({ userId, username, code, expiresAt });
-
-    // Send to all L1 management users
     await sendOTPToL1(username, fullName, code);
 
     return res.json({ success: true, message: 'OTP sent to Management L1' });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error('[generate-otp]', err.message);
+    return res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
-// VERIFY OTP (with brute-force protection — max 5 attempts)
+// VERIFY OTP — called only during the accountant login OTP step.
+// This endpoint is intentionally unauthenticated because the user hasn't received
+// a session yet. It validates the OTP against the pending session stored by auth.js.
+// NOTE: The actual session binding is done by POST /api/auth/verify-otp, not here.
+// This route is kept for backward-compat but defers to the session-scoped flow.
 router.post('/verify-otp', async (req, res) => {
   try {
     const { userId, code } = req.body;
+    if (!userId || !code) {
+      return res.status(400).json({ success: false, message: 'userId and code are required' });
+    }
     const otp = await OTP.findOne({ userId, used: false });
 
     if (!otp) return res.status(400).json({ success: false, message: 'No OTP found. Please try logging in again.' });
@@ -92,7 +102,7 @@ router.post('/verify-otp', async (req, res) => {
       return res.status(429).json({ success: false, message: 'Too many incorrect attempts. Please request a new OTP.' });
     }
 
-    if (otp.code !== code) {
+    if (otp.code !== String(code).trim()) {
       otp.attempts = (otp.attempts || 0) + 1;
       await otp.save();
       const remaining = MAX_OTP_ATTEMPTS - otp.attempts;
@@ -107,7 +117,8 @@ router.post('/verify-otp', async (req, res) => {
 
     return res.json({ success: true, message: 'OTP verified' });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error('[verify-otp]', err.message);
+    return res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -118,15 +129,17 @@ router.get('/config', isLoggedIn, notSupervisor, async (req, res) => {
     const config = settings ? (settings.securityConfig || {}) : {};
     return res.json({ success: true, config });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'security config get') });
   }
 });
 
 // SAVE security config (L1 + Admin only)
+// NOTE: managementLevel is stored as Number (1, 2, 3) in the User model, not as 'L1'/'L2'.
 router.post('/config', isLoggedIn, async (req, res) => {
   try {
     const user = req.session.user;
-    if (user.role !== 'admin' && !(user.role === 'management' && user.managementLevel === 'L1')) {
+    const isL1 = user.role === 'management' && Number(user.managementLevel) === 1;
+    if (user.role !== 'admin' && !isL1) {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
     let settings = await Settings.findOne();
@@ -135,7 +148,8 @@ router.post('/config', isLoggedIn, async (req, res) => {
     await settings.save();
     return res.json({ success: true, message: 'Security settings saved' });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error('[security config save]', err.message);
+    return res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -143,7 +157,8 @@ router.post('/config', isLoggedIn, async (req, res) => {
 router.get('/audit-log', isLoggedIn, async (req, res) => {
   try {
     const user = req.session.user;
-    if (user.role !== 'admin' && !(user.role === 'management' && user.managementLevel === 'L1')) {
+    const isL1 = user.role === 'management' && Number(user.managementLevel) === 1;
+    if (user.role !== 'admin' && !isL1) {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
     const filter = {};
@@ -155,7 +170,8 @@ router.get('/audit-log', isLoggedIn, async (req, res) => {
     const logs = await AuditLog.find(filter).sort({ timestamp: -1 }).limit(500);
     return res.json({ success: true, logs });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error('[audit log]', err.message);
+    return res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 

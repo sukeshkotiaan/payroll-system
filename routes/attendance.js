@@ -3,6 +3,7 @@ const router = express.Router();
 const Attendance = require('../models/Attendance');
 const Employee = require('../models/Employee');
 const { isLoggedIn, isAdmin } = require('../middleware/auth');
+const { safeError } = require('../middleware/security');
 const { logAudit } = require('./security');
 
 const MONTHS = ['January','February','March','April','May','June',
@@ -42,9 +43,26 @@ function calculateTotals(days) {
   });
   const lopDays = absent;
   // payableDays = days the employee is entitled to pay (present + paid leaves + week-offs + holidays)
-  // Absent days are already excluded from presentDays, so do NOT subtract them again
   const payableDays = presentDays + weekOff + holidays;
   return { presentDays, cl, sl, pl, spL, absent, halfDays, weekOff, holidays, otHours, lopDays, payableDays };
+}
+
+// ── Ownership helper ──────────────────────────────────────────────────────────
+// Supervisors may only access attendance records they own.
+// Returns true if the requesting user is allowed to access/modify this record.
+function canAccessAttendance(user, attendance) {
+  if (user.role === 'admin' || user.role === 'management') return true;
+  if (user.role === 'accountant') {
+    // Accountants scoped to their branch; no supervisorId restriction needed
+    const branches = user.branches || [];
+    if (branches.includes('all')) return true;
+    return !attendance.location || branches.includes(attendance.location);
+  }
+  if (user.role === 'supervisor') {
+    // Supervisor must own the attendance record
+    return attendance.supervisorId && attendance.supervisorId.toString() === user.id.toString();
+  }
+  return false;
 }
 
 // GET all attendance records
@@ -70,11 +88,9 @@ router.get('/', isLoggedIn, async (req, res) => {
       .sort({ year: -1, month: -1 });
     return res.json({ success: true, records });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'attendance list') });
   }
 });
-
-// GET single attendance record
 
 // GET employees for template
 router.get('/template/employees', isLoggedIn, async (req, res) => {
@@ -103,7 +119,7 @@ router.get('/template/employees', isLoggedIn, async (req, res) => {
     const daysInMonth = getDaysInMonth(month, year);
     return res.json({ success: true, employees, daysInMonth });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'attendance template employees') });
   }
 });
 
@@ -114,17 +130,39 @@ router.get('/supervisors/list', isLoggedIn, async (req, res) => {
     const supervisors = await User.find({ role: 'supervisor', isActive: true }, { password: 0 });
     return res.json({ success: true, supervisors });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'attendance supervisors list') });
   }
 });
 
 // SAVE / UPDATE attendance
 router.post('/', isLoggedIn, async (req, res) => {
   try {
+    const user = req.session.user;
     const { month, year, location, section, profile, records } = req.body;
     if (!month || !year || !location || !section || !profile) {
       return res.status(400).json({ success: false, message: 'All fields required' });
     }
+
+    // Supervisors: verify every EIN in the submission belongs to their team
+    if (user.role === 'supervisor') {
+      const submittedEINs = (records || []).map(r => r.ein).filter(Boolean);
+      if (submittedEINs.length > 0) {
+        const owned = await Employee.find({
+          ein: { $in: submittedEINs },
+          supervisorId: user.id,
+          isActive: true
+        }).select('ein');
+        const ownedEINs = new Set(owned.map(e => e.ein));
+        const unauthorized = submittedEINs.filter(e => !ownedEINs.has(e));
+        if (unauthorized.length > 0) {
+          return res.status(403).json({
+            success: false,
+            message: 'Access denied — some employees in this submission are not in your team'
+          });
+        }
+      }
+    }
+
     const processedRecords = records.map(r => {
       const totals = calculateTotals(r.days || []);
       return { ...r, ...totals };
@@ -133,6 +171,10 @@ router.post('/', isLoggedIn, async (req, res) => {
       month, year: parseInt(year), location, section, profile
     });
     if (existing) {
+      // Ownership check on update
+      if (!canAccessAttendance(user, existing)) {
+        return res.status(403).json({ success: false, message: 'Access denied' });
+      }
       if (existing.status === 'Approved') {
         return res.status(400).json({ success: false, message: 'Attendance is approved and cannot be edited' });
       }
@@ -147,26 +189,38 @@ router.post('/', isLoggedIn, async (req, res) => {
     const attendance = await Attendance.create({
       month, year: parseInt(year), location, section, profile,
       groupName, records: processedRecords,
-      supervisorId: req.session.user.role === 'supervisor' ? req.session.user.id : null,
-      uploadedBy: req.session.user.username
+      supervisorId: user.role === 'supervisor' ? user.id : null,
+      uploadedBy: user.username
     });
     return res.json({ success: true, message: 'Attendance saved successfully', record: attendance });
   } catch (err) {
     console.error('Attendance POST error:', err.message);
-    console.error('Stack:', err.stack);
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'attendance save') });
   }
 });
 
 // UPDATE day status for one employee
 router.patch('/:id/day', isLoggedIn, async (req, res) => {
   try {
+    const user = req.session.user;
     const { ein, day, status, otHours } = req.body;
     const attendance = await Attendance.findById(req.params.id);
     if (!attendance) return res.status(404).json({ success: false, message: 'Not found' });
+
+    // Ownership check
+    if (!canAccessAttendance(user, attendance)) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
     if (attendance.status === 'Locked') {
       return res.status(400).json({ success: false, message: 'Attendance is locked' });
     }
+
+    // Supervisor: the EIN being updated must be in their team
+    if (user.role === 'supervisor' && ein) {
+      const emp = await Employee.findOne({ ein, supervisorId: user.id, isActive: true }).select('_id');
+      if (!emp) return res.status(403).json({ success: false, message: 'Employee not in your team' });
+    }
+
     const record = attendance.records.find(r => r.ein === ein);
     if (record) {
       const dayRecord = record.days.find(d => d.day === parseInt(day));
@@ -184,21 +238,27 @@ router.patch('/:id/day', isLoggedIn, async (req, res) => {
     await attendance.save();
     return res.json({ success: true, message: 'Updated' });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'attendance day update') });
   }
 });
 
 // SUBMIT attendance
 router.patch('/:id/submit', isLoggedIn, async (req, res) => {
   try {
+    const user = req.session.user;
     const attendance = await Attendance.findById(req.params.id);
     if (!attendance) return res.status(404).json({ success: false, message: 'Not found' });
+
+    // Ownership check
+    if (!canAccessAttendance(user, attendance)) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
     attendance.status = 'Pending';
     attendance.updatedAt = new Date();
     await attendance.save();
     return res.json({ success: true, message: 'Attendance submitted for payroll' });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'attendance submit') });
   }
 });
 
@@ -214,12 +274,12 @@ router.patch('/:id/lock', isLoggedIn, isAdmin, async (req, res) => {
       'ATTENDANCE_LOCKED', `Locked attendance for ${attendance.groupName} ${attendance.month} ${attendance.year}`, ip);
     return res.json({ success: true, message: 'Attendance locked' });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'attendance lock') });
   }
 });
 
-// DELETE attendance
-router.delete('/:id', isLoggedIn, async (req, res) => {
+// DELETE attendance — restricted to admin/management only (irreversible)
+router.delete('/:id', isLoggedIn, isAdmin, async (req, res) => {
   try {
     const attendance = await Attendance.findById(req.params.id);
     if (!attendance) return res.status(404).json({ success: false, message: 'Not found' });
@@ -229,15 +289,9 @@ router.delete('/:id', isLoggedIn, async (req, res) => {
     await Attendance.findByIdAndDelete(req.params.id);
     return res.json({ success: true, message: 'Deleted successfully' });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'attendance delete') });
   }
 });
-
-
-// APPROVE attendance
-
-// REJECT attendance
-
 
 // APPROVE attendance (admin/management only)
 router.patch('/:id/approve', isLoggedIn, isAdmin, async (req, res) => {
@@ -252,7 +306,7 @@ router.patch('/:id/approve', isLoggedIn, isAdmin, async (req, res) => {
       'ATTENDANCE_APPROVED', `Approved attendance for ${attendance.groupName} ${attendance.month} ${attendance.year}`, ip);
     return res.json({ success: true, message: 'Attendance approved successfully' });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'attendance approve') });
   }
 });
 
@@ -269,18 +323,24 @@ router.patch('/:id/reject', isLoggedIn, isAdmin, async (req, res) => {
       'ATTENDANCE_REJECTED', `Rejected attendance for ${attendance.groupName} ${attendance.month} ${attendance.year}`, ip);
     return res.json({ success: true, message: 'Attendance rejected and returned to Draft' });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'attendance reject') });
   }
 });
 
-
+// GET single attendance record — with ownership enforcement
 router.get('/:id', isLoggedIn, async (req, res) => {
   try {
+    const user = req.session.user;
     const record = await Attendance.findById(req.params.id);
     if (!record) return res.status(404).json({ success: false, message: 'Not found' });
+
+    if (!canAccessAttendance(user, record)) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
     return res.json({ success: true, record });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'attendance get') });
   }
 });
+
 module.exports = router;

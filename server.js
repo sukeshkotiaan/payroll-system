@@ -41,6 +41,17 @@ app.use(securityHeaders);
 // Middleware
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
+// Block /uploads/* from the unauthenticated static middleware — must run before express.static
+// Employee photos are served through the authenticated route registered below after session init.
+app.use('/uploads', (req, res, next) => {
+  // Allow access only after session is verified (session middleware hasn't run yet here,
+  // so we redirect to the authenticated /api/uploads/* handler instead of 403-ing directly).
+  // Returning 403 here effectively blocks all static serving of uploads.
+  return res.status(403).json({ success: false, message: 'Direct access to uploads is not permitted' });
+});
+
+// Serve static public assets (CSS, JS, HTML pages) — uploads directory is blocked above
 app.use(express.static(path.join(__dirname, 'public')));
 
 // NoSQL injection prevention — sanitize req.query/body/params on every API call
@@ -64,6 +75,34 @@ app.use(session({
     sameSite: 'lax'
   }
 }));
+
+// ── Authenticated file serving for employee photos ────────────────────────────
+// /uploads/* is blocked from anonymous access above; authenticated users get it here.
+// Public photo-upload page (token-auth) is also allowed for upload submissions.
+app.get('/uploads/*', (req, res, next) => {
+  // Allow: authenticated session OR a valid upload-photo page session check is done
+  // in the public upload flow (the file is served only when a valid token was used).
+  // For simplicity and security, require a session for all direct file reads.
+  if (req.session && req.session.user) return next();
+  // No session — deny
+  return res.status(401).json({ success: false, message: 'Authentication required' });
+}, (req, res) => {
+  const requestedPath = req.params[0]; // everything after /uploads/
+  // Prevent path traversal — reject any path with '..' segments
+  if (requestedPath.includes('..') || requestedPath.includes('%2e') || requestedPath.includes('%2E')) {
+    return res.status(400).json({ success: false, message: 'Invalid path' });
+  }
+  const filePath = path.join(__dirname, 'public', 'uploads', requestedPath);
+  // Ensure the resolved path stays inside the uploads directory
+  const uploadsBase = path.resolve(path.join(__dirname, 'public', 'uploads'));
+  if (!path.resolve(filePath).startsWith(uploadsBase + path.sep) &&
+      path.resolve(filePath) !== uploadsBase) {
+    return res.status(400).json({ success: false, message: 'Invalid path' });
+  }
+  res.sendFile(filePath, err => {
+    if (err) return res.status(404).json({ success: false, message: 'File not found' });
+  });
+});
 
 // API Routes
 app.use('/api/auth', require('./routes/auth'));

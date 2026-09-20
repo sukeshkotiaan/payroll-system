@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const EmployeeSubmission = require('../models/EmployeeSubmission');
 const { isLoggedIn, isAdmin } = require('../middleware/auth');
+const { safeError } = require('../middleware/security');
 
 // PUBLIC - submit a new employee form (no login required)
 router.post('/submit', async (req, res) => {
@@ -14,7 +15,7 @@ router.post('/submit', async (req, res) => {
     const submission = await EmployeeSubmission.create(data);
     return res.json({ success: true, message: 'Submitted successfully', submission });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'submissions submit') });
   }
 });
 
@@ -26,7 +27,7 @@ router.get('/', isLoggedIn, isAdmin, async (req, res) => {
     const submissions = await EmployeeSubmission.find(filter).sort({ submittedAt: -1 });
     return res.json({ success: true, submissions });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'submissions list') });
   }
 });
 
@@ -102,7 +103,7 @@ router.get('/export', isLoggedIn, isAdmin, async (req, res) => {
     await wb.xlsx.write(res);
     res.end();
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'submissions export') });
   }
 });
 
@@ -112,7 +113,7 @@ router.delete('/:id', isLoggedIn, isAdmin, async (req, res) => {
     await EmployeeSubmission.findByIdAndDelete(req.params.id);
     return res.json({ success: true, message: 'Deleted successfully' });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'submissions delete') });
   }
 });
 
@@ -122,7 +123,7 @@ router.patch('/mark-imported', isLoggedIn, isAdmin, async (req, res) => {
     await EmployeeSubmission.updateMany({ status: 'Pending' }, { status: 'Imported' });
     return res.json({ success: true, message: 'All pending submissions marked as imported' });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'submissions mark-imported') });
   }
 });
 

@@ -4,6 +4,7 @@ const ExcelJS = require('exceljs');
 const Payroll = require('../models/Payroll');
 const Employee = require('../models/Employee');
 const { isLoggedIn, isAdmin } = require('../middleware/auth');
+const { safeError } = require('../middleware/security');
 
 // ── helpers ───────────────────────────────────────────────────
 const round2 = n => parseFloat((n || 0).toFixed(2));
@@ -209,7 +210,7 @@ router.get('/bank-advice', isLoggedIn, isAdmin, async (req, res) => {
 
   } catch (err) {
     console.error('Bank advice error:', err);
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'reports bank-advice') });
   }
 });
 
@@ -297,7 +298,7 @@ router.get('/pf-ecr', isLoggedIn, isAdmin, async (req, res) => {
 
   } catch (err) {
     console.error('PF ECR error:', err);
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'reports pf-ecr') });
   }
 });
 
@@ -427,7 +428,7 @@ router.get('/ytd', isLoggedIn, isAdmin, async (req, res) => {
 
   } catch (err) {
     console.error('YTD report error:', err);
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'reports ytd') });
   }
 });
 

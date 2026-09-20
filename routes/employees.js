@@ -105,12 +105,12 @@ router.post('/generate-ein', isLoggedIn, async (req, res) => {
     }
     return res.json({ success: true, ein: prefix + '-' + nextNumber });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'employees generate-ein') });
   }
 });
 
-// CHECK for duplicate bank account number
-router.get('/check-account/:accountNumber', isLoggedIn, async (req, res) => {
+// CHECK for duplicate bank account number — admin/management/accountant only
+router.get('/check-account/:accountNumber', isLoggedIn, isAccountantOrAdmin, async (req, res) => {
   try {
     const { accountNumber } = req.params;
     const excludeId = req.query.excludeId;
@@ -120,7 +120,7 @@ router.get('/check-account/:accountNumber', isLoggedIn, async (req, res) => {
     const duplicates = await Employee.find(filter).select('ein employeeName');
     return res.json({ success: true, duplicates });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'employee check-account') });
   }
 });
 
@@ -137,7 +137,7 @@ router.get('/my-team-bank', isLoggedIn, async (req, res) => {
       .sort({ ein: 1 });
     return res.json({ success: true, employees });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'employees my-team-bank') });
   }
 });
 
@@ -180,7 +180,7 @@ router.patch('/:id/bank-details', isLoggedIn, async (req, res) => {
     await employee.save();
     return res.json({ success: true, message: 'Bank details updated', employee });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'employees bank-details') });
   }
 });
 
@@ -195,7 +195,9 @@ router.get('/', isLoggedIn, async (req, res) => {
       filter.isRestricted = false;
     }
     if (user.role === 'supervisor') {
-      filter.isRestricted = false; // supervisors cannot see restricted employees
+      // Supervisors can only see employees assigned to them — no other filter overrides this
+      filter.supervisorId = user.id;
+      filter.isRestricted = false;
     }
     // Management employees are only visible to admin and management roles
     if (user.role !== 'admin' && user.role !== 'management') {
@@ -252,7 +254,7 @@ router.get('/', isLoggedIn, async (req, res) => {
       pagination: { page, limit: isGroupScoped ? total : limit, total, pages: isGroupScoped ? 1 : Math.ceil(total / (limit || 1)) }
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'employees list') });
   }
 });
 
@@ -378,8 +380,8 @@ router.post('/', isLoggedIn, isAdmin, (req, res, next) => {
     console.log('Employee saved:', newEmployee.ein);
     return res.json({ success: true, message: 'Employee created successfully', employee: newEmployee });
   } catch (err) {
-    console.log('Create error:', err.message);
-    return res.status(500).json({ success: false, message: err.message });
+    console.error('Create error:', err.message);
+    return res.status(500).json({ success: false, message: safeError(err, 'employees create') });
   }
 });
 
@@ -395,10 +397,28 @@ router.put('/:id', isLoggedIn, isAccountantOrAdmin, (req, res, next) => {
   next();
 }, async (req, res) => {
   try {
-    console.log('PUT /employees/:id =>', req.params.id, '| content-type:', req.headers['content-type']);
+    const role = req.session.user.role;
+
+    // Fetch the employee first to enforce management access control
+    const existing = await Employee.findById(req.params.id);
+    if (!existing) return res.status(404).json({ success: false, message: 'Employee not found. Please refresh the page and try again.' });
+
+    // Block accountants and other non-admin roles from updating management employees
+    if (existing.ein && /^MGT-/i.test(existing.ein) && role !== 'admin' && role !== 'management') {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
     const data = { ...req.body };
     if (req.file) data.photo = '/uploads/' + req.file.filename;
     data.updatedAt = Date.now();
+
+    // Accountants may not change salary, PAN, Aadhaar or government IDs
+    if (role === 'accountant') {
+      const restricted = ['monthlySalary','ctcAnnual','ctcMonthly','basic','hraAllowance',
+                          'panNumber','aadhaarNumber','isRestricted'];
+      restricted.forEach(k => delete data[k]);
+    }
+
     // qualifications may be an array (JSON body) or a JSON string (FormData body)
     if (typeof data.qualifications === 'string') {
       try { data.qualifications = JSON.parse(data.qualifications); }
@@ -412,12 +432,11 @@ router.put('/:id', isLoggedIn, isAccountantOrAdmin, (req, res, next) => {
     if (data.bankVerifiedAt === '') data.bankVerifiedAt = null;
     delete data._id;
     const employee = await Employee.findByIdAndUpdate(req.params.id, { $set: data }, { new: true });
-    console.log('PUT /employees/:id result:', employee ? 'updated ' + employee.employeeName : 'NOT FOUND id=' + req.params.id);
     if (!employee) return res.status(404).json({ success: false, message: 'Employee not found. Please refresh the page and try again.' });
     return res.json({ success: true, message: 'Employee updated successfully', employee });
   } catch (err) {
     console.error('PUT /employees/:id error:', err.message);
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'employee update') });
   }
 });
 
@@ -434,7 +453,7 @@ router.patch('/:id/id-card-printed', isLoggedIn, isAdmin, async (req, res) => {
     if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
     return res.json({ success: true, message: 'ID card year updated', employee });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'employees idcard-year') });
   }
 });
 
@@ -458,7 +477,7 @@ router.patch('/:id/ein', isLoggedIn, isAdmin, async (req, res) => {
     return res.json({ success: true, message: `EIN updated to ${newEIN}`, employee });
   } catch (err) {
     console.error('PATCH /:id/ein error:', err.message);
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'employees patch-ein') });
   }
 });
 
@@ -471,7 +490,7 @@ router.patch('/:id/deactivate', isLoggedIn, isAdmin, async (req, res) => {
     );
     return res.json({ success: true, message: 'Employee deactivated', employee });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'employees deactivate') });
   }
 });
 
@@ -517,7 +536,7 @@ router.post('/bulk-import', isLoggedIn, isAdmin, async (req, res) => {
     }
     return res.json({ success: true, message: 'Import complete. Created: ' + created + ', Skipped: ' + skipped, errors });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'employees bulk-import') });
   }
 });
 
@@ -850,7 +869,7 @@ router.post('/upload-excel', isLoggedIn, isSystemAdmin, excelUpload.single('file
       skippedRows: results.skippedRows
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'employees excel-upload') });
   } finally {
     if (tmpPath && fs.existsSync(tmpPath)) {
       try { fs.unlinkSync(tmpPath); } catch (_) {}
@@ -872,7 +891,7 @@ router.patch('/bulk-update-supervisor', isLoggedIn, isAdmin, async (req, res) =>
     const action = supervisorId ? 'assigned to supervisor' : 'unassigned from supervisor';
     return res.json({ success: true, message: employeeIds.length + ' employees ' + action });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'employees bulk-update-supervisor') });
   }
 });
 

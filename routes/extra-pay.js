@@ -48,7 +48,7 @@ router.post('/', isLoggedIn, isAdmin, async (req, res) => {
     });
     return res.json({ success: true, message: 'Extra pay entry added', entry });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'extra-pay post') });
   }
 });
 
@@ -58,7 +58,7 @@ router.delete('/:id', isLoggedIn, isAdmin, async (req, res) => {
     await ExtraPay.findByIdAndDelete(req.params.id);
     return res.json({ success: true, message: 'Deleted successfully' });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'extra-pay delete') });
   }
 });
 
