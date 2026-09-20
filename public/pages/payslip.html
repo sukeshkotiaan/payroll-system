@@ -274,25 +274,36 @@
     const html = slipEl.outerHTML;
     try {
       showEmailAlert('Sending...', 'info');
-      const res = await fetch('/api/email/send-payslip', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          to, subject, html,
-          employeeName: emailPayslipData.name,
-          month: emailPayslipData.month,
-          year: emailPayslipData.year
-        })
-      });
-      const data = await res.json();
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 20000);
+      let res;
+      try {
+        res = await fetch('/api/email/send-payslip', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          signal: controller.signal,
+          body: JSON.stringify({
+            to, subject, html,
+            employeeName: emailPayslipData.name,
+            month: emailPayslipData.month,
+            year: emailPayslipData.year
+          })
+        });
+      } finally {
+        clearTimeout(timeout);
+      }
+      let data;
+      try { data = await res.json(); } catch(_) { data = { success: false, message: 'Server returned an invalid response' }; }
       if (data.success) {
         showEmailAlert('✅ ' + data.message, 'success');
         setTimeout(closeEmailModal, 2000);
       } else {
         showEmailAlert('❌ ' + data.message, 'error');
       }
-    } catch(e) { showEmailAlert('Error: ' + e.message, 'error'); }
+    } catch(e) {
+      showEmailAlert('❌ ' + (e.name === 'AbortError' ? 'Request timed out. Check email settings on the server.' : e.message), 'error');
+    }
   }
 
   function showEmailAlert(msg, type) {

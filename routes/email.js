@@ -23,7 +23,10 @@ router.post('/send-payslip', isLoggedIn, isAccountantOrAdmin, async (req, res) =
 
     const transporter = nodemailer.createTransport({
       service: 'gmail',
-      auth: { user: gmailUser, pass: gmailPass }
+      auth: { user: gmailUser, pass: gmailPass },
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000
     });
 
     await transporter.sendMail({
