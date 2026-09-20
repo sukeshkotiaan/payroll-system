@@ -35,6 +35,33 @@ const loginLimiter = rateLimit({
   message: { success: false, message: 'Too many login attempts. Please try again in 15 minutes.' }
 });
 
+// OTP generation: max 5 per IP per 10 minutes
+const otpLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many OTP requests. Please wait 10 minutes.' }
+});
+
+// Email send: max 20 per IP per 10 minutes
+const emailLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many email requests. Please wait 10 minutes.' }
+});
+
+// Attendance write: max 30 per IP per 5 minutes
+const attendanceLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many attendance submissions. Please slow down.' }
+});
+
 // Security headers on every response
 app.use(securityHeaders);
 
@@ -57,8 +84,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 // NoSQL injection prevention — sanitize req.query/body/params on every API call
 app.use('/api/', noSQLSanitizer);
 
-// Apply login rate limiter early (before session middleware to save DB round-trips on blocked requests)
+// Apply rate limiters early (before session middleware to save DB round-trips on blocked requests)
 app.use('/api/auth/login', loginLimiter);
+app.use('/api/security/generate-otp', otpLimiter);
+app.use('/api/email/send-payslip', emailLimiter);
+app.use('/api/attendance', attendanceLimiter);
 
 // Session
 app.use(session({

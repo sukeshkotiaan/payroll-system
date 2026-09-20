@@ -69,8 +69,13 @@ router.get('/menus', isLoggedIn, async (req, res) => {
 
 // GET masters by type
 // PUBLIC - for join-form page (no login required)
+// 'role' type is blocked — it contains permission configuration
+const PUBLIC_ALLOWED_TYPES = new Set(['location', 'section', 'profile', 'department', 'designation']);
 router.get('/public/:type', async (req, res) => {
   try {
+    if (!PUBLIC_ALLOWED_TYPES.has(req.params.type)) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
     const Master = require('../models/Master');
     const masters = await Master.find({ type: req.params.type, isActive: { $ne: false } }).sort({ value: 1 });
     return res.json({ success: true, masters });

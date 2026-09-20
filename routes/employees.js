@@ -84,7 +84,7 @@ async function getNextReservedEIN() {
   return slot || null;
 }
 
-router.post('/generate-ein', isLoggedIn, async (req, res) => {
+router.post('/generate-ein', isLoggedIn, isAccountantOrAdmin, async (req, res) => {
   try {
     const { location, section, profile } = req.body;
     if (!location || !section || !profile) {
@@ -135,7 +135,16 @@ router.get('/my-team-bank', isLoggedIn, async (req, res) => {
     const employees = await Employee.find(filter)
       .select('ein employeeName designation location bankName accountNumber ifscCode accountHolderName bankVerificationStatus bankVerifiedBy bankVerifiedAt')
       .sort({ ein: 1 });
-    return res.json({ success: true, employees });
+
+    const result = employees.map(emp => {
+      const obj = emp.toObject();
+      if (role === 'supervisor' && obj.accountNumber) {
+        obj.accountNumber = 'XXXX' + obj.accountNumber.slice(-4);
+      }
+      return obj;
+    });
+
+    return res.json({ success: true, employees: result });
   } catch (err) {
     return res.status(500).json({ success: false, message: safeError(err, 'employees my-team-bank') });
   }
