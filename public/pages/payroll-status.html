@@ -128,6 +128,34 @@
 
     .loading { text-align: center; padding: 60px; color: #1a73e8; font-size: 14px; }
 
+    /* ── Batch action bar ── */
+    .batch-bar {
+      background: #fff; border-bottom: 1px solid #e0e0e0;
+      padding: 12px 24px; display: flex; align-items: center; gap: 12px;
+      flex-wrap: wrap;
+    }
+    .batch-bar-label { font-size: 12px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 4px; }
+    .btn-batch {
+      border: none; border-radius: 6px; padding: 8px 18px;
+      font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;
+    }
+    .btn-batch:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-batch-approve { background: #e6f4ea; color: #2e7d32; }
+    .btn-batch-approve:not(:disabled):hover { background: #c8e6c9; }
+    .btn-batch-lock    { background: #f3e8ff; color: #7b1fa2; }
+    .btn-batch-lock:not(:disabled):hover { background: #e1bee7; }
+
+    /* ── Progress bar ── */
+    .progress-wrap {
+      background: #fff; border-bottom: 1px solid #f0f0f0;
+      padding: 10px 24px;
+    }
+    .progress-label { font-size: 11px; font-weight: 600; color: #888; margin-bottom: 5px; display: flex; justify-content: space-between; }
+    .progress-track { background: #f0f0f0; border-radius: 6px; height: 8px; overflow: hidden; }
+    .progress-fill  { height: 100%; border-radius: 6px; transition: width 0.4s ease; }
+    .progress-fill-locked   { background: #9c27b0; }
+    .progress-fill-approved { background: #34a853; }
+
     @media (max-width: 900px) {
       .group-card { grid-template-columns: 1fr; }
       .card-cell { border-right: none; border-bottom: 1px solid #f0f0f0; }
@@ -158,6 +186,24 @@
   <label>Year</label>
   <select id="selYear"></select>
   <button class="btn-load" onclick="loadStatus()">Load Status</button>
+</div>
+
+<div class="batch-bar" id="batchBar" style="display:none;">
+  <span class="batch-bar-label">Batch Actions</span>
+  <button class="btn-batch btn-batch-approve" id="btnApproveAll" onclick="doBatchAction('approve')" disabled>✅ Approve All</button>
+  <button class="btn-batch btn-batch-lock"    id="btnLockAll"    onclick="doBatchAction('lock')"    disabled>🔒 Lock All</button>
+  <span id="batchStatus" style="font-size:12px;color:#888;margin-left:8px;"></span>
+</div>
+
+<div class="progress-wrap" id="progressWrap" style="display:none;">
+  <div class="progress-label">
+    <span id="progressLabel">Payroll cycle progress</span>
+    <span id="progressPct"></span>
+  </div>
+  <div class="progress-track">
+    <div class="progress-fill progress-fill-locked" id="progressFillLocked" style="width:0%; float:left;"></div>
+    <div class="progress-fill progress-fill-approved" id="progressFillApproved" style="width:0%; float:left; background:#34a853;"></div>
+  </div>
 </div>
 
 <div class="summary-bar" id="summaryBar"></div>
@@ -237,8 +283,41 @@
       else counts.none++;
     });
 
-    // Summary bar
     const total = groups.length;
+    const isAdm = currentUser && (currentUser.role === 'admin' || currentUser.role === 'management');
+
+    // ── Batch bar ──
+    const hasDraftOrPending = counts.draft > 0 || counts.pending > 0;
+    const hasApproved = counts.approved > 0;
+    const batchBar = document.getElementById('batchBar');
+    if (isAdm) {
+      batchBar.style.display = 'flex';
+      document.getElementById('btnApproveAll').disabled = !hasDraftOrPending;
+      document.getElementById('btnLockAll').disabled    = !hasApproved;
+    } else {
+      batchBar.style.display = 'none';
+    }
+    document.getElementById('batchStatus').textContent = '';
+
+    // ── Progress bar ──
+    const progressWrap = document.getElementById('progressWrap');
+    if (total > 0) {
+      progressWrap.style.display = 'block';
+      const lockedPct   = Math.round((counts.locked   / total) * 100);
+      const approvedPct = Math.round((counts.approved / total) * 100);
+      document.getElementById('progressFillLocked').style.width   = lockedPct + '%';
+      document.getElementById('progressFillApproved').style.width = approvedPct + '%';
+      const done = counts.locked + counts.approved;
+      document.getElementById('progressPct').textContent = `${counts.locked}/${total} locked`;
+      document.getElementById('progressLabel').textContent =
+        counts.locked === total ? '🎉 All groups locked — payroll cycle complete!' :
+        counts.approved + counts.locked === total ? '✅ All processed — ready to lock' :
+        'Payroll cycle progress';
+    } else {
+      progressWrap.style.display = 'none';
+    }
+
+    // Summary bar
     document.getElementById('summaryBar').innerHTML = `
       <div class="pill pill-locked">  <span class="pill-count">${counts.locked}</span>  / ${total} Locked</div>
       <div class="pill pill-approved"><span class="pill-count">${counts.approved}</span> / ${total} Approved</div>
@@ -253,7 +332,7 @@
       return;
     }
 
-    const isAdmin = currentUser && (currentUser.role === 'admin' || currentUser.role === 'management');
+    const isAdmin = isAdm;
 
     document.getElementById('groupsContainer').innerHTML = groups.map(g => {
       const pStatus = g.payroll ? g.payroll.status : null;
@@ -367,6 +446,37 @@
       if (!data.success) throw new Error(data.message);
       await loadStatus();
     } catch (e) {
+      alert('Error: ' + e.message);
+    }
+  }
+
+  async function doBatchAction(action) {
+    const confirmMsg = action === 'approve'
+      ? `Approve ALL Draft / Pending Approval payrolls for ${currentMonth} ${currentYear}?`
+      : `Lock ALL Approved payrolls for ${currentMonth} ${currentYear}?\n\nLoan EMIs for this month will be auto-marked as Paid. This cannot be undone.`;
+    if (!confirm(confirmMsg)) return;
+
+    const endpoint = action === 'approve' ? '/api/payroll/batch-approve' : '/api/payroll/batch-lock';
+    const btnId    = action === 'approve' ? 'btnApproveAll' : 'btnLockAll';
+    const btn      = document.getElementById(btnId);
+    const statusEl = document.getElementById('batchStatus');
+
+    btn.disabled = true;
+    statusEl.textContent = action === 'approve' ? 'Approving…' : 'Locking…';
+
+    try {
+      const res  = await fetch(endpoint, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ month: currentMonth, year: currentYear })
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message);
+      statusEl.textContent = data.message;
+      await loadStatus();
+    } catch (e) {
+      statusEl.textContent = '';
+      btn.disabled = false;
       alert('Error: ' + e.message);
     }
   }

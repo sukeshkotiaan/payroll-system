@@ -1042,4 +1042,69 @@ router.post('/process-all', isLoggedIn, isAdmin, async (req, res) => {
   }
 });
 
+// BATCH APPROVE — approve all Draft/Pending payrolls for a month in one call
+router.patch('/batch-approve', isLoggedIn, isAdmin, async (req, res) => {
+  try {
+    const { month, year } = req.body;
+    if (!month || !year) return res.status(400).json({ success: false, message: 'month and year required' });
+    const payrolls = await Payroll.find({
+      month, year: parseInt(year),
+      status: { $in: ['Draft', 'Pending Approval'] }
+    });
+    if (payrolls.length === 0) return res.json({ success: true, message: 'No payrolls to approve', count: 0 });
+    const now = new Date();
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+    for (const p of payrolls) {
+      p.status = 'Approved';
+      p.approvedBy = req.session.user.username;
+      p.approvedAt = now;
+      p.updatedAt = now;
+      await p.save();
+      await logAudit(req.session.user.id, req.session.user.username, req.session.user.fullName, req.session.user.role,
+        'PAYROLL_APPROVED', `Batch approved: ${p.groupName} ${p.month} ${p.year}`, ip);
+    }
+    return res.json({ success: true, message: `Approved ${payrolls.length} payroll group(s)`, count: payrolls.length });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// BATCH LOCK — lock all Approved payrolls for a month and auto-mark loan EMIs
+router.patch('/batch-lock', isLoggedIn, isAdmin, async (req, res) => {
+  try {
+    const { month, year } = req.body;
+    if (!month || !year) return res.status(400).json({ success: false, message: 'month and year required' });
+    const payrolls = await Payroll.find({ month, year: parseInt(year), status: 'Approved' });
+    if (payrolls.length === 0) return res.json({ success: true, message: 'No approved payrolls to lock', count: 0 });
+    const now = new Date();
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+    for (const payroll of payrolls) {
+      // Auto-mark loan EMIs
+      const employeeEINs = new Set(payroll.records.map(r => r.ein));
+      const activeLoans = await Loan.find({ location: payroll.location, section: payroll.section, profile: payroll.profile, status: 'Active' });
+      for (const loan of activeLoans) {
+        if (!employeeEINs.has(loan.ein)) continue;
+        const scheduleItem = loan.schedule.find(s => s.month === month && s.year === parseInt(year) && s.status === 'Pending');
+        if (!scheduleItem) continue;
+        scheduleItem.status = 'Paid';
+        scheduleItem.paidInPayrollId = payroll._id;
+        loan.totalPaid = parseFloat((loan.totalPaid + scheduleItem.emiAmount).toFixed(2));
+        loan.outstandingBalance = scheduleItem.balance;
+        if (scheduleItem.balance === 0) loan.status = 'Closed';
+        loan.updatedAt = now;
+        loan.markModified('schedule');
+        await loan.save();
+      }
+      payroll.status = 'Locked';
+      payroll.updatedAt = now;
+      await payroll.save();
+      await logAudit(req.session.user.id, req.session.user.username, req.session.user.fullName, req.session.user.role,
+        'PAYROLL_LOCKED', `Batch locked: ${payroll.groupName} ${payroll.month} ${payroll.year}`, ip);
+    }
+    return res.json({ success: true, message: `Locked ${payrolls.length} payroll group(s) and updated loan EMIs`, count: payrolls.length });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 module.exports = router;
