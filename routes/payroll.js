@@ -707,11 +707,14 @@ router.patch('/:id/submit', isLoggedIn, isAdmin, async (req, res) => {
   }
 });
 
-// APPROVE payroll
+// APPROVE payroll (accepts Draft or Pending Approval — Submit step is optional)
 router.patch('/:id/approve', isLoggedIn, isAdmin, async (req, res) => {
   try {
     const payroll = await Payroll.findById(req.params.id);
     if (!payroll) return res.status(404).json({ success: false, message: 'Not found' });
+    if (!['Draft', 'Pending Approval'].includes(payroll.status)) {
+      return res.status(400).json({ success: false, message: `Cannot approve a payroll with status: ${payroll.status}` });
+    }
     payroll.status = 'Approved';
     payroll.approvedBy = req.session.user.username;
     payroll.approvedAt = new Date();
@@ -726,18 +729,39 @@ router.patch('/:id/approve', isLoggedIn, isAdmin, async (req, res) => {
   }
 });
 
-// LOCK payroll
+// LOCK payroll — also auto-marks any remaining Pending loan EMIs as Paid
 router.patch('/:id/lock', isLoggedIn, isAdmin, async (req, res) => {
   try {
     const payroll = await Payroll.findById(req.params.id);
     if (!payroll) return res.status(404).json({ success: false, message: 'Not found' });
+
+    // Auto-mark loan EMIs: safety net in case processing missed any
+    const { month, year, location, section, profile } = payroll;
+    const employeeEINs = new Set(payroll.records.map(r => r.ein));
+    const activeLoans = await Loan.find({ location, section, profile, status: 'Active' });
+    for (const loan of activeLoans) {
+      if (!employeeEINs.has(loan.ein)) continue;
+      const scheduleItem = loan.schedule.find(s =>
+        s.month === month && s.year === year && s.status === 'Pending'
+      );
+      if (!scheduleItem) continue;
+      scheduleItem.status = 'Paid';
+      scheduleItem.paidInPayrollId = payroll._id;
+      loan.totalPaid = parseFloat((loan.totalPaid + scheduleItem.emiAmount).toFixed(2));
+      loan.outstandingBalance = scheduleItem.balance;
+      if (scheduleItem.balance === 0) loan.status = 'Closed';
+      loan.updatedAt = new Date();
+      loan.markModified('schedule');
+      await loan.save();
+    }
+
     payroll.status = 'Locked';
     payroll.updatedAt = new Date();
     await payroll.save();
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
     await logAudit(req.session.user.id, req.session.user.username, req.session.user.fullName, req.session.user.role,
       'PAYROLL_LOCKED', `Locked payroll: ${payroll.groupName} ${payroll.month} ${payroll.year}`, ip);
-    return res.json({ success: true, message: 'Payroll locked' });
+    return res.json({ success: true, message: 'Payroll locked and loan EMIs updated' });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }

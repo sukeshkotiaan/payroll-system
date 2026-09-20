@@ -331,7 +331,7 @@
     setDefaults();
     await loadPayrollList();
 
-    // Auto-fill EIN from URL param (e.g. when navigated from Employees page)
+    // Auto-fill from URL params
     const urlParams = new URLSearchParams(window.location.search);
     const einParam = urlParams.get('ein');
     if (einParam) {
@@ -342,6 +342,18 @@
         setTimeout(function() {
           if (typeof searchEmployeePayslip === 'function') searchEmployeePayslip();
         }, 300);
+      }
+    } else {
+      // Pre-fill group tab from payroll detail deep-link
+      const grpMonth    = urlParams.get('grpMonth');
+      const grpYear     = urlParams.get('grpYear');
+      const grpLocation = urlParams.get('grpLocation');
+      if (grpMonth || grpYear || grpLocation) {
+        switchTab('Group');
+        if (grpMonth)    document.getElementById('grpMonth').value    = grpMonth;
+        if (grpYear)     document.getElementById('grpYear').value     = grpYear;
+        if (grpLocation) document.getElementById('grpLocation').value = grpLocation;
+        setTimeout(() => { if (typeof loadGroupPayslips === 'function') loadGroupPayslips(); }, 400);
       }
     }
   };

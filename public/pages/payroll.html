@@ -327,8 +327,10 @@
 
       <div class="action-bar" id="detailActionBar">
         <button class="btn-secondary" onclick="showListView()">Close</button>
-        <button class="btn-primary" id="btnReprocess" onclick="reprocessPayroll()">🔄 Reprocess</button>
-        <button class="btn-warning" id="btnSubmit" onclick="submitForApproval()">📤 Submit for Approval</button>
+        <button class="btn-success" id="btnExportDetail" onclick="exportPayroll()" style="display:none;">📤 Export</button>
+        <button class="btn-secondary" id="btnPayslips" onclick="openPayslips()" style="display:none;">🧾 Payslips</button>
+        <button class="btn-secondary" id="btnBankFile" onclick="downloadBankFile()" style="display:none;">🏦 Bank File</button>
+        <button class="btn-primary" id="btnReprocess" onclick="reprocessPayroll()">♻ Recalculate</button>
         <button class="btn-success" id="btnApprove" onclick="approvePayroll()">✅ Approve</button>
         <button class="btn-danger" id="btnLock" onclick="lockPayroll()">🔒 Lock</button>
       </div>
@@ -788,11 +790,15 @@
     const isApproved = payroll.status === 'Approved';
     const isPending = payroll.status === 'Pending Approval';
     const isDraft = payroll.status === 'Draft';
+    const isLocked = payroll.status === 'Locked';
 
     document.getElementById('btnReprocess').style.display = isDraft ? 'inline-block' : 'none';
-    document.getElementById('btnSubmit').style.display = isDraft ? 'inline-block' : 'none';
-    document.getElementById('btnApprove').style.display = isPending ? 'inline-block' : 'none';
+    // Approve works from Draft OR Pending Approval — no separate Submit step needed
+    document.getElementById('btnApprove').style.display = (isDraft || isPending) ? 'inline-block' : 'none';
     document.getElementById('btnLock').style.display = isApproved ? 'inline-block' : 'none';
+    document.getElementById('btnExportDetail').style.display = 'inline-block';
+    document.getElementById('btnPayslips').style.display = 'inline-block';
+    document.getElementById('btnBankFile').style.display = isLocked ? 'inline-block' : 'none';
 
     const tbody = document.getElementById('payrollTableBody');
     let totalGross = 0, totalPF = 0, totalPT = 0, totalESIC = 0,
@@ -986,6 +992,19 @@
         await viewPayroll(currentPayrollId);
       } else { showAlert('detailAlertError', data.message); }
     } catch(e) { showAlert('detailAlertError', 'Error: ' + e.message); }
+  }
+
+  function openPayslips() {
+    if (!currentPayroll) return;
+    const { month, year, location } = currentPayroll;
+    window.open(`/payslip?grpMonth=${encodeURIComponent(month)}&grpYear=${year}&grpLocation=${encodeURIComponent(location)}`, '_blank');
+  }
+
+  async function downloadBankFile() {
+    if (!currentPayroll) return;
+    const { month, year, location, section, profile } = currentPayroll;
+    const url = `/api/reports/bank-advice?month=${encodeURIComponent(month)}&year=${year}&location=${encodeURIComponent(location)}&section=${encodeURIComponent(section)}&profile=${encodeURIComponent(profile)}`;
+    window.location.href = url;
   }
 
   async function deletePayroll(id) {
