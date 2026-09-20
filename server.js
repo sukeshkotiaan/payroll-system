@@ -109,7 +109,7 @@ app.use(session({
 // ── Authenticated file serving for employee photos ────────────────────────────
 // /uploads/* is blocked from anonymous access above; authenticated users get it here.
 // Public photo-upload page (token-auth) is also allowed for upload submissions.
-app.get('/uploads/*', (req, res, next) => {
+app.get('/uploads/*path', (req, res, next) => {
   // Allow: authenticated session OR a valid upload-photo page session check is done
   // in the public upload flow (the file is served only when a valid token was used).
   // For simplicity and security, require a session for all direct file reads.
@@ -117,7 +117,7 @@ app.get('/uploads/*', (req, res, next) => {
   // No session — deny
   return res.status(401).json({ success: false, message: 'Authentication required' });
 }, (req, res) => {
-  const requestedPath = req.params[0]; // everything after /uploads/
+  const requestedPath = req.params.path; // everything after /uploads/
   // Prevent path traversal — reject any path with '..' segments
   if (requestedPath.includes('..') || requestedPath.includes('%2e') || requestedPath.includes('%2E')) {
     return res.status(400).json({ success: false, message: 'Invalid path' });
