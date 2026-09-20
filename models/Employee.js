@@ -58,6 +58,8 @@ const employeeSchema = new mongoose.Schema({
   bankVerificationStatus: { type: String, enum: ['Not Filled', 'Pending', 'Verified'], default: 'Not Filled' },
   bankVerifiedBy: { type: String, default: '' },
   bankVerifiedAt: { type: Date, default: null },
+  bloodGroup: { type: String, default: '' },
+  idCardPrintedYear: { type: String, default: '' }, // e.g. "2025-26"
   remarks: { type: String, default: '' },
   createdBy: { type: String, default: '' },
   createdAt: { type: Date, default: Date.now },

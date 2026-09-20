@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ID Card Printing</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; color: #333; }
+
+    /* ── Header ── */
+    .header {
+      background: linear-gradient(135deg, #1a73e8, #0d47a1);
+      color: #fff; padding: 14px 24px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .header h1 { font-size: 20px; font-weight: 600; }
+    .header-right { display: flex; align-items: center; gap: 10px; }
+    .btn-back {
+      background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
+      color: #fff; padding: 7px 14px; border-radius: 6px; cursor: pointer;
+      font-size: 13px; text-decoration: none; display: inline-block;
+    }
+    .btn-back:hover { background: rgba(255,255,255,0.25); }
+
+    /* ── Filter bar ── */
+    .filter-bar {
+      background: #fff; border-bottom: 1px solid #e0e0e0;
+      padding: 14px 24px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    }
+    .filter-bar select, .filter-bar input {
+      border: 1px solid #d0d0d0; border-radius: 6px; padding: 7px 12px;
+      font-size: 13px; background: #fff;
+    }
+    .filter-bar label { font-size: 12px; font-weight: 600; color: #666; }
+    .btn-primary {
+      background: #1a73e8; color: #fff; border: none; padding: 8px 20px;
+      border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    .btn-primary:hover { background: #1558b0; }
+    .btn-secondary {
+      background: #f5f5f5; color: #444; border: 1px solid #ddd; padding: 8px 16px;
+      border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    .btn-secondary:hover { background: #ececec; }
+    .btn-success {
+      background: #34a853; color: #fff; border: none; padding: 8px 20px;
+      border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    .btn-success:hover { background: #2e7d32; }
+    .btn-purple {
+      background: #7b1fa2; color: #fff; border: none; padding: 8px 20px;
+      border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    .btn-purple:hover { background: #6a1b9a; }
+    .sep { width: 1px; height: 28px; background: #e0e0e0; }
+
+    /* ── Layout ── */
+    .layout { display: flex; gap: 0; height: calc(100vh - 120px); }
+
+    /* ── Employee list ── */
+    .emp-panel {
+      width: 380px; min-width: 320px; background: #fff;
+      border-right: 1px solid #e0e0e0; display: flex; flex-direction: column;
+    }
+    .emp-panel-header {
+      padding: 12px 16px; border-bottom: 1px solid #eee;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .emp-panel-header span { font-size: 12px; font-weight: 600; color: #888; }
+    .emp-list { overflow-y: auto; flex: 1; }
+
+    .emp-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 11px 16px; border-bottom: 1px solid #f5f5f5;
+      cursor: pointer; transition: background 0.1s;
+    }
+    .emp-row:hover { background: #f0f6ff; }
+    .emp-row.active { background: #e8f0fe; border-left: 3px solid #1a73e8; }
+    .emp-row.printed { opacity: 0.6; }
+
+    .emp-check { accent-color: #1a73e8; width: 15px; height: 15px; cursor: pointer; }
+    .emp-thumb {
+      width: 38px; height: 38px; border-radius: 50%; object-fit: cover;
+      background: #e0e0e0; border: 2px solid #e0e0e0; flex-shrink: 0;
+    }
+    .emp-info { flex: 1; min-width: 0; }
+    .emp-name { font-size: 13px; font-weight: 600; color: #222; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .emp-desig { font-size: 11px; color: #888; }
+    .emp-ein   { font-size: 10px; color: #aaa; font-family: monospace; }
+    .badge-printed { font-size: 9px; font-weight: 700; color: #7b1fa2; background: #f3e8ff; border-radius: 8px; padding: 1px 6px; white-space: nowrap; }
+    .badge-year    { font-size: 9px; font-weight: 700; color: #2e7d32; background: #e6f4ea; border-radius: 8px; padding: 1px 6px; }
+
+    /* ── Preview panel ── */
+    .preview-panel {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      justify-content: flex-start; padding: 32px 24px; overflow-y: auto; background: #f0f2f5;
+    }
+    .preview-empty { color: #bbb; font-size: 15px; text-align: center; margin-top: 80px; }
+    .preview-actions {
+      display: flex; gap: 10px; margin-bottom: 24px; align-items: center; flex-wrap: wrap; justify-content: center;
+    }
+    .validity-label { font-size: 12px; color: #666; font-weight: 600; }
+    .validity-select { border: 1px solid #d0d0d0; border-radius: 6px; padding: 6px 10px; font-size: 13px; background: #fff; }
+
+    /* ── ID CARD ── */
+    /* CR80 landscape: 85.6mm × 54mm — classic school staff ID */
+    .id-card-wrap { position: relative; }
+    .id-card {
+      width: 85.6mm; height: 54mm;
+      border-radius: 4mm;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.22);
+      display: flex; flex-direction: column;
+      font-family: Arial, Helvetica, sans-serif;
+      position: relative;
+    }
+
+    /* State (Xaviers) card theme — deep navy */
+    .id-card.theme-state {
+      background: linear-gradient(165deg, #002060 0%, #003080 60%, #001840 100%);
+      color: #fff;
+    }
+    .id-card.theme-state .card-header { background: rgba(255,255,255,0.08); border-bottom: 1px solid rgba(255,255,255,0.15); }
+    .id-card.theme-state .card-footer { background: rgba(255,255,255,0.1); border-top: 1px solid rgba(255,255,255,0.15); }
+    .id-card.theme-state .school-name { color: #ffd700; }
+    .id-card.theme-state .emp-card-name { color: #fff; }
+    .id-card.theme-state .emp-card-desig { color: #a8c4ff; }
+    .id-card.theme-state .emp-card-ein  { color: #7aa0e8; }
+    .id-card.theme-state .validity-tag  { background: #ffd700; color: #002060; }
+    .id-card.theme-state .blood-tag     { background: rgba(255,100,80,0.25); color: #ff9980; border: 1px solid rgba(255,100,80,0.4); }
+    .id-card.theme-state .watermark     { opacity: 0.04; }
+
+    /* Global card theme — dark teal */
+    .id-card.theme-global {
+      background: linear-gradient(165deg, #004d40 0%, #00695c 60%, #003830 100%);
+      color: #fff;
+    }
+    .id-card.theme-global .card-header { background: rgba(255,255,255,0.08); border-bottom: 1px solid rgba(255,255,255,0.15); }
+    .id-card.theme-global .card-footer { background: rgba(255,255,255,0.1); border-top: 1px solid rgba(255,255,255,0.15); }
+    .id-card.theme-global .school-name { color: #80cbc4; }
+    .id-card.theme-global .emp-card-name { color: #fff; }
+    .id-card.theme-global .emp-card-desig { color: #a7d8d5; }
+    .id-card.theme-global .emp-card-ein  { color: #80b5b3; }
+    .id-card.theme-global .validity-tag  { background: #80cbc4; color: #003830; }
+    .id-card.theme-global .blood-tag     { background: rgba(255,100,80,0.25); color: #ff9980; border: 1px solid rgba(255,100,80,0.4); }
+    .id-card.theme-global .watermark     { opacity: 0.04; }
+
+    .watermark {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      pointer-events: none; z-index: 0;
+    }
+    .watermark-text {
+      font-size: 28mm; font-weight: 900; letter-spacing: -2mm;
+      transform: rotate(-25deg); white-space: nowrap; color: #fff;
+    }
+
+    .card-header {
+      display: flex; align-items: center; gap: 2mm; padding: 2mm 3mm;
+      position: relative; z-index: 1; flex-shrink: 0;
+    }
+    .logo-img { height: 9mm; width: auto; object-fit: contain; flex-shrink: 0; }
+    .logo-placeholder { height: 9mm; width: 9mm; background: rgba(255,255,255,0.2); border-radius: 1mm; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 5mm; }
+    .header-text { flex: 1; min-width: 0; }
+    .school-name { font-size: 2.8mm; font-weight: 700; line-height: 1.2; }
+    .school-sub  { font-size: 1.9mm; color: rgba(255,255,255,0.65); margin-top: 0.5mm; }
+
+    .card-body {
+      flex: 1; display: flex; gap: 3mm; padding: 2mm 3mm;
+      position: relative; z-index: 1; min-height: 0;
+    }
+    .photo-col { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 1mm; }
+    .emp-photo {
+      width: 18mm; height: 22mm; border-radius: 1.5mm; object-fit: cover;
+      border: 0.5mm solid rgba(255,255,255,0.4); background: rgba(255,255,255,0.1);
+    }
+    .photo-placeholder {
+      width: 18mm; height: 22mm; border-radius: 1.5mm;
+      border: 0.5mm solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1);
+      display: flex; align-items: center; justify-content: center; font-size: 8mm;
+    }
+    .blood-tag {
+      font-size: 2mm; font-weight: 700; padding: 0.5mm 2mm;
+      border-radius: 2mm; white-space: nowrap;
+    }
+
+    .info-col { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 1.5mm; min-width: 0; }
+    .emp-card-name  { font-size: 3.2mm; font-weight: 700; line-height: 1.2; }
+    .emp-card-desig { font-size: 2.3mm; font-weight: 600; }
+    .emp-card-dept  { font-size: 2mm; color: rgba(255,255,255,0.55); }
+    .emp-card-ein   { font-size: 2mm; font-family: 'Courier New', monospace; margin-top: 1mm; }
+    .id-divider { border: none; border-top: 0.2mm solid rgba(255,255,255,0.15); margin: 0.5mm 0; }
+
+    .card-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1.5mm 3mm; position: relative; z-index: 1; flex-shrink: 0;
+    }
+    .validity-tag {
+      font-size: 1.8mm; font-weight: 700; padding: 0.8mm 2.5mm;
+      border-radius: 2mm; letter-spacing: 0.2mm;
+    }
+    .footer-contact { font-size: 1.7mm; color: rgba(255,255,255,0.55); text-align: right; line-height: 1.4; }
+
+    /* ── Batch print layout ── */
+    @media print {
+      body > *:not(#printArea) { display: none !important; }
+      #printArea { display: block !important; }
+
+      @page { size: A4 portrait; margin: 8mm; }
+
+      .print-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 85.6mm);
+        gap: 6mm;
+        justify-content: center;
+      }
+      .print-card-wrap { page-break-inside: avoid; }
+      .id-card {
+        width: 85.6mm !important;
+        height: 54mm !important;
+        box-shadow: none;
+        border: 0.2mm solid #ccc;
+      }
+    }
+
+    #printArea { display: none; }
+
+    /* ── Selection info bar ── */
+    .sel-bar {
+      background: #e8f0fe; border-top: 1px solid #d2e3fc;
+      padding: 8px 16px; display: flex; align-items: center; justify-content: space-between;
+      font-size: 12px; color: #1a73e8; font-weight: 600;
+    }
+
+    .loading-msg { text-align: center; padding: 40px; color: #aaa; font-size: 13px; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🪪 ID Card Printing</h1>
+  <div class="header-right">
+    <span id="headerUser" style="font-size:13px;opacity:0.85;"></span>
+    <a class="btn-back" href="/employees">Employees</a>
+    <a class="btn-back" href="/dashboard">← Dashboard</a>
+  </div>
+</div>
+
+<div class="filter-bar">
+  <label>Section</label>
+  <select id="selSection" onchange="loadEmployees()">
+    <option value="">All Sections</option>
+    <option value="State">State (Xaviers)</option>
+    <option value="Global">Global</option>
+  </select>
+  <label>Location</label>
+  <select id="selLocation" onchange="loadEmployees()">
+    <option value="">All Locations</option>
+    <option value="Panvel">Panvel</option>
+    <option value="Thane">Thane</option>
+  </select>
+  <label>Profile</label>
+  <select id="selProfile" onchange="loadEmployees()">
+    <option value="">All</option>
+    <option value="Teaching">Teaching</option>
+    <option value="Non-Teaching">Non-Teaching</option>
+  </select>
+  <label>Year filter</label>
+  <select id="selYearFilter" onchange="loadEmployees()">
+    <option value="">All employees</option>
+    <option value="pending">Not printed this year</option>
+    <option value="done">Already printed</option>
+  </select>
+  <div class="sep"></div>
+  <button class="btn-primary" onclick="loadEmployees()">Refresh</button>
+  <button class="btn-success" id="btnBatchPrint" onclick="batchPrint()" style="display:none;">🖨 Print Selected</button>
+  <button class="btn-secondary" onclick="selectAll()">Select All</button>
+  <button class="btn-secondary" onclick="clearSel()">Clear</button>
+</div>
+
+<div class="layout">
+
+  <!-- Employee list -->
+  <div class="emp-panel">
+    <div class="emp-panel-header">
+      <span id="empCount">Loading…</span>
+      <span id="selCount" style="color:#1a73e8;"></span>
+    </div>
+    <div class="emp-list" id="empList">
+      <div class="loading-msg">Select filters and load employees</div>
+    </div>
+    <div class="sel-bar" id="selBar" style="display:none;">
+      <span id="selBarText"></span>
+      <button class="btn-primary" onclick="batchPrint()" style="padding:5px 14px;font-size:12px;">🖨 Print Selected</button>
+    </div>
+  </div>
+
+  <!-- Preview panel -->
+  <div class="preview-panel" id="previewPanel">
+    <div class="preview-empty" id="previewEmpty">
+      ← Select an employee to preview their ID card
+    </div>
+
+    <div id="previewContent" style="display:none; width:100%; display:none; align-items:center; flex-direction:column; gap:20px;">
+      <div class="preview-actions">
+        <span class="validity-label">Valid Year:</span>
+        <select class="validity-select" id="selValidity"></select>
+        <div class="sep"></div>
+        <button class="btn-primary" onclick="printOne()">🖨 Print this card</button>
+        <button class="btn-success" onclick="markPrinted()">✅ Mark as Printed</button>
+      </div>
+      <div id="cardPreviewWrap"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Hidden print area (used for both single and batch) -->
+<div id="printArea">
+  <div class="print-grid" id="printGrid"></div>
+</div>
+
+<script>
+  const MONTHS = ['January','February','March','April','May','June',
+    'July','August','September','October','November','December'];
+
+  let currentUser = null;
+  let employees = [];
+  let selectedIds = new Set();
+  let activeEmp = null;
+  let schoolInfoCache = {};
+
+  // ── Academic year (June–May): Sept 2026 → "2026-27"
+  function currentAcademicYear() {
+    const now = new Date();
+    const m = now.getMonth(); // 0-based, June=5
+    const y = now.getFullYear();
+    const start = m >= 5 ? y : y - 1;
+    return start + '-' + String(start + 1).slice(2);
+  }
+
+  function academicYearOptions(count = 3) {
+    const opts = [];
+    const now = new Date();
+    const m = now.getMonth(); const y = now.getFullYear();
+    const startBase = m >= 5 ? y : y - 1;
+    for (let i = 0; i < count; i++) {
+      const s = startBase - i;
+      opts.push(s + '-' + String(s + 1).slice(2));
+    }
+    return opts;
+  }
+
+  window.onload = async () => {
+    await checkAuth();
+    populateValidity();
+    await loadSchoolInfo();
+    await loadEmployees();
+  };
+
+  async function checkAuth() {
+    const res = await fetch('/api/auth/me');
+    const data = await res.json();
+    if (!data.success) { window.location.href = '/'; return; }
+    currentUser = data.user;
+    document.getElementById('headerUser').textContent = data.user.fullName;
+  }
+
+  function populateValidity() {
+    const sel = document.getElementById('selValidity');
+    academicYearOptions(3).forEach((y, i) => {
+      sel.innerHTML += `<option value="${y}" ${i === 0 ? 'selected' : ''}>${y}</option>`;
+    });
+  }
+
+  async function loadSchoolInfo() {
+    try {
+      const res = await fetch('/api/schoolinfo');
+      const data = await res.json();
+      if (data.success && data.schools) {
+        data.schools.forEach(s => { schoolInfoCache[s.schoolType] = s; });
+      }
+    } catch(e) { console.error('schoolinfo error', e); }
+  }
+
+  async function loadEmployees() {
+    const section  = document.getElementById('selSection').value;
+    const location = document.getElementById('selLocation').value;
+    const profile  = document.getElementById('selProfile').value;
+    const yrFilter = document.getElementById('selYearFilter').value;
+
+    document.getElementById('empList').innerHTML = '<div class="loading-msg">Loading…</div>';
+    selectedIds.clear();
+    updateSelUI();
+
+    let url = '/api/employees?all=true';
+    if (section)  url += '&section='  + encodeURIComponent(section);
+    if (location) url += '&location=' + encodeURIComponent(location);
+    if (profile)  url += '&profile='  + encodeURIComponent(profile);
+
+    try {
+      const res  = await fetch(url);
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message);
+
+      const curYear = currentAcademicYear();
+      employees = data.employees.filter(e => e.isActive !== false);
+
+      // year filter
+      if (yrFilter === 'pending') employees = employees.filter(e => e.idCardPrintedYear !== curYear);
+      if (yrFilter === 'done')    employees = employees.filter(e => e.idCardPrintedYear === curYear);
+
+      renderEmpList();
+    } catch(e) {
+      document.getElementById('empList').innerHTML = `<div class="loading-msg" style="color:#e53935;">Error: ${e.message}</div>`;
+    }
+  }
+
+  function renderEmpList() {
+    const curYear = currentAcademicYear();
+    document.getElementById('empCount').textContent = `${employees.length} employee${employees.length !== 1 ? 's' : ''}`;
+    if (employees.length === 0) {
+      document.getElementById('empList').innerHTML = '<div class="loading-msg">No employees found</div>';
+      return;
+    }
+    document.getElementById('empList').innerHTML = employees.map(e => {
+      const printed = e.idCardPrintedYear === curYear;
+      const thumb = e.photo
+        ? `<img class="emp-thumb" src="${e.photo}" onerror="this.src=''" alt="">`
+        : `<div class="emp-thumb" style="display:flex;align-items:center;justify-content:center;font-size:18px;background:#e8eaf6;">👤</div>`;
+      const badge = printed
+        ? `<span class="badge-printed">✓ ${e.idCardPrintedYear}</span>`
+        : (e.idCardPrintedYear ? `<span class="badge-year">${e.idCardPrintedYear}</span>` : '');
+      return `
+        <div class="emp-row${printed ? ' printed' : ''}" id="row-${e._id}" onclick="selectEmp('${e._id}')">
+          <input type="checkbox" class="emp-check" id="chk-${e._id}"
+            onclick="toggleSel(event,'${e._id}')"
+            ${selectedIds.has(e._id) ? 'checked' : ''}>
+          ${thumb}
+          <div class="emp-info">
+            <div class="emp-name">${e.employeeName}</div>
+            <div class="emp-desig">${e.designation}${e.department ? ' · ' + e.department : ''}</div>
+            <div class="emp-ein">${e.ein || '—'} &nbsp;${badge}</div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function toggleSel(event, id) {
+    event.stopPropagation();
+    if (selectedIds.has(id)) selectedIds.delete(id);
+    else selectedIds.add(id);
+    document.getElementById('chk-' + id).checked = selectedIds.has(id);
+    updateSelUI();
+  }
+
+  function updateSelUI() {
+    const n = selectedIds.size;
+    document.getElementById('selCount').textContent = n > 0 ? `${n} selected` : '';
+    const bar = document.getElementById('selBar');
+    if (n > 0) {
+      bar.style.display = 'flex';
+      document.getElementById('selBarText').textContent = `${n} employee${n !== 1 ? 's' : ''} selected`;
+      document.getElementById('btnBatchPrint').style.display = 'inline-flex';
+    } else {
+      bar.style.display = 'none';
+      document.getElementById('btnBatchPrint').style.display = 'none';
+    }
+  }
+
+  function selectAll() {
+    employees.forEach(e => selectedIds.add(e._id));
+    renderEmpList();
+    updateSelUI();
+    // re-check all boxes
+    employees.forEach(e => {
+      const chk = document.getElementById('chk-' + e._id);
+      if (chk) chk.checked = true;
+    });
+  }
+
+  function clearSel() {
+    selectedIds.clear();
+    employees.forEach(e => {
+      const chk = document.getElementById('chk-' + e._id);
+      if (chk) chk.checked = false;
+    });
+    updateSelUI();
+  }
+
+  function selectEmp(id) {
+    activeEmp = employees.find(e => e._id === id);
+    if (!activeEmp) return;
+
+    // Highlight row
+    document.querySelectorAll('.emp-row').forEach(r => r.classList.remove('active'));
+    const row = document.getElementById('row-' + id);
+    if (row) row.classList.add('active');
+
+    document.getElementById('previewEmpty').style.display = 'none';
+    const content = document.getElementById('previewContent');
+    content.style.display = 'flex';
+
+    renderCardPreview(activeEmp, document.getElementById('selValidity').value, document.getElementById('cardPreviewWrap'));
+  }
+
+  document.getElementById('selValidity').addEventListener('change', () => {
+    if (activeEmp) renderCardPreview(activeEmp, document.getElementById('selValidity').value, document.getElementById('cardPreviewWrap'));
+  });
+
+  function getSchool(emp) {
+    // State → xaviers, Global → global
+    return emp.section === 'Global' ? schoolInfoCache['global'] : schoolInfoCache['xaviers'];
+  }
+
+  function buildCardHTML(emp, validYear) {
+    const school  = getSchool(emp);
+    const theme   = emp.section === 'Global' ? 'theme-global' : 'theme-state';
+    const logoHtml = school && school.logo
+      ? `<img class="logo-img" src="${school.logo}" alt="logo">`
+      : `<div class="logo-placeholder">🏫</div>`;
+    const schoolName = school ? school.schoolName : (emp.section === 'Global' ? 'Global School' : "St. Xavier's");
+    const schoolAddr = school ? (school.address || '') : '';
+    const schoolPhone = school ? (school.phone || '') : '';
+
+    const photoHtml = emp.photo
+      ? `<img class="emp-photo" src="${emp.photo}" alt="photo">`
+      : `<div class="photo-placeholder">👤</div>`;
+
+    const bloodHtml = emp.bloodGroup
+      ? `<div class="blood-tag">${emp.bloodGroup}</div>`
+      : '';
+
+    return `
+      <div class="id-card ${theme}">
+        <div class="watermark"><div class="watermark-text">STAFF</div></div>
+
+        <div class="card-header">
+          ${logoHtml}
+          <div class="header-text">
+            <div class="school-name">${schoolName}</div>
+            <div class="school-sub">${emp.section === 'State' ? emp.location + ' Branch' : 'Thane'} · Staff Identity Card</div>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <div class="photo-col">
+            ${photoHtml}
+            ${bloodHtml}
+          </div>
+          <div class="info-col">
+            <div class="emp-card-name">${emp.employeeName}</div>
+            <div class="emp-card-desig">${emp.designation}</div>
+            ${emp.department ? `<div class="emp-card-dept">${emp.department}</div>` : ''}
+            <hr class="id-divider">
+            <div class="emp-card-ein">ID: ${emp.ein || '—'}</div>
+          </div>
+        </div>
+
+        <div class="card-footer">
+          <div class="validity-tag">Valid: ${validYear}</div>
+          <div class="footer-contact">
+            ${schoolPhone ? schoolPhone + '<br>' : ''}
+            ${schoolAddr ? schoolAddr.split(',').slice(-1)[0].trim() : ''}
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function renderCardPreview(emp, validYear, container) {
+    container.innerHTML = buildCardHTML(emp, validYear);
+  }
+
+  function printOne() {
+    if (!activeEmp) return;
+    const validYear = document.getElementById('selValidity').value;
+    document.getElementById('printGrid').innerHTML =
+      `<div class="print-card-wrap">${buildCardHTML(activeEmp, validYear)}</div>`;
+    window.print();
+  }
+
+  async function markPrinted() {
+    if (!activeEmp) return;
+    const validYear = document.getElementById('selValidity').value;
+    try {
+      const res = await fetch(`/api/employees/${activeEmp._id}/id-card-printed`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ year: validYear })
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message);
+      activeEmp.idCardPrintedYear = validYear;
+      // Update list row badge
+      const idx = employees.findIndex(e => e._id === activeEmp._id);
+      if (idx >= 0) employees[idx].idCardPrintedYear = validYear;
+      renderEmpList();
+      // Re-highlight active row
+      const row = document.getElementById('row-' + activeEmp._id);
+      if (row) row.classList.add('active');
+    } catch(e) {
+      alert('Error: ' + e.message);
+    }
+  }
+
+  function batchPrint() {
+    const validYear = document.getElementById('selValidity').value;
+    const selected  = employees.filter(e => selectedIds.has(e._id));
+    if (selected.length === 0) { alert('Select at least one employee.'); return; }
+    document.getElementById('printGrid').innerHTML = selected.map(emp =>
+      `<div class="print-card-wrap">${buildCardHTML(emp, validYear)}</div>`
+    ).join('');
+    window.print();
+  }
+</script>
+</body>
+</html>

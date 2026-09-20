@@ -403,6 +403,22 @@ router.put('/:id', isLoggedIn, isAccountantOrAdmin, (req, res, next) => {
 });
 
 // PATCH EIN only — JSON body, no multer, for quick EIN reassignment from admin
+router.patch('/:id/id-card-printed', isLoggedIn, isAdmin, async (req, res) => {
+  try {
+    const { year } = req.body; // e.g. "2025-26"
+    if (!year) return res.status(400).json({ success: false, message: 'year required' });
+    const employee = await Employee.findByIdAndUpdate(
+      req.params.id,
+      { $set: { idCardPrintedYear: year, updatedAt: Date.now() } },
+      { new: true }
+    );
+    if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
+    return res.json({ success: true, message: 'ID card year updated', employee });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 router.patch('/:id/ein', isLoggedIn, isAdmin, async (req, res) => {
   try {
     const { ein } = req.body;

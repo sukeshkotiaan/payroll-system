@@ -180,6 +180,10 @@ app.get('/masters', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'pages', 'masters.html'));
 });
 
+app.get('/id-cards', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'pages', 'id-cards.html'));
+});
+
 app.get('/attendance-exceptions', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'pages', 'attendance-exceptions.html'));
 });
