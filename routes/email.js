@@ -50,7 +50,17 @@ router.post('/send-payslip', isLoggedIn, isAccountantOrAdmin, async (req, res) =
 
     return res.json({ success: true, message: 'Payslip sent to ' + to });
   } catch (err) {
-    return res.status(500).json({ success: false, message: safeError(err, 'email send-payslip') });
+    console.error('[email send-payslip]', err.code, err.message);
+    // Surface actionable SMTP errors — these don't leak sensitive details
+    const smtpErrors = {
+      EAUTH:        'Gmail authentication failed. Check that the App Password in GMAIL_PASS is correct and 2FA is enabled on the Gmail account.',
+      ECONNECTION:  'Could not connect to Gmail SMTP. The server may be temporarily unreachable — please try again.',
+      ETIMEDOUT:    'Connection to Gmail timed out. Please try again in a moment.',
+      ENETUNREACH:  'Network unreachable — the server cannot reach Gmail SMTP. Contact support.',
+      EMESSAGE:     'Email was rejected by Gmail. Check the recipient address and try again.',
+    };
+    const friendly = smtpErrors[err.code];
+    return res.status(500).json({ success: false, message: friendly || safeError(err, 'email send-payslip') });
   }
 });
 
