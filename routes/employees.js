@@ -193,6 +193,13 @@ router.get('/', isLoggedIn, async (req, res) => {
       filter.location = user.branch;
       filter.isRestricted = false;
     }
+    if (user.role === 'supervisor') {
+      filter.isRestricted = false; // supervisors cannot see restricted employees
+    }
+    // Management employees are only visible to admin and management roles
+    if (user.role !== 'admin' && user.role !== 'management') {
+      filter.ein = { $not: /^MGT-/i };
+    }
 
     // Standard filters
     if (req.query.location)   filter.location   = req.query.location;
@@ -220,8 +227,8 @@ router.get('/', isLoggedIn, async (req, res) => {
     // (attendance/payroll pages need every employee in a group).
     // Admin/management may also pass ?all=true to bypass pagination for
     // bulk operations like the appraisals grid.
-    const wantsAll = req.query.all === 'true' &&
-                     (user.role === 'admin' || user.role === 'management');
+    // Any role may request all records within their already-scoped filter
+    const wantsAll = req.query.all === 'true';
     const isGroupScoped = wantsAll ||
                           (req.query.location && req.query.section && req.query.profile);
     const page  = Math.max(1, parseInt(req.query.page)  || 1);

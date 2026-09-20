@@ -2,10 +2,10 @@ const express = require('express');
 const router = express.Router();
 const ExtraPay = require('../models/ExtraPay');
 const Employee = require('../models/Employee');
-const { isLoggedIn, isAdmin } = require('../middleware/auth');
+const { isLoggedIn, isAdmin, notSupervisor } = require('../middleware/auth');
 
 // GET — list entries (filterable by month, year, location, ein)
-router.get('/', isLoggedIn, async (req, res) => {
+router.get('/', isLoggedIn, notSupervisor, async (req, res) => {
   try {
     const filter = {};
     if (req.query.month)    filter.month    = req.query.month;

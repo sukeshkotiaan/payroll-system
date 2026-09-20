@@ -6,7 +6,7 @@ const AuditLog = require('../models/AuditLog');
 const User = require('../models/User');
 const Settings = require('../models/Settings');
 const nodemailer = require('nodemailer');
-const { isLoggedIn } = require('../middleware/auth');
+const { isLoggedIn, notSupervisor } = require('../middleware/auth');
 
 // Helper: generate cryptographically secure 6-digit OTP
 function generateOTP() {
@@ -112,7 +112,7 @@ router.post('/verify-otp', async (req, res) => {
 });
 
 // GET security config (for Settings page)
-router.get('/config', isLoggedIn, async (req, res) => {
+router.get('/config', isLoggedIn, notSupervisor, async (req, res) => {
   try {
     const settings = await Settings.findOne();
     const config = settings ? (settings.securityConfig || {}) : {};

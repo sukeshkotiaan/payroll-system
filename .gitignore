@@ -5,3 +5,5 @@ node_modules/
 # One-time migration scripts (contain employee data)
 fix_section_eins.js
 reprocess_august_payroll.js
+fix_esic_pt.js
+revert_esic_fix.js

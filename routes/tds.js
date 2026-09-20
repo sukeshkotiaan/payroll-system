@@ -2,10 +2,10 @@ const express = require('express');
 const router = express.Router();
 const TDS = require('../models/TDS');
 const Employee = require('../models/Employee');
-const { isLoggedIn, isAdmin, isAccountantOrAdmin } = require('../middleware/auth');
+const { isLoggedIn, isAdmin, isAccountantOrAdmin, notSupervisor } = require('../middleware/auth');
 
 // GET all TDS records
-router.get('/', isLoggedIn, async (req, res) => {
+router.get('/', isLoggedIn, notSupervisor, async (req, res) => {
   try {
     let filter = {};
     if (req.query.month) filter.month = req.query.month;
@@ -37,7 +37,7 @@ router.get('/find-employee/:search', isLoggedIn, async (req, res) => {
 });
 
 // GET TDS for payroll (specific group and month)
-router.get('/for-payroll', isLoggedIn, async (req, res) => {
+router.get('/for-payroll', isLoggedIn, notSupervisor, async (req, res) => {
   try {
     const { location, section, profile, month, year } = req.query;
     const records = await TDS.find({ location, section, profile, month, year: parseInt(year) });

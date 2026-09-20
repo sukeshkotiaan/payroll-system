@@ -42,4 +42,13 @@ const hasRole = (...roles) => {
   };
 };
 
-module.exports = { isLoggedIn, isAdmin, isSystemAdmin, isAccountantOrAdmin, hasRole };
+// Block supervisor role from financial/sensitive data routes
+// Supervisors only access attendance and exit form
+const notSupervisor = (req, res, next) => {
+  if (req.session && req.session.user && req.session.user.role === 'supervisor') {
+    return res.status(403).json({ success: false, message: 'Access denied — supervisors do not have access to this data' });
+  }
+  return next();
+};
+
+module.exports = { isLoggedIn, isAdmin, isSystemAdmin, isAccountantOrAdmin, hasRole, notSupervisor };

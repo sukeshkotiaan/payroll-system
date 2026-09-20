@@ -1296,7 +1296,7 @@
       const data = await res.json();
       if (!data.success) return;
       const employees = data.employees;
-      const rows = [['EIN','Title','Name','Gender','Designation','Department','Location','Section','Profile','Date of Birth','Age','Date of Joining','Exit Date','PAN','Aadhaar','Phone','Email','Address','UAN','Monthly Salary','CTC Annual','Basic','HRA','PF','PT','PF Applicable','ESIC Applicable','PT Applicable','Restricted','Status','Qualifications','Exit Reason','Last Working Day','Notice Period','FnF','Relieving Letter','Rehire']];
+      const rows = [['EIN','Title','Name','Gender','Designation','Department','Location','Section','Profile','Date of Birth','Age','Date of Joining','Exit Date','PAN','Aadhaar','Phone','Email','Address','UAN','Monthly Salary','CTC Annual','Basic','HRA','PF','PT','PF Applicable','ESIC Applicable','PT Applicable','TDS Applicable','Restricted','Status','Qualifications','Exit Reason','Last Working Day','Notice Period','FnF','Relieving Letter','Rehire']];
       for (const emp of employees) {
         const dob = emp.dateOfBirth ? new Date(emp.dateOfBirth) : null;
         const age = dob ? new Date().getFullYear() - dob.getFullYear() : '';
@@ -1311,7 +1311,7 @@
             noticePeriod = ex.noticePeriod || ''; exitFnF = ex.fnfSettlement || ''; exitRelieving = ex.relievingLetter || ''; exitRehire = ex.eligibleForRehire || '';
           }
         } catch(e) {}
-        rows.push([emp.ein||'', emp.title||'', emp.employeeName||'', emp.gender||'', emp.designation||'', emp.department||'', emp.location||'', emp.section||'', emp.profile||'', dob?dob.toLocaleDateString('en-IN'):'', age, emp.dateOfJoining?new Date(emp.dateOfJoining).toLocaleDateString('en-IN'):'', emp.dateOfExit?new Date(emp.dateOfExit).toLocaleDateString('en-IN'):'', emp.panNumber||'', emp.aadhaarNumber||'', emp.phoneNumber||'', emp.email||'', emp.address||'', emp.uanNumber||'', emp.monthlySalary||'', emp.ctcAnnual||'', emp.basic||'', emp.hraAllowance||'', emp.pf||'', emp.pt||'', emp.pfApplicable?'Yes':'No', emp.esicApplicable?'Yes':'No', emp.ptApplicable?'Yes':'No', emp.isRestricted?'Yes':'No', emp.isActive?'Active':'Inactive', quals, exitReason, exitLWD, noticePeriod, exitFnF, exitRelieving, exitRehire]);
+        rows.push([emp.ein||'', emp.title||'', emp.employeeName||'', emp.gender||'', emp.designation||'', emp.department||'', emp.location||'', emp.section||'', emp.profile||'', dob?dob.toLocaleDateString('en-IN'):'', age, emp.dateOfJoining?new Date(emp.dateOfJoining).toLocaleDateString('en-IN'):'', emp.dateOfExit?new Date(emp.dateOfExit).toLocaleDateString('en-IN'):'', emp.panNumber||'', emp.aadhaarNumber||'', emp.phoneNumber||'', emp.email||'', emp.address||'', emp.uanNumber||'', emp.monthlySalary||'', emp.ctcAnnual||'', emp.basic||'', emp.hraAllowance||'', emp.pf||'', emp.pt||'', emp.pfApplicable?'Yes':'No', emp.esicApplicable?'Yes':'No', emp.ptApplicable?'Yes':'No', emp.tdsApplicable?'Yes':'No', emp.isRestricted?'Yes':'No', emp.isActive?'Active':'Inactive', quals, exitReason, exitLWD, noticePeriod, exitFnF, exitRelieving, exitRehire]);
       }
       const ws = XLSX.utils.aoa_to_sheet(rows);
       const wb = XLSX.utils.book_new();

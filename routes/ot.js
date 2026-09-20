@@ -2,11 +2,11 @@ const express = require('express');
 const router = express.Router();
 const OT = require('../models/OT');
 const Employee = require('../models/Employee');
-const { isLoggedIn, isAdmin, isAccountantOrAdmin } = require('../middleware/auth');
+const { isLoggedIn, isAdmin, isAccountantOrAdmin, notSupervisor } = require('../middleware/auth');
 const { getSettings } = require('../lib/settingsCache');
 
 // GET all OT records
-router.get('/', isLoggedIn, async (req, res) => {
+router.get('/', isLoggedIn, notSupervisor, async (req, res) => {
   try {
     let filter = {};
     if (req.query.month) filter.month = req.query.month;

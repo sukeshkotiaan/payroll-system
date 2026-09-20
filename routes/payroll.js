@@ -4,7 +4,7 @@ const Payroll = require('../models/Payroll');
 const Attendance = require('../models/Attendance');
 const Employee = require('../models/Employee');
 const Settings = require('../models/Settings');
-const { isLoggedIn, isAdmin } = require('../middleware/auth');
+const { isLoggedIn, isAdmin, notSupervisor } = require('../middleware/auth');
 const { logAudit } = require('./security');
 const { getSettings } = require('../lib/settingsCache');
 const Arrear = require('../models/Arrear');
@@ -201,7 +201,7 @@ function calculatePayroll(emp, attendance, rules, month) {
 }
 
 // GET all payroll records
-router.get('/', isLoggedIn, async (req, res) => {
+router.get('/', isLoggedIn, notSupervisor, async (req, res) => {
   try {
     let filter = {};
     if (req.query.month) filter.month = req.query.month;
@@ -218,7 +218,7 @@ router.get('/', isLoggedIn, async (req, res) => {
 });
 
 // GET single payroll
-router.get('/:id', isLoggedIn, async (req, res) => {
+router.get('/:id', isLoggedIn, notSupervisor, async (req, res) => {
   try {
     const payroll = await Payroll.findById(req.params.id);
     if (!payroll) return res.status(404).json({ success: false, message: 'Not found' });

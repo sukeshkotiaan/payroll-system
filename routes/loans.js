@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Loan = require('../models/Loan');
 const Employee = require('../models/Employee');
-const { isLoggedIn, isAdmin } = require('../middleware/auth');
+const { isLoggedIn, isAdmin, notSupervisor } = require('../middleware/auth');
 
 const MONTHS = ['January','February','March','April','May','June',
   'July','August','September','October','November','December'];
@@ -44,7 +44,7 @@ function calculateEMI(principal, rate, tenure) {
 }
 
 // GET all loans
-router.get('/', isLoggedIn, async (req, res) => {
+router.get('/', isLoggedIn, notSupervisor, async (req, res) => {
   try {
     let filter = {};
     if (req.query.ein) filter.ein = req.query.ein;
@@ -58,7 +58,7 @@ router.get('/', isLoggedIn, async (req, res) => {
 });
 
 // GET single loan with schedule
-router.get('/:id', isLoggedIn, async (req, res) => {
+router.get('/:id', isLoggedIn, notSupervisor, async (req, res) => {
   try {
     const loan = await Loan.findById(req.params.id);
     if (!loan) return res.status(404).json({ success: false, message: 'Not found' });

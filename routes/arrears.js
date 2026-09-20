@@ -2,11 +2,11 @@ const express = require('express');
 const router = express.Router();
 const Arrear = require('../models/Arrear');
 const Employee = require('../models/Employee');
-const { isLoggedIn, isAccountantOrAdmin } = require('../middleware/auth');
+const { isLoggedIn, isAccountantOrAdmin, notSupervisor } = require('../middleware/auth');
 const { logAudit } = require('./security');
 
 // GET all arrears
-router.get('/', isLoggedIn, async (req, res) => {
+router.get('/', isLoggedIn, notSupervisor, async (req, res) => {
   try {
     let filter = {};
     if (req.query.month) filter.month = req.query.month;
