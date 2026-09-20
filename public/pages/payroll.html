@@ -464,6 +464,11 @@
     const y = document.getElementById('processYear');
     if (m) m.value = MONTHS[now.getMonth()];
     if (y) y.value = now.getFullYear();
+    // Also default the filter to current month/year so list isn't overwhelming
+    const fm = document.getElementById('filterMonth');
+    const fy = document.getElementById('filterYear');
+    if (fm) fm.value = MONTHS[now.getMonth()];
+    if (fy) fy.value = now.getFullYear();
   }
 
   async function loadPayrollList() {

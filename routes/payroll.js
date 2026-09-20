@@ -208,6 +208,28 @@ router.get('/', isLoggedIn, notSupervisor, async (req, res) => {
     if (req.query.year) filter.year = parseInt(req.query.year);
     if (req.query.location) filter.location = req.query.location;
     if (req.query.status) filter.status = req.query.status;
+
+    const user = req.session.user;
+    const isAccountant = user.role === 'accountant';
+
+    if (isAccountant) {
+      // For accountants: fetch with records to strip MGT rows, then recalculate totals
+      const docs = await Payroll.find(filter).sort({ year: -1, month: -1 });
+      const records = docs.map(p => {
+        const obj = p.toObject();
+        const nonMgt = obj.records.filter(r => !/^MGT-/i.test(r.ein));
+        return {
+          _id: obj._id, groupName: obj.groupName, month: obj.month, year: obj.year,
+          location: obj.location, section: obj.section, profile: obj.profile,
+          status: obj.status, processedBy: obj.processedBy,
+          employeeCount: nonMgt.length,
+          totalGross: parseFloat(nonMgt.reduce((s, r) => s + (r.grossSalary || 0), 0).toFixed(2)),
+          totalNet:   parseFloat(nonMgt.reduce((s, r) => s + (r.netSalary   || 0), 0).toFixed(2))
+        };
+      });
+      return res.json({ success: true, records });
+    }
+
     const records = await Payroll.find(filter)
       .select('-records')
       .sort({ year: -1, month: -1 });
@@ -222,6 +244,20 @@ router.get('/:id', isLoggedIn, notSupervisor, async (req, res) => {
   try {
     const payroll = await Payroll.findById(req.params.id);
     if (!payroll) return res.status(404).json({ success: false, message: 'Not found' });
+
+    const user = req.session.user;
+    const isAccountant = user.role === 'accountant';
+
+    if (isAccountant) {
+      // Strip management (MGT-prefix) rows and recalculate totals
+      const obj = payroll.toObject();
+      obj.records = obj.records.filter(r => !/^MGT-/i.test(r.ein));
+      obj.totalGross    = parseFloat(obj.records.reduce((s, r) => s + (r.grossSalary  || 0), 0).toFixed(2));
+      obj.totalNet      = parseFloat(obj.records.reduce((s, r) => s + (r.netSalary    || 0), 0).toFixed(2));
+      obj.employeeCount = obj.records.length;
+      return res.json({ success: true, payroll: obj });
+    }
+
     return res.json({ success: true, payroll });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
