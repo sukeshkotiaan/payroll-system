@@ -81,6 +81,7 @@ app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/loans', require('./routes/loans'));
 app.use('/api/extra-pay', require('./routes/extra-pay'));
 app.use('/api/reports', require('./routes/reports'));
+app.use('/api/photo-upload', require('./routes/photo-upload'));
 
 // Page Routes
 app.get('/', (req, res) => {
@@ -182,6 +183,15 @@ app.get('/masters', (req, res) => {
 
 app.get('/id-cards', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'pages', 'id-cards.html'));
+});
+
+app.get('/photo-task', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'pages', 'photo-task.html'));
+});
+
+// Public — no auth (token is the auth)
+app.get('/upload-photo/:token', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'pages', 'upload-photo.html'));
 });
 
 app.get('/attendance-exceptions', (req, res) => {

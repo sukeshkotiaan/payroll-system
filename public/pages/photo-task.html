@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Photo Collection Task</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; color: #333; }
+
+    .header {
+      background: linear-gradient(135deg, #1a73e8, #0d47a1);
+      color: #fff; padding: 14px 24px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .header h1 { font-size: 20px; font-weight: 600; }
+    .header-right { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+    .btn-back {
+      background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
+      color: #fff; padding: 7px 14px; border-radius: 6px; cursor: pointer;
+      font-size: 13px; text-decoration: none; display: inline-block;
+    }
+    .btn-back:hover { background: rgba(255,255,255,0.25); }
+
+    /* ── Stats bar ── */
+    .stats-bar {
+      background: #fff; border-bottom: 1px solid #e0e0e0;
+      padding: 16px 24px; display: flex; gap: 14px; flex-wrap: wrap; align-items: center;
+    }
+    .stat-pill {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600;
+    }
+    .stat-num { font-size: 20px; font-weight: 800; }
+    .pill-total    { background: #f5f5f5;   color: #555; }
+    .pill-none     { background: #fafafa;   color: #888;   border: 1px solid #e0e0e0; }
+    .pill-sent     { background: #e8f0fe;   color: #1a73e8; }
+    .pill-pending  { background: #fff3e0;   color: #e65100; }
+    .pill-approved { background: #e6f4ea;   color: #2e7d32; }
+    .pill-rejected { background: #fce8e6;   color: #c62828; }
+
+    /* Progress bar */
+    .progress-wrap { padding: 0 24px 14px; background: #fff; border-bottom: 1px solid #f0f0f0; }
+    .progress-label { font-size: 11px; color: #888; font-weight: 600; margin-bottom: 5px; display: flex; justify-content: space-between; }
+    .progress-track { background: #e0e0e0; border-radius: 6px; height: 10px; overflow: hidden; display: flex; }
+    .progress-seg   { height: 100%; transition: width 0.4s; }
+    .seg-approved   { background: #34a853; }
+    .seg-pending    { background: #fbbc04; }
+    .seg-sent       { background: #4285f4; }
+    .seg-rejected   { background: #ea4335; }
+
+    /* ── Filter & actions bar ── */
+    .action-bar {
+      background: #fff; border-bottom: 1px solid #e0e0e0;
+      padding: 12px 24px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    }
+    .action-bar select, .action-bar input[type="text"] {
+      border: 1px solid #d0d0d0; border-radius: 6px; padding: 7px 12px;
+      font-size: 13px; background: #fff;
+    }
+    .action-bar input[type="text"] { min-width: 200px; }
+    .btn { border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .btn-primary { background: #1a73e8; color: #fff; }
+    .btn-primary:hover { background: #1558b0; }
+    .btn-secondary { background: #f5f5f5; color: #555; }
+    .btn-secondary:hover { background: #e8e8e8; }
+    .sep { width: 1px; height: 28px; background: #e0e0e0; }
+    .spacer { flex: 1; }
+
+    /* ── Table ── */
+    .table-wrap { padding: 20px 24px; }
+    table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+    thead th { background: #f8f9fa; padding: 11px 14px; text-align: left; font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #eee; }
+    tbody td { padding: 11px 14px; border-bottom: 1px solid #f5f5f5; vertical-align: middle; font-size: 13px; }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover { background: #fafafa; }
+
+    .emp-thumb {
+      width: 36px; height: 36px; border-radius: 50%; object-fit: cover;
+      border: 2px solid #e0e0e0; background: #e8eaf6;
+      display: flex; align-items: center; justify-content: center; font-size: 16px;
+    }
+    .emp-thumb img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
+
+    .emp-name  { font-weight: 600; color: #222; }
+    .emp-desig { font-size: 11px; color: #999; }
+
+    /* Status badges */
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 700;
+    }
+    .badge-none     { background: #f5f5f5; color: #999; }
+    .badge-sent     { background: #e8f0fe; color: #1a73e8; }
+    .badge-pending  { background: #fff3e0; color: #e65100; }
+    .badge-approved { background: #e6f4ea; color: #2e7d32; }
+    .badge-rejected { background: #fce8e6; color: #c62828; }
+
+    /* Action buttons in table */
+    .action-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+    .btn-sm { border: none; border-radius: 5px; padding: 5px 11px; font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .btn-wa     { background: #25D366; color: #fff; }
+    .btn-wa:hover { background: #1da851; }
+    .btn-approve { background: #e6f4ea; color: #2e7d32; }
+    .btn-approve:hover { background: #c8e6c9; }
+    .btn-reject  { background: #fce8e6; color: #c62828; }
+    .btn-reject:hover { background: #ffcdd2; }
+    .btn-view    { background: #f5f5f5; color: #555; }
+    .btn-view:hover { background: #e0e0e0; }
+    .btn-resend  { background: #e8f0fe; color: #1a73e8; }
+    .btn-resend:hover { background: #d2e3fc; }
+
+    /* Photo modal */
+    .modal-bg {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+      display: flex; align-items: center; justify-content: center; z-index: 1000;
+    }
+    .modal-box {
+      background: #fff; border-radius: 14px; padding: 24px; max-width: 400px; width: 90%;
+      display: flex; flex-direction: column; gap: 16px;
+    }
+    .modal-box h3 { font-size: 16px; font-weight: 700; }
+    .modal-photo { width: 100%; max-height: 360px; object-fit: contain; border-radius: 8px; border: 1px solid #eee; }
+    .modal-footer { display: flex; gap: 10px; justify-content: flex-end; }
+    .modal-textarea { width: 100%; border: 1px solid #d0d0d0; border-radius: 6px; padding: 8px 12px; font-size: 13px; resize: vertical; min-height: 70px; }
+
+    .empty-state { text-align: center; padding: 48px; color: #bbb; font-size: 14px; }
+    .loading-state { text-align: center; padding: 48px; color: #1a73e8; font-size: 14px; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📸 Photo Collection Task</h1>
+  <div class="header-right">
+    <span id="headerUser"></span>
+    <a class="btn-back" href="/dashboard">← Dashboard</a>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-bar" id="statsBar">
+  <div class="stat-pill pill-total">  <span class="stat-num" id="cTotal">—</span> Total</div>
+  <div class="stat-pill pill-approved"><span class="stat-num" id="cApproved">—</span> Approved</div>
+  <div class="stat-pill pill-pending"> <span class="stat-num" id="cPending">—</span> Awaiting Review</div>
+  <div class="stat-pill pill-sent">    <span class="stat-num" id="cSent">—</span> Link Sent</div>
+  <div class="stat-pill pill-rejected"><span class="stat-num" id="cRejected">—</span> Rejected</div>
+  <div class="stat-pill pill-none">    <span class="stat-num" id="cNone">—</span> Not Sent</div>
+</div>
+<div class="progress-wrap">
+  <div class="progress-label">
+    <span id="progressLabel">Collection progress</span>
+    <span id="progressPct"></span>
+  </div>
+  <div class="progress-track" id="progressTrack"></div>
+</div>
+
+<!-- Filter & actions -->
+<div class="action-bar">
+  <input type="text" id="search" placeholder="Search name or EIN…" oninput="applyFilters()">
+  <select id="filterStatus" onchange="applyFilters()">
+    <option value="">All statuses</option>
+    <option value="none">Not Sent</option>
+    <option value="link_sent">Link Sent</option>
+    <option value="pending_review">Awaiting Review</option>
+    <option value="approved">Approved</option>
+    <option value="rejected">Rejected</option>
+  </select>
+  <div class="sep"></div>
+  <button class="btn btn-primary" onclick="loadData()">↻ Refresh</button>
+  <div class="spacer"></div>
+  <span id="rowCount" style="font-size:12px;color:#888;"></span>
+</div>
+
+<!-- Table -->
+<div class="table-wrap">
+  <table id="mainTable">
+    <thead>
+      <tr>
+        <th>Employee</th>
+        <th>Section / Location</th>
+        <th>Status</th>
+        <th>Link Sent</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody">
+      <tr><td colspan="5" class="loading-state">Loading…</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Photo review modal -->
+<div class="modal-bg" id="modalBg" style="display:none;" onclick="closeModal(event)">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <h3 id="modalTitle">Review Photo</h3>
+    <img class="modal-photo" id="modalPhoto" src="" alt="photo">
+    <div id="modalRejectFields" style="display:none;">
+      <div style="font-size:12px;font-weight:600;color:#666;margin-bottom:5px;">Reason for rejection <span style="color:#999;font-weight:400;">(shown to employee on re-upload)</span></div>
+      <textarea class="modal-textarea" id="rejectNote" placeholder="e.g. Please use a plain background without filters, face must be clearly visible."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+      <button class="btn btn-sm btn-approve" id="modalBtnApprove" onclick="reviewAction('approve')" style="font-size:13px;padding:7px 16px;">✅ Approve</button>
+      <button class="btn btn-sm btn-reject"  id="modalBtnReject"  onclick="toggleRejectFields()" style="font-size:13px;padding:7px 16px;">❌ Reject</button>
+      <button class="btn btn-sm btn-reject"  id="modalBtnConfirmReject" onclick="reviewAction('reject')" style="display:none;font-size:13px;padding:7px 16px;">Confirm Reject</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let allEmployees = [];
+  let counts = {};
+  let currentUser = null;
+  let modalEmpId = null;
+  const BASE = window.location.origin;
+
+  window.onload = async () => {
+    const res = await fetch('/api/auth/me');
+    const d   = await res.json();
+    if (!d.success) { window.location.href = '/'; return; }
+    currentUser = d.user;
+    document.getElementById('headerUser').textContent = d.user.fullName;
+    await loadData();
+  };
+
+  async function loadData() {
+    document.getElementById('tableBody').innerHTML = '<tr><td colspan="5" class="loading-state">Loading…</td></tr>';
+    try {
+      const res  = await fetch('/api/photo-upload/status');
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message);
+      allEmployees = data.employees;
+      counts = data.counts;
+      updateStats();
+      applyFilters();
+    } catch(e) {
+      document.getElementById('tableBody').innerHTML = `<tr><td colspan="5" class="empty-state" style="color:#e53935;">Error: ${e.message}</td></tr>`;
+    }
+  }
+
+  function updateStats() {
+    const c = counts;
+    document.getElementById('cTotal').textContent    = c.total;
+    document.getElementById('cApproved').textContent = c.approved;
+    document.getElementById('cPending').textContent  = c.pending_review;
+    document.getElementById('cSent').textContent     = c.link_sent;
+    document.getElementById('cRejected').textContent = c.rejected;
+    document.getElementById('cNone').textContent     = c.none;
+
+    // Progress bar
+    const t = c.total || 1;
+    const segs = [
+      { cls: 'seg-approved', pct: c.approved     / t * 100 },
+      { cls: 'seg-pending',  pct: c.pending_review/ t * 100 },
+      { cls: 'seg-sent',     pct: c.link_sent    / t * 100 },
+      { cls: 'seg-rejected', pct: c.rejected      / t * 100 },
+    ];
+    document.getElementById('progressTrack').innerHTML =
+      segs.map(s => `<div class="progress-seg ${s.cls}" style="width:${s.pct.toFixed(1)}%"></div>`).join('');
+
+    const done = c.approved + c.pending_review;
+    document.getElementById('progressPct').textContent = `${c.approved}/${c.total} approved`;
+    document.getElementById('progressLabel').textContent =
+      c.approved === c.total ? '🎉 All photos approved!' :
+      done === c.total       ? '✅ All collected — review pending' :
+      'Photo collection progress';
+  }
+
+  function effectiveStatus(e) {
+    if (e.photoStatus === 'approved')      return 'approved';
+    if (e.photoStatus === 'rejected')      return 'rejected';
+    if (e.photoStatus === 'pending_review') return 'pending_review';
+    if (e.activeToken)                     return 'link_sent';
+    return 'none';
+  }
+
+  function applyFilters() {
+    const q   = document.getElementById('search').value.trim().toLowerCase();
+    const fs  = document.getElementById('filterStatus').value;
+    let filtered = allEmployees.filter(e => {
+      if (q && !e.employeeName.toLowerCase().includes(q) && !(e.ein || '').toLowerCase().includes(q)) return false;
+      if (fs && effectiveStatus(e) !== fs) return false;
+      return true;
+    });
+    renderTable(filtered);
+  }
+
+  function renderTable(list) {
+    document.getElementById('rowCount').textContent = list.length + ' employee' + (list.length !== 1 ? 's' : '');
+    if (!list.length) {
+      document.getElementById('tableBody').innerHTML = '<tr><td colspan="5" class="empty-state">No employees match the filter.</td></tr>';
+      return;
+    }
+    document.getElementById('tableBody').innerHTML = list.map(e => {
+      const status = effectiveStatus(e);
+      const badgeMap = {
+        none:           '<span class="badge badge-none">— Not Sent</span>',
+        link_sent:      '<span class="badge badge-sent">🔗 Link Sent</span>',
+        pending_review: '<span class="badge badge-pending">⏳ Review Pending</span>',
+        approved:       '<span class="badge badge-approved">✅ Approved</span>',
+        rejected:       '<span class="badge badge-rejected">❌ Rejected</span>'
+      };
+      const photoThumb = e.photo
+        ? `<div class="emp-thumb"><img src="${e.photo}" onerror="this.parentElement.innerHTML='👤'" alt="photo"></div>`
+        : `<div class="emp-thumb" style="display:flex;align-items:center;justify-content:center;">👤</div>`;
+
+      const sentAt = e.photoLinkSentAt
+        ? new Date(e.photoLinkSentAt).toLocaleDateString('en-IN', { day:'numeric', month:'short' })
+        : '—';
+      const expiry = e.activeToken
+        ? ' <span style="font-size:10px;color:#aaa;">expires ' + new Date(e.activeToken.expiresAt).toLocaleDateString('en-IN',{day:'numeric',month:'short'}) + '</span>'
+        : '';
+
+      let actions = '';
+      if (status === 'none') {
+        actions = `<button class="btn-sm btn-wa" onclick="sendLink('${e._id}','${safePhone(e)}','${esc(e.employeeName)}')">📲 Send WhatsApp</button>`;
+      } else if (status === 'link_sent') {
+        actions = `
+          <button class="btn-sm btn-wa"     onclick="sendLink('${e._id}','${safePhone(e)}','${esc(e.employeeName)}')">📲 Resend</button>
+          <button class="btn-sm btn-resend" onclick="copyLink('${e.activeToken ? e.activeToken.token : ''}')">📋 Copy Link</button>`;
+      } else if (status === 'pending_review') {
+        actions = `
+          <button class="btn-sm btn-view"    onclick="openModal('${e._id}','${esc(e.employeeName)}','${e.photo}')">👁 Review</button>
+          <button class="btn-sm btn-approve" onclick="quickApprove('${e._id}')">✅ Approve</button>
+          <button class="btn-sm btn-reject"  onclick="openModal('${e._id}','${esc(e.employeeName)}','${e.photo}',true)">❌ Reject</button>`;
+      } else if (status === 'approved') {
+        actions = `<button class="btn-sm btn-view" onclick="openModal('${e._id}','${esc(e.employeeName)}','${e.photo}')">👁 View</button>`;
+      } else if (status === 'rejected') {
+        actions = `
+          <button class="btn-sm btn-wa" onclick="sendLink('${e._id}','${safePhone(e)}','${esc(e.employeeName)}')">📲 Resend Link</button>
+          <div style="font-size:10px;color:#c62828;max-width:180px;white-space:normal;line-height:1.3;">${esc(e.photoRejectedNote)}</div>`;
+      }
+
+      return `<tr>
+        <td>
+          <div style="display:flex;align-items:center;gap:10px;">
+            ${photoThumb}
+            <div>
+              <div class="emp-name">${esc(e.employeeName)}</div>
+              <div class="emp-desig">${esc(e.designation)}${e.ein ? ' · ' + e.ein : ''}</div>
+            </div>
+          </div>
+        </td>
+        <td style="font-size:12px;color:#666;">${e.section} · ${e.location}</td>
+        <td>${badgeMap[status]}</td>
+        <td style="font-size:12px;color:#888;">${sentAt}${expiry}</td>
+        <td><div class="action-btns">${actions}</div></td>
+      </tr>`;
+    }).join('');
+  }
+
+  function safePhone(e) { return (e.phoneNumber || '').replace(/\D/g, ''); }
+  function esc(s) { return (s || '').replace(/'/g, "\\'").replace(/</g, '&lt;'); }
+
+  async function sendLink(empId, rawPhone, name) {
+    try {
+      const res  = await fetch('/api/photo-upload/generate-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ employeeId: empId })
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message);
+
+      const uploadUrl = BASE + '/upload-photo/' + data.token;
+      const phone = formatPhone(rawPhone || data.phone || '');
+      const msg   = encodeURIComponent(
+        `Hello ${data.employeeName},\n\nPlease upload your photo for the staff ID card using the link below. The link is valid for 7 days.\n\n${uploadUrl}\n\nThank you.`
+      );
+
+      if (phone) {
+        window.open('https://wa.me/' + phone + '?text=' + msg, '_blank');
+      } else {
+        // No phone — just copy the link
+        await navigator.clipboard.writeText(uploadUrl).catch(() => {});
+        alert('No phone number on file. Upload link copied to clipboard:\n\n' + uploadUrl);
+      }
+
+      await loadData();
+    } catch(e) {
+      alert('Error: ' + e.message);
+    }
+  }
+
+  function formatPhone(raw) {
+    const digits = raw.replace(/\D/g, '');
+    if (!digits) return '';
+    if (digits.startsWith('91') && digits.length === 12) return digits;
+    if (digits.length === 10) return '91' + digits;
+    return digits;
+  }
+
+  async function copyLink(token) {
+    if (!token) return;
+    const url = BASE + '/upload-photo/' + token;
+    await navigator.clipboard.writeText(url).catch(() => {});
+    alert('Upload link copied to clipboard:\n\n' + url);
+  }
+
+  function openModal(empId, name, photoSrc, rejectMode) {
+    modalEmpId = empId;
+    document.getElementById('modalTitle').textContent = name;
+    document.getElementById('modalPhoto').src = photoSrc || '';
+    document.getElementById('modalBtnConfirmReject').style.display = 'none';
+    document.getElementById('modalBtnReject').style.display = rejectMode ? 'none' : '';
+    document.getElementById('modalRejectFields').style.display = rejectMode ? 'block' : 'none';
+    if (rejectMode) document.getElementById('modalBtnConfirmReject').style.display = 'inline-block';
+    document.getElementById('rejectNote').value = '';
+    document.getElementById('modalBg').style.display = 'flex';
+  }
+
+  function closeModal(e) {
+    if (e && e.target !== document.getElementById('modalBg')) return;
+    document.getElementById('modalBg').style.display = 'none';
+    modalEmpId = null;
+  }
+
+  function toggleRejectFields() {
+    document.getElementById('modalRejectFields').style.display = 'block';
+    document.getElementById('modalBtnReject').style.display = 'none';
+    document.getElementById('modalBtnConfirmReject').style.display = 'inline-block';
+  }
+
+  async function quickApprove(empId) {
+    try {
+      const res = await fetch(`/api/photo-upload/review/${empId}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'approve' })
+      });
+      const d = await res.json();
+      if (!d.success) throw new Error(d.message);
+      await loadData();
+    } catch(e) { alert('Error: ' + e.message); }
+  }
+
+  async function reviewAction(action) {
+    if (!modalEmpId) return;
+    const note = action === 'reject' ? document.getElementById('rejectNote').value.trim() : '';
+    if (action === 'reject' && !note) {
+      alert('Please enter a reason so the employee knows what to fix.');
+      return;
+    }
+    try {
+      const res = await fetch(`/api/photo-upload/review/${modalEmpId}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, note })
+      });
+      const d = await res.json();
+      if (!d.success) throw new Error(d.message);
+      document.getElementById('modalBg').style.display = 'none';
+      modalEmpId = null;
+      await loadData();
+    } catch(e) { alert('Error: ' + e.message); }
+  }
+</script>
+</body>
+</html>

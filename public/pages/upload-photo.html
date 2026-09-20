@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Upload Your Photo</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f2f5; color: #333;
+      min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+    }
+
+    .top-bar {
+      width: 100%; background: linear-gradient(135deg, #1a73e8, #0d47a1);
+      padding: 16px 20px; display: flex; align-items: center; gap: 14px;
+    }
+    .school-logo { height: 44px; width: auto; object-fit: contain; }
+    .school-name { color: #fff; font-size: 15px; font-weight: 600; line-height: 1.3; }
+    .school-sub  { color: rgba(255,255,255,0.7); font-size: 12px; }
+
+    .card {
+      background: #fff; border-radius: 16px; margin: 20px 16px;
+      padding: 28px 22px; width: calc(100% - 32px); max-width: 440px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.10);
+    }
+
+    .greeting { font-size: 20px; font-weight: 700; color: #222; margin-bottom: 4px; }
+    .sub-text  { font-size: 13px; color: #888; margin-bottom: 22px; }
+
+    /* Rejected notice */
+    .reject-notice {
+      background: #fff3cd; border: 1px solid #ffc107; border-radius: 10px;
+      padding: 14px 16px; margin-bottom: 20px;
+    }
+    .reject-notice .reject-title { font-weight: 700; color: #856404; font-size: 14px; margin-bottom: 4px; }
+    .reject-notice p { font-size: 13px; color: #6b5200; }
+
+    /* Photo preview */
+    .photo-preview-wrap {
+      display: flex; flex-direction: column; align-items: center; gap: 14px; margin-bottom: 24px;
+    }
+    .preview-circle {
+      width: 140px; height: 140px; border-radius: 50%; border: 3px dashed #d0d0d0;
+      background: #f8f8f8; display: flex; align-items: center; justify-content: center;
+      overflow: hidden; position: relative; cursor: pointer;
+    }
+    .preview-circle img { width: 100%; height: 100%; object-fit: cover; }
+    .preview-placeholder { font-size: 52px; user-select: none; }
+    .preview-overlay {
+      position: absolute; inset: 0; background: rgba(0,0,0,0.45);
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 13px; font-weight: 600; opacity: 0; transition: opacity 0.2s;
+      border-radius: 50%;
+    }
+    .preview-circle:hover .preview-overlay { opacity: 1; }
+
+    /* Upload buttons */
+    .upload-btns { display: flex; gap: 10px; width: 100%; margin-bottom: 18px; }
+    .btn-upload {
+      flex: 1; padding: 13px 10px; border-radius: 10px; border: 1.5px solid #1a73e8;
+      background: #fff; color: #1a73e8; font-size: 14px; font-weight: 600;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 7px;
+    }
+    .btn-upload:active { background: #e8f0fe; }
+    .btn-upload.primary { background: #1a73e8; color: #fff; }
+    .btn-upload.primary:active { background: #1558b0; }
+
+    input[type="file"] { display: none; }
+
+    /* Tips */
+    .tips { background: #f8f9fa; border-radius: 10px; padding: 14px 16px; margin-bottom: 22px; }
+    .tips h4 { font-size: 13px; font-weight: 700; color: #555; margin-bottom: 8px; }
+    .tips ul { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+    .tips li { font-size: 12px; color: #777; display: flex; gap: 7px; }
+    .tips li::before { content: '✓'; color: #34a853; font-weight: 700; flex-shrink: 0; }
+
+    /* Submit */
+    .btn-submit {
+      width: 100%; padding: 15px; border-radius: 10px; border: none;
+      background: #34a853; color: #fff; font-size: 16px; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-submit:disabled { background: #bdbdbd; cursor: not-allowed; }
+    .btn-submit:not(:disabled):active { background: #2e7d32; }
+
+    /* States */
+    .state-loading, .state-success, .state-error {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; padding: 48px 24px; gap: 16px;
+    }
+    .state-icon { font-size: 64px; }
+    .state-title { font-size: 22px; font-weight: 700; }
+    .state-body  { font-size: 14px; color: #666; line-height: 1.6; }
+    .state-success .state-title { color: #2e7d32; }
+    .state-error   .state-title { color: #c62828; }
+
+    .spinner {
+      width: 44px; height: 44px; border: 4px solid #e0e0e0;
+      border-top-color: #1a73e8; border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .expire-note { font-size: 11px; color: #aaa; text-align: center; margin-top: 16px; }
+  </style>
+</head>
+<body>
+
+<div class="top-bar" id="topBar">
+  <div id="logoWrap"></div>
+  <div>
+    <div class="school-name" id="schoolName">Loading…</div>
+    <div class="school-sub">Staff Photo Upload</div>
+  </div>
+</div>
+
+<div class="card" id="mainCard">
+  <div class="state-loading" id="stateLoading">
+    <div class="spinner"></div>
+    <div style="color:#666;font-size:14px;">Verifying your link…</div>
+  </div>
+
+  <div id="stateForm" style="display:none;">
+    <div class="greeting" id="empGreeting"></div>
+    <div class="sub-text">Please upload a recent passport-style photo for your ID card.</div>
+
+    <div class="reject-notice" id="rejectNotice" style="display:none;">
+      <div class="reject-title">⚠ Your previous photo was not accepted</div>
+      <p id="rejectReason"></p>
+    </div>
+
+    <div class="photo-preview-wrap">
+      <div class="preview-circle" onclick="document.getElementById('fileCamera').click()">
+        <div class="preview-placeholder" id="previewPlaceholder">👤</div>
+        <img id="previewImg" style="display:none;" alt="preview">
+        <div class="preview-overlay">Tap to change</div>
+      </div>
+    </div>
+
+    <div class="upload-btns">
+      <button class="btn-upload primary" onclick="document.getElementById('fileCamera').click()">
+        📷 Take Selfie
+      </button>
+      <button class="btn-upload" onclick="document.getElementById('fileGallery').click()">
+        🖼 Gallery
+      </button>
+    </div>
+    <input type="file" id="fileCamera"  accept="image/*" capture="user"  onchange="onFileSelected(this)">
+    <input type="file" id="fileGallery" accept="image/*"                 onchange="onFileSelected(this)">
+
+    <div class="tips">
+      <h4>Photo guidelines</h4>
+      <ul>
+        <li>Clear face — look directly at the camera</li>
+        <li>Plain or light-coloured background</li>
+        <li>No sunglasses, caps or filters</li>
+        <li>Good lighting — avoid harsh shadows</li>
+      </ul>
+    </div>
+
+    <button class="btn-submit" id="btnSubmit" onclick="submitPhoto()" disabled>
+      Upload Photo
+    </button>
+    <div class="expire-note" id="expireNote"></div>
+  </div>
+
+  <div class="state-success" id="stateSuccess" style="display:none;">
+    <div class="state-icon">✅</div>
+    <div class="state-title">Photo Uploaded!</div>
+    <div class="state-body">
+      Your photo has been submitted for review.<br>
+      Your supervisor will approve it shortly.<br><br>
+      You may close this window.
+    </div>
+  </div>
+
+  <div class="state-error" id="stateError" style="display:none;">
+    <div class="state-icon">⛔</div>
+    <div class="state-title" id="errorTitle">Link Invalid</div>
+    <div class="state-body" id="errorBody">This link is invalid or has expired. Please contact your supervisor for a new link.</div>
+  </div>
+</div>
+
+<script>
+  const token = location.pathname.split('/').pop();
+  let selectedFile = null;
+
+  async function init() {
+    try {
+      const res  = await fetch('/api/photo-upload/validate/' + token);
+      const data = await res.json();
+
+      document.getElementById('stateLoading').style.display = 'none';
+
+      if (!data.success) {
+        show('stateError');
+        document.getElementById('errorTitle').textContent = 'Link Problem';
+        document.getElementById('errorBody').textContent  = data.message;
+        return;
+      }
+
+      // School branding
+      if (data.school) {
+        document.getElementById('schoolName').textContent = data.school.schoolName || 'St. Xavier\'s';
+        if (data.school.logo) {
+          document.getElementById('logoWrap').innerHTML = `<img class="school-logo" src="${data.school.logo}" alt="logo">`;
+        }
+        if (data.employee.section === 'Global') {
+          document.querySelector('.top-bar').style.background = 'linear-gradient(135deg, #004d40, #00695c)';
+        }
+      }
+
+      // Employee greeting
+      document.getElementById('empGreeting').textContent = 'Hello, ' + data.employee.employeeName + ' 👋';
+
+      // Rejection notice
+      if (data.employee.photoStatus === 'rejected' && data.employee.photoRejectedNote) {
+        document.getElementById('rejectNotice').style.display = 'block';
+        document.getElementById('rejectReason').textContent = data.employee.photoRejectedNote;
+      }
+
+      // Expiry note
+      if (data.expiresAt) {
+        const exp = new Date(data.expiresAt);
+        document.getElementById('expireNote').textContent = 'Link expires ' + exp.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+      }
+
+      show('stateForm');
+    } catch(e) {
+      document.getElementById('stateLoading').style.display = 'none';
+      show('stateError');
+      document.getElementById('errorBody').textContent = 'Network error. Please check your internet connection and try again.';
+    }
+  }
+
+  function show(id) {
+    ['stateLoading','stateForm','stateSuccess','stateError'].forEach(s => {
+      document.getElementById(s).style.display = s === id ? '' : 'none';
+    });
+  }
+
+  function onFileSelected(input) {
+    if (!input.files || !input.files[0]) return;
+    selectedFile = input.files[0];
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = document.getElementById('previewImg');
+      img.src = e.target.result;
+      img.style.display = 'block';
+      document.getElementById('previewPlaceholder').style.display = 'none';
+    };
+    reader.readAsDataURL(selectedFile);
+    document.getElementById('btnSubmit').disabled = false;
+    document.getElementById('btnSubmit').textContent = '✅  Upload Photo';
+  }
+
+  async function submitPhoto() {
+    if (!selectedFile) return;
+    const btn = document.getElementById('btnSubmit');
+    btn.disabled = true;
+    btn.textContent = 'Uploading…';
+
+    const formData = new FormData();
+    formData.append('photo', selectedFile);
+
+    try {
+      const res  = await fetch('/api/photo-upload/submit/' + token, { method: 'POST', body: formData });
+      const data = await res.json();
+      if (data.success) {
+        show('stateSuccess');
+      } else {
+        btn.disabled = false;
+        btn.textContent = '↑ Upload Photo';
+        alert('Error: ' + data.message);
+      }
+    } catch(e) {
+      btn.disabled = false;
+      btn.textContent = '↑ Upload Photo';
+      alert('Upload failed. Please check your connection and try again.');
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>

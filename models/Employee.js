@@ -60,6 +60,9 @@ const employeeSchema = new mongoose.Schema({
   bankVerifiedAt: { type: Date, default: null },
   bloodGroup: { type: String, default: '' },
   idCardPrintedYear: { type: String, default: '' }, // e.g. "2025-26"
+  photoStatus: { type: String, enum: ['none', 'pending_review', 'approved', 'rejected'], default: 'none' },
+  photoRejectedNote: { type: String, default: '' },
+  photoLinkSentAt: { type: Date, default: null },
   remarks: { type: String, default: '' },
   createdBy: { type: String, default: '' },
   createdAt: { type: Date, default: Date.now },
