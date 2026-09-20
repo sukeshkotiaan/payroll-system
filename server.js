@@ -138,6 +138,13 @@ app.get('/adjustments', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'pages', 'adjustments.html'));
 });
 
+app.get('/payroll-status', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'pages', 'payroll-status.html'));
+});
+
+// Legacy dead-link redirect
+app.get('/payroll-approval', (req, res) => { res.redirect('/payroll-status'); });
+
 app.get('/ot', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'pages', 'ot.html'));
 });

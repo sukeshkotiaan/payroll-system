@@ -63,6 +63,7 @@
     .badge-pending { background: #e8f0fe; color: #1a73e8; }
     .badge-approved { background: #e6f4ea; color: #34a853; }
     .badge-locked { background: #f3e8ff; color: #7b1fa2; }
+    .badge-pending-approval { background: #e8f0fe; color: #1a73e8; }
     .alert { padding: 10px 14px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; display: none; }
     .alert-success { background: #e6f4ea; color: #34a853; }
     .alert-error { background: #fce8e6; color: #ea4335; }
@@ -410,6 +411,18 @@
     populateYears();
     setDefaultMonthYear();
     await loadPayrollList();
+    // Handle deep-link from payroll-status page
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('view')) {
+      await viewPayroll(params.get('view'));
+    } else if (params.get('process')) {
+      showProcessView();
+      if (params.get('location')) document.getElementById('processLocation').value = params.get('location');
+      if (params.get('section'))  document.getElementById('processSection').value  = params.get('section');
+      if (params.get('profile'))  document.getElementById('processProfile').value  = params.get('profile');
+      if (params.get('month'))    document.getElementById('processMonth').value     = params.get('month');
+      if (params.get('year'))     document.getElementById('processYear').value      = params.get('year');
+    }
   };
 
   async function checkAuth() {
@@ -509,7 +522,7 @@
         <td>₹${formatNum(r.totalGross)}</td>
         <td>₹${formatNum(r.totalNet)}</td>
         <td>${r.processedBy || '—'}</td>
-        <td><span class="badge badge-${r.status.toLowerCase().replace(' ','-')}">${r.status}</span></td>
+        <td><span class="badge badge-${r.status.toLowerCase().replace(/ /g,'-')}">${r.status}</span></td>
         <td>
           <button class="btn-warning" onclick="viewPayroll('${r._id}')">View</button>
           ${r.status === 'Draft' ? '<button class="btn-danger" onclick="deletePayroll(\'' + r._id + '\')" style="margin-left:4px;">Delete</button>' : ''}

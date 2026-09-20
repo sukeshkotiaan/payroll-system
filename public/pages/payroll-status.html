@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payroll Month Status</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; color: #333; }
+
+    /* ── Header ── */
+    .header {
+      background: linear-gradient(135deg, #1a73e8, #0d47a1);
+      color: #fff; padding: 14px 24px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .header h1 { font-size: 20px; font-weight: 600; }
+    .header-right { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+    .btn-back {
+      background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
+      color: #fff; padding: 7px 14px; border-radius: 6px; cursor: pointer;
+      font-size: 13px; text-decoration: none; display: inline-block;
+    }
+    .btn-back:hover { background: rgba(255,255,255,0.25); }
+
+    /* ── Controls ── */
+    .controls {
+      background: #fff; border-bottom: 1px solid #e0e0e0;
+      padding: 14px 24px; display: flex; align-items: center; gap: 12px;
+    }
+    .controls label { font-size: 13px; font-weight: 600; color: #555; }
+    .controls select {
+      border: 1px solid #d0d0d0; border-radius: 6px; padding: 7px 12px;
+      font-size: 13px; background: #fff; cursor: pointer;
+    }
+    .btn-load {
+      background: #1a73e8; color: #fff; border: none; padding: 8px 20px;
+      border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    .btn-load:hover { background: #1558b0; }
+
+    /* ── Summary pills ── */
+    .summary-bar {
+      padding: 16px 24px; display: flex; gap: 12px; flex-wrap: wrap;
+    }
+    .pill {
+      padding: 8px 18px; border-radius: 20px; font-size: 13px; font-weight: 600;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .pill-locked   { background: #f3e8ff; color: #7b1fa2; }
+    .pill-approved { background: #e6f4ea; color: #2e7d32; }
+    .pill-pending  { background: #e8f0fe; color: #1a73e8; }
+    .pill-draft    { background: #fef3c7; color: #b45309; }
+    .pill-none     { background: #f5f5f5; color: #666; }
+    .pill-count    { font-size: 18px; font-weight: 700; }
+
+    /* ── Group cards ── */
+    .groups-container { padding: 0 24px 32px; display: flex; flex-direction: column; gap: 12px; }
+
+    .group-card {
+      background: #fff; border-radius: 10px;
+      border-left: 5px solid #e0e0e0;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+      display: grid;
+      grid-template-columns: 220px 160px 1fr auto auto;
+      align-items: center; gap: 0;
+      overflow: hidden;
+    }
+    .group-card.status-locked   { border-left-color: #9c27b0; }
+    .group-card.status-approved { border-left-color: #34a853; }
+    .group-card.status-pending  { border-left-color: #1a73e8; }
+    .group-card.status-draft    { border-left-color: #f59e0b; }
+    .group-card.status-none     { border-left-color: #bdbdbd; }
+
+    .card-cell { padding: 16px 18px; border-right: 1px solid #f0f0f0; }
+    .card-cell:last-child { border-right: none; }
+
+    .group-name { font-weight: 600; font-size: 15px; color: #222; }
+    .group-sub  { font-size: 11px; color: #888; margin-top: 3px; }
+
+    .att-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600;
+    }
+    .att-submitted  { background: #e6f4ea; color: #2e7d32; }
+    .att-pending    { background: #fff3e0; color: #e65100; }
+    .att-none       { background: #f5f5f5; color: #999; }
+
+    .payroll-status-cell { display: flex; flex-direction: column; gap: 6px; }
+    .status-pipeline {
+      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    }
+    .step {
+      font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 10px;
+      white-space: nowrap;
+    }
+    .step-done   { background: #e6f4ea; color: #2e7d32; }
+    .step-active { background: #1a73e8; color: #fff; }
+    .step-future { background: #f0f0f0; color: #999; }
+    .step-arrow  { color: #ccc; font-size: 12px; }
+
+    .totals-cell { padding: 16px 18px; min-width: 140px; }
+    .total-gross { font-size: 12px; color: #666; margin-bottom: 3px; }
+    .total-net   { font-size: 15px; font-weight: 700; color: #222; }
+    .total-emp   { font-size: 11px; color: #999; margin-top: 2px; }
+
+    .action-cell { padding: 16px 18px; min-width: 130px; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+
+    .btn-action {
+      border: none; border-radius: 6px; padding: 7px 16px;
+      font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap;
+      width: 100%;
+    }
+    .btn-process  { background: #e8f0fe; color: #1a73e8; }
+    .btn-process:hover { background: #d2e3fc; }
+    .btn-submit   { background: #fff3e0; color: #e65100; }
+    .btn-submit:hover { background: #ffe0b2; }
+    .btn-approve  { background: #e6f4ea; color: #2e7d32; }
+    .btn-approve:hover { background: #c8e6c9; }
+    .btn-lock     { background: #f3e8ff; color: #7b1fa2; }
+    .btn-lock:hover { background: #e1bee7; }
+    .btn-view     { background: #f5f5f5; color: #555; }
+    .btn-view:hover { background: #eeeeee; }
+
+    .done-badge { display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: #7b1fa2; }
+
+    .empty-state { text-align: center; padding: 60px; color: #999; font-size: 15px; }
+
+    .loading { text-align: center; padding: 60px; color: #1a73e8; font-size: 14px; }
+
+    @media (max-width: 900px) {
+      .group-card { grid-template-columns: 1fr; }
+      .card-cell { border-right: none; border-bottom: 1px solid #f0f0f0; }
+      .card-cell:last-child { border-bottom: none; }
+      .action-cell { align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📊 Payroll Month Status</h1>
+  <div class="header-right">
+    <span id="headerUser"></span>
+    <a class="btn-back" href="/payroll">Payroll</a>
+    <a class="btn-back" href="/dashboard">← Dashboard</a>
+  </div>
+</div>
+
+<div class="controls">
+  <label>Month</label>
+  <select id="selMonth">
+    <option>January</option><option>February</option><option>March</option>
+    <option>April</option><option>May</option><option>June</option>
+    <option>July</option><option>August</option><option>September</option>
+    <option>October</option><option>November</option><option>December</option>
+  </select>
+  <label>Year</label>
+  <select id="selYear"></select>
+  <button class="btn-load" onclick="loadStatus()">Load Status</button>
+</div>
+
+<div class="summary-bar" id="summaryBar"></div>
+
+<div class="groups-container" id="groupsContainer">
+  <div class="loading">Select month and year, then click Load Status</div>
+</div>
+
+<script>
+  const MONTHS = ['January','February','March','April','May','June',
+    'July','August','September','October','November','December'];
+
+  let currentUser = null;
+  let currentMonth = '', currentYear = 0;
+
+  window.onload = async () => {
+    await checkAuth();
+    populateYears();
+    setCurrentMonth();
+    await loadStatus();
+  };
+
+  async function checkAuth() {
+    const res = await fetch('/api/auth/me');
+    const data = await res.json();
+    if (!data.success) { window.location.href = '/'; return; }
+    currentUser = data.user;
+    document.getElementById('headerUser').textContent = data.user.fullName;
+  }
+
+  function populateYears() {
+    const sel = document.getElementById('selYear');
+    const now = new Date().getFullYear();
+    for (let y = now + 1; y >= now - 2; y--) {
+      sel.innerHTML += `<option value="${y}">${y}</option>`;
+    }
+  }
+
+  function setCurrentMonth() {
+    const now = new Date();
+    document.getElementById('selMonth').value = MONTHS[now.getMonth()];
+    document.getElementById('selYear').value = now.getFullYear();
+  }
+
+  async function loadStatus() {
+    const month = document.getElementById('selMonth').value;
+    const year  = document.getElementById('selYear').value;
+    currentMonth = month; currentYear = parseInt(year);
+
+    document.getElementById('groupsContainer').innerHTML = '<div class="loading">Loading…</div>';
+    document.getElementById('summaryBar').innerHTML = '';
+
+    try {
+      const res  = await fetch(`/api/payroll/month-overview?month=${encodeURIComponent(month)}&year=${year}`);
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message);
+      renderStatus(data.groups, month, year);
+    } catch (e) {
+      document.getElementById('groupsContainer').innerHTML =
+        `<div class="empty-state">Error loading status: ${e.message}</div>`;
+    }
+  }
+
+  function getPayrollStatusLabel(payroll) {
+    if (!payroll) return 'Not Started';
+    return payroll.status;
+  }
+
+  function renderStatus(groups, month, year) {
+    const counts = { locked: 0, approved: 0, pending: 0, draft: 0, none: 0 };
+    groups.forEach(g => {
+      const s = g.payroll ? g.payroll.status : 'none';
+      if (s === 'Locked') counts.locked++;
+      else if (s === 'Approved') counts.approved++;
+      else if (s === 'Pending Approval') counts.pending++;
+      else if (s === 'Draft') counts.draft++;
+      else counts.none++;
+    });
+
+    // Summary bar
+    const total = groups.length;
+    document.getElementById('summaryBar').innerHTML = `
+      <div class="pill pill-locked">  <span class="pill-count">${counts.locked}</span>  / ${total} Locked</div>
+      <div class="pill pill-approved"><span class="pill-count">${counts.approved}</span> / ${total} Approved</div>
+      <div class="pill pill-pending"> <span class="pill-count">${counts.pending}</span>  / ${total} Pending Approval</div>
+      <div class="pill pill-draft">   <span class="pill-count">${counts.draft}</span>   / ${total} Draft</div>
+      <div class="pill pill-none">    <span class="pill-count">${counts.none}</span>    / ${total} Not Started</div>
+    `;
+
+    if (groups.length === 0) {
+      document.getElementById('groupsContainer').innerHTML =
+        '<div class="empty-state">No employee groups found.</div>';
+      return;
+    }
+
+    const isAdmin = currentUser && (currentUser.role === 'admin' || currentUser.role === 'management');
+
+    document.getElementById('groupsContainer').innerHTML = groups.map(g => {
+      const pStatus = g.payroll ? g.payroll.status : null;
+      const cardClass = pStatus
+        ? 'status-' + pStatus.toLowerCase().replace(' ', '-').replace('-approval', '')
+        : 'status-none';
+
+      // Attendance badge
+      let attHtml = '<span class="att-badge att-none">— No Attendance</span>';
+      if (g.attendance) {
+        const s = g.attendance.status;
+        const isReady = ['Submitted','Approved','Locked'].includes(s);
+        attHtml = `<span class="att-badge ${isReady ? 'att-submitted' : 'att-pending'}">${isReady ? '✓' : '⚠'} ${s}</span>`;
+      }
+
+      // Status pipeline
+      const steps = ['Processed', 'Submitted', 'Approved', 'Locked'];
+      const doneMap = { Processed: ['Draft','Pending Approval','Approved','Locked'], Submitted: ['Pending Approval','Approved','Locked'], Approved: ['Approved','Locked'], Locked: ['Locked'] };
+      const pipelineHtml = steps.map((step, i) => {
+        const done = pStatus && doneMap[step] && doneMap[step].includes(pStatus);
+        const isActive = (step === 'Processed' && pStatus === 'Draft') ||
+                         (step === 'Submitted' && pStatus === 'Pending Approval') ||
+                         (step === 'Approved'  && pStatus === 'Approved') ||
+                         (step === 'Locked'    && pStatus === 'Locked');
+        const cls = isActive ? 'step-active' : done ? 'step-done' : 'step-future';
+        return (i > 0 ? '<span class="step-arrow">›</span>' : '') + `<span class="step ${cls}">${step}</span>`;
+      }).join('');
+
+      // Totals
+      let totalsHtml = '<span style="color:#bbb;font-size:13px;">—</span>';
+      if (g.payroll) {
+        totalsHtml = `
+          <div class="total-gross">Gross: ₹${fmt(g.payroll.totalGross)}</div>
+          <div class="total-net">₹${fmt(g.payroll.totalNet)}</div>
+          <div class="total-emp">${g.payroll.employeeCount} employees</div>
+        `;
+      }
+
+      // Action buttons
+      let actionHtml = '';
+      if (isAdmin) {
+        if (!pStatus) {
+          const attOk = g.attendance && ['Submitted','Approved','Locked'].includes(g.attendance.status);
+          actionHtml = `<button class="btn-action btn-process" onclick="goProcess('${g.location}','${g.section}','${g.profile}')">${attOk ? '▶ Process' : '⚠ Process'}</button>`;
+          if (!attOk) actionHtml += `<small style="color:#e65100;font-size:10px;text-align:right;">Attendance not submitted</small>`;
+        } else if (pStatus === 'Draft') {
+          actionHtml = `
+            <button class="btn-action btn-approve" onclick="doAction('approve','${g.payroll._id}')">✅ Approve</button>
+            <button class="btn-action btn-view"    onclick="viewPayroll('${g.payroll._id}')">View</button>
+          `;
+        } else if (pStatus === 'Pending Approval') {
+          actionHtml = `
+            <button class="btn-action btn-approve" onclick="doAction('approve','${g.payroll._id}')">✅ Approve</button>
+            <button class="btn-action btn-view"    onclick="viewPayroll('${g.payroll._id}')">View</button>
+          `;
+        } else if (pStatus === 'Approved') {
+          actionHtml = `
+            <button class="btn-action btn-lock" onclick="doAction('lock','${g.payroll._id}')">🔒 Lock</button>
+            <button class="btn-action btn-view" onclick="viewPayroll('${g.payroll._id}')">View</button>
+          `;
+        } else if (pStatus === 'Locked') {
+          actionHtml = `
+            <div class="done-badge">🔒 Locked</div>
+            <button class="btn-action btn-view" onclick="viewPayroll('${g.payroll._id}')">View</button>
+          `;
+        }
+      } else {
+        // Non-admin: view only
+        if (g.payroll) {
+          actionHtml = `<button class="btn-action btn-view" onclick="viewPayroll('${g.payroll._id}')">View</button>`;
+        }
+      }
+
+      return `
+        <div class="group-card ${cardClass}">
+          <div class="card-cell">
+            <div class="group-name">${g.groupName}</div>
+            <div class="group-sub">${g.section} · ${g.location} · ${g.empCount} employees</div>
+          </div>
+          <div class="card-cell">${attHtml}</div>
+          <div class="card-cell payroll-status-cell">
+            <div class="status-pipeline">${pipelineHtml}</div>
+            ${g.payroll && g.payroll.processedBy ? `<div style="font-size:11px;color:#999;margin-top:4px;">By ${g.payroll.processedBy}</div>` : ''}
+          </div>
+          <div class="card-cell totals-cell">${totalsHtml}</div>
+          <div class="action-cell">${actionHtml}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function fmt(n) {
+    if (!n && n !== 0) return '—';
+    return Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function goProcess(location, section, profile) {
+    window.location.href = `/payroll?process=1&location=${encodeURIComponent(location)}&section=${encodeURIComponent(section)}&profile=${encodeURIComponent(profile)}&month=${encodeURIComponent(currentMonth)}&year=${currentYear}`;
+  }
+
+  function viewPayroll(id) {
+    window.location.href = `/payroll?view=${id}`;
+  }
+
+  async function doAction(action, id) {
+    const labels = { approve: 'Approve this payroll?', lock: 'Lock this payroll? This cannot be undone.' };
+    if (!confirm(labels[action])) return;
+    try {
+      const res = await fetch(`/api/payroll/${id}/${action}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' } });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message);
+      await loadStatus();
+    } catch (e) {
+      alert('Error: ' + e.message);
+    }
+  }
+</script>
+</body>
+</html>

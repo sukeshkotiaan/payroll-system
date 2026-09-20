@@ -239,6 +239,51 @@ router.get('/', isLoggedIn, notSupervisor, async (req, res) => {
   }
 });
 
+// GET month overview — all groups + attendance + payroll status for a given month
+router.get('/month-overview', isLoggedIn, notSupervisor, async (req, res) => {
+  try {
+    const { month, year } = req.query;
+    if (!month || !year) return res.status(400).json({ success: false, message: 'month and year required' });
+    const yr = parseInt(year);
+
+    // Derive valid groups from active non-MGT employees
+    const groups = await Employee.aggregate([
+      { $match: { isActive: true, ein: { $not: /^MGT-/i } } },
+      { $group: { _id: { location: '$location', section: '$section', profile: '$profile' }, empCount: { $sum: 1 } } },
+      { $sort: { '_id.section': 1, '_id.location': 1, '_id.profile': 1 } }
+    ]);
+
+    const payrolls = await Payroll.find({ month, year: yr }).select('-records');
+    const attendances = await Attendance.find({ month, year: yr }).select('location section profile status submittedAt');
+
+    const payrollMap = {}, attendanceMap = {};
+    payrolls.forEach(p => { payrollMap[`${p.location}|${p.section}|${p.profile}`] = p; });
+    attendances.forEach(a => { attendanceMap[`${a.location}|${a.section}|${a.profile}`] = a; });
+
+    const result = groups.map(g => {
+      const { location, section, profile } = g._id;
+      const key = `${location}|${section}|${profile}`;
+      const p = payrollMap[key] || null;
+      const a = attendanceMap[key] || null;
+      return {
+        location, section, profile,
+        groupName: getGroupName(section, location, profile),
+        empCount: g.empCount,
+        attendance: a ? { status: a.status, submittedAt: a.submittedAt } : null,
+        payroll: p ? {
+          _id: p._id, status: p.status,
+          totalGross: p.totalGross, totalNet: p.totalNet,
+          employeeCount: p.employeeCount, processedBy: p.processedBy
+        } : null
+      };
+    });
+
+    return res.json({ success: true, groups: result, month, year: yr });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // GET single payroll
 router.get('/:id', isLoggedIn, notSupervisor, async (req, res) => {
   try {
