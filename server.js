@@ -16,6 +16,7 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 
 const app = express();
+const { securityHeaders, noSQLSanitizer } = require('./middleware/security');
 
 // Trust Render.com / reverse-proxy so that req.ip resolves correctly
 app.set('trust proxy', 1);
@@ -34,10 +35,16 @@ const loginLimiter = rateLimit({
   message: { success: false, message: 'Too many login attempts. Please try again in 15 minutes.' }
 });
 
+// Security headers on every response
+app.use(securityHeaders);
+
 // Middleware
-app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(express.static(path.join(__dirname, 'public')));
+
+// NoSQL injection prevention — sanitize req.query/body/params on every API call
+app.use('/api/', noSQLSanitizer);
 
 // Apply login rate limiter early (before session middleware to save DB round-trips on blocked requests)
 app.use('/api/auth/login', loginLimiter);
@@ -208,10 +215,7 @@ app.get('/healthz', (req, res) => {
   return res.status(503).json({ status: 'degraded', db: 'disconnected' });
 });
 
-// Test route
-app.get('/api/test', (req, res) => {
-  res.json({ success: true, message: 'API working' });
-});
+// Removed: /api/test endpoint (unnecessary exposure in production)
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

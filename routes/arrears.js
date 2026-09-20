@@ -4,11 +4,13 @@ const Arrear = require('../models/Arrear');
 const Employee = require('../models/Employee');
 const { isLoggedIn, isAccountantOrAdmin, notSupervisor } = require('../middleware/auth');
 const { logAudit } = require('./security');
+const { mgtFilter, sanitizeRegex, safeError } = require('../middleware/security');
 
-// GET all arrears
+// GET all arrears — management hidden from accountants
 router.get('/', isLoggedIn, notSupervisor, async (req, res) => {
   try {
-    let filter = {};
+    const role = req.session.user.role;
+    let filter = { ...mgtFilter(role) };
     if (req.query.month) filter.month = req.query.month;
     if (req.query.year) filter.year = parseInt(req.query.year);
     if (req.query.location) filter.location = req.query.location;
@@ -17,26 +19,23 @@ router.get('/', isLoggedIn, notSupervisor, async (req, res) => {
     const arrears = await Arrear.find(filter).sort({ addedAt: -1 });
     return res.json({ success: true, arrears });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'arrears list') });
   }
 });
 
-// GET employee by EIN
-router.get('/find-employee/:ein', isLoggedIn, async (req, res) => {
+// GET employee by EIN — management blocked for non-admin
+router.get('/find-employee/:ein', isLoggedIn, notSupervisor, async (req, res) => {
   try {
-    const employee = await Employee.findOne({
-      ein: req.params.ein.toUpperCase(),
-      isActive: true
-    });
-    if (!employee) {
-      return res.status(404).json({
-        success: false,
-        message: 'Active employee not found with EIN: ' + req.params.ein
-      });
+    const role = req.session.user.role;
+    const ein = req.params.ein.toUpperCase();
+    if (/^MGT-/i.test(ein) && role !== 'admin' && role !== 'management') {
+      return res.status(403).json({ success: false, message: 'Access denied' });
     }
+    const employee = await Employee.findOne({ ein, isActive: true, ...mgtFilter(role) });
+    if (!employee) return res.status(404).json({ success: false, message: 'Active employee not found' });
     return res.json({ success: true, employee });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'arrears find-employee') });
   }
 });
 

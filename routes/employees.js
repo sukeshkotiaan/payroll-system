@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { sanitizeRegex, mgtFilter, supervisorOwns, safeError } = require('../middleware/security');
 const Employee    = require('../models/Employee');
 const ReservedEIN = require('../models/ReservedEIN');
 const { isLoggedIn, isAdmin, isSystemAdmin, isAccountantOrAdmin } = require('../middleware/auth');
@@ -212,9 +213,9 @@ router.get('/', isLoggedIn, async (req, res) => {
     if (req.query.fullAttendance !== undefined && req.query.fullAttendance !== '')
       filter.fullAttendance = req.query.fullAttendance === 'true';
 
-    // Server-side search across EIN and name
+    // Server-side search across EIN and name (regex sanitized against ReDoS)
     if (req.query.search) {
-      const q = req.query.search.trim();
+      const q = sanitizeRegex(req.query.search.trim());
       if (q.length >= 1) {
         filter.$or = [
           { ein: { $regex: '^' + q, $options: 'i' } },
@@ -259,41 +260,59 @@ router.get('/', isLoggedIn, async (req, res) => {
 // SEARCH employees by EIN or Name
 router.get('/search', isLoggedIn, async (req, res) => {
   try {
-    const q = req.query.q || '';
-    if (!q || q.length < 2) return res.json({ success: true, employees: [] });
+    const role = req.session.user.role;
+    // Supervisors cannot use the general search (they have photo-task for their team)
+    if (role === 'supervisor') return res.json({ success: true, employees: [] });
+
+    const raw = req.query.q || '';
+    if (!raw || raw.length < 2) return res.json({ success: true, employees: [] });
+    const q = sanitizeRegex(raw);
     const includeInactive = req.query.includeInactive === 'true';
     const filter = {
       $or: [
         { ein: { $regex: '^' + q, $options: 'i' } },
         { employeeName: { $regex: q, $options: 'i' } }
-      ]
+      ],
+      ...mgtFilter(role)
     };
     if (!includeInactive) filter.isActive = true;
 
-    // Supervisors only ever search within their own mapped team
-    if (req.session.user.role === 'supervisor') {
-      filter.supervisorId = req.session.user.id;
+    // Accountants scoped to their branch
+    if (role === 'accountant' && req.session.user.branch) {
+      filter.location = req.session.user.branch;
     }
+
+    // Never return salary in search results — used only for lookup autocompletes
     const employees = await Employee.find(filter)
-      .select('ein employeeName designation location section profile monthlySalary isActive dateOfExit')
+      .select('ein employeeName designation location section profile isActive dateOfExit')
       .limit(10);
     return res.json({ success: true, employees });
   } catch (err) {
-    console.error('Search error:', err.message, err.stack);
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'employee search') });
   }
 });
 
 router.get('/:id', isLoggedIn, async (req, res) => {
   try {
-    const projection = piiProjection(req.session.user.role);
+    const user = req.session.user;
+    const projection = piiProjection(user.role);
     let q = Employee.findById(req.params.id);
     if (projection) q = q.select(projection);
     const employee = await q;
     if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
+
+    // Management employees — only visible to admin and management roles
+    if (employee.ein && /^MGT-/i.test(employee.ein) && user.role !== 'admin' && user.role !== 'management') {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+    // Supervisors may only fetch employees in their own team
+    if (!supervisorOwns(user, employee)) {
+      return res.status(403).json({ success: false, message: 'Access denied — not in your team' });
+    }
+
     return res.json({ success: true, employee });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'employee GET/:id') });
   }
 });
 

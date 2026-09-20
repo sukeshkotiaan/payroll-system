@@ -3,11 +3,13 @@ const router = express.Router();
 const ExtraPay = require('../models/ExtraPay');
 const Employee = require('../models/Employee');
 const { isLoggedIn, isAdmin, notSupervisor } = require('../middleware/auth');
+const { mgtFilter, safeError } = require('../middleware/security');
 
-// GET — list entries (filterable by month, year, location, ein)
+// GET — list entries, management hidden from accountants
 router.get('/', isLoggedIn, notSupervisor, async (req, res) => {
   try {
-    const filter = {};
+    const role = req.session.user.role;
+    const filter = { ...mgtFilter(role) };
     if (req.query.month)    filter.month    = req.query.month;
     if (req.query.year)     filter.year     = parseInt(req.query.year);
     if (req.query.location) filter.location = req.query.location;
@@ -15,7 +17,7 @@ router.get('/', isLoggedIn, notSupervisor, async (req, res) => {
     const entries = await ExtraPay.find(filter).sort({ createdAt: -1 });
     return res.json({ success: true, entries });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'extra-pay list') });
   }
 });
 

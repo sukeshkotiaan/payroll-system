@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
-const { isLoggedIn, isAdmin } = require('../middleware/auth');
+const { isLoggedIn, isAdmin, notSupervisor } = require('../middleware/auth');
 const Settings = require('../models/Settings');
 const Master = require('../models/Master');
 const { invalidateCache } = require('../lib/settingsCache');
@@ -59,8 +59,8 @@ const getOrCreateSettings = async () => {
   return settings;
 };
 
-// GET all location rules
-router.get('/calc-rules', isLoggedIn, async (req, res) => {
+// GET all location rules — supervisors blocked (salary calc rules are sensitive)
+router.get('/calc-rules', isLoggedIn, notSupervisor, async (req, res) => {
   try {
     const settings = await getOrCreateSettings();
     const rules = settings.locationSettings.map(ls => ({
@@ -73,8 +73,8 @@ router.get('/calc-rules', isLoggedIn, async (req, res) => {
   }
 });
 
-// GET rules for specific location
-router.get('/calc-rules/:location', isLoggedIn, async (req, res) => {
+// GET rules for specific location — supervisors blocked
+router.get('/calc-rules/:location', isLoggedIn, notSupervisor, async (req, res) => {
   try {
     const settings = await getOrCreateSettings();
     const ls = settings.locationSettings.find(

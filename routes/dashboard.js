@@ -4,17 +4,20 @@ const Employee = require('../models/Employee');
 const Payroll = require('../models/Payroll');
 const Attendance = require('../models/Attendance');
 const Loan = require('../models/Loan');
-const { isLoggedIn } = require('../middleware/auth');
+const { isLoggedIn, isAdmin } = require('../middleware/auth');
 
-router.get('/stats', isLoggedIn, async (req, res) => {
+// Financial stats — admin and management only (supervisors and accountants excluded)
+router.get('/stats', isLoggedIn, isAdmin, async (req, res) => {
   try {
     const now = new Date();
     const month = ['January','February','March','April','May','June',
       'July','August','September','October','November','December'][now.getMonth()];
     const year = now.getFullYear();
 
-    // Total active employees
-    const totalEmployees = await Employee.countDocuments({ isActive: true });
+    // Exclude management employees from counts visible to non-admin
+    // (isAdmin middleware already ensures only admin/management reach here)
+    const empFilter = { isActive: true };
+    const totalEmployees = await Employee.countDocuments(empFilter);
 
     // This month payroll total
     const payrolls = await Payroll.find({ month, year });

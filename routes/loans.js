@@ -3,6 +3,7 @@ const router = express.Router();
 const Loan = require('../models/Loan');
 const Employee = require('../models/Employee');
 const { isLoggedIn, isAdmin, notSupervisor } = require('../middleware/auth');
+const { mgtFilter, sanitizeRegex, safeError } = require('../middleware/security');
 
 const MONTHS = ['January','February','March','April','May','June',
   'July','August','September','October','November','December'];
@@ -43,45 +44,54 @@ function calculateEMI(principal, rate, tenure) {
   return parseFloat(emi.toFixed(2));
 }
 
-// GET all loans
+// GET all loans — management employees hidden from accountants
 router.get('/', isLoggedIn, notSupervisor, async (req, res) => {
   try {
-    let filter = {};
+    const role = req.session.user.role;
+    let filter = { ...mgtFilter(role) };
     if (req.query.ein) filter.ein = req.query.ein;
     if (req.query.location) filter.location = req.query.location;
     if (req.query.status) filter.status = req.query.status;
     const loans = await Loan.find(filter).select('-schedule').sort({ createdAt: -1 });
     return res.json({ success: true, loans });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'loans list') });
   }
 });
 
 // GET single loan with schedule
 router.get('/:id', isLoggedIn, notSupervisor, async (req, res) => {
   try {
+    const role = req.session.user.role;
     const loan = await Loan.findById(req.params.id);
     if (!loan) return res.status(404).json({ success: false, message: 'Not found' });
+    // Block accountants from seeing management loans
+    if (loan.ein && /^MGT-/i.test(loan.ein) && role !== 'admin' && role !== 'management') {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
     return res.json({ success: true, loan });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'loans get') });
   }
 });
 
-// GET employee by EIN or Name
-router.get('/find-employee/:search', isLoggedIn, async (req, res) => {
+// GET employee by EIN or Name — management blocked for non-admin
+router.get('/find-employee/:search', isLoggedIn, notSupervisor, async (req, res) => {
   try {
+    const role = req.session.user.role;
     const search = req.params.search.trim();
-    let employee = await Employee.findOne({ ein: search.toUpperCase(), isActive: true });
+    if (/^MGT-/i.test(search) && role !== 'admin' && role !== 'management') {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+    const safe = sanitizeRegex(search);
+    let employee = await Employee.findOne({ ein: search.toUpperCase(), isActive: true, ...mgtFilter(role) });
     if (!employee) {
-      employee = await Employee.findOne({
-        employeeName: { $regex: search, $options: 'i' }, isActive: true
-      });
+      employee = await Employee.findOne({ employeeName: { $regex: safe, $options: 'i' }, isActive: true, ...mgtFilter(role) });
     }
     if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
     return res.json({ success: true, employee });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'loans find-employee') });
   }
 });
 

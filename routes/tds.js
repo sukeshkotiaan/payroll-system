@@ -3,11 +3,13 @@ const router = express.Router();
 const TDS = require('../models/TDS');
 const Employee = require('../models/Employee');
 const { isLoggedIn, isAdmin, isAccountantOrAdmin, notSupervisor } = require('../middleware/auth');
+const { mgtFilter, sanitizeRegex, safeError } = require('../middleware/security');
 
-// GET all TDS records
+// GET all TDS records — management hidden from accountants
 router.get('/', isLoggedIn, notSupervisor, async (req, res) => {
   try {
-    let filter = {};
+    const role = req.session.user.role;
+    let filter = { ...mgtFilter(role) };
     if (req.query.month) filter.month = req.query.month;
     if (req.query.year) filter.year = parseInt(req.query.year);
     if (req.query.location) filter.location = req.query.location;
@@ -15,24 +17,27 @@ router.get('/', isLoggedIn, notSupervisor, async (req, res) => {
     const records = await TDS.find(filter).sort({ year: -1, month: -1, ein: 1 });
     return res.json({ success: true, records });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'tds list') });
   }
 });
 
-// FIND employee by EIN or Name
-router.get('/find-employee/:search', isLoggedIn, async (req, res) => {
+// FIND employee by EIN or Name — management blocked for non-admin
+router.get('/find-employee/:search', isLoggedIn, notSupervisor, async (req, res) => {
   try {
+    const role = req.session.user.role;
     const search = req.params.search.trim();
-    let employee = await Employee.findOne({ ein: search.toUpperCase(), isActive: true });
-    if (!employee) {
-      employee = await Employee.findOne({
-        employeeName: { $regex: search, $options: 'i' }, isActive: true
-      });
+    if (/^MGT-/i.test(search) && role !== 'admin' && role !== 'management') {
+      return res.status(403).json({ success: false, message: 'Access denied' });
     }
-    if (!employee) return res.status(404).json({ success: false, message: 'Employee not found: ' + search });
+    const safe = sanitizeRegex(search);
+    let employee = await Employee.findOne({ ein: search.toUpperCase(), isActive: true, ...mgtFilter(role) });
+    if (!employee) {
+      employee = await Employee.findOne({ employeeName: { $regex: safe, $options: 'i' }, isActive: true, ...mgtFilter(role) });
+    }
+    if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
     return res.json({ success: true, employee });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: safeError(err, 'tds find-employee') });
   }
 });
 
