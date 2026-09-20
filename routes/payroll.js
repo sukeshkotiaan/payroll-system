@@ -67,7 +67,7 @@ async function buildAppraisalMap(location, section, profile, currentFY, employee
 }
 
 function getGroupName(section, location, profile) {
-  if (section === 'State') return 'Xaviers ' + location;
+  if (section === 'State') return 'Xaviers ' + location + ' (' + profile + ')';
   if (section === 'Global' && profile === 'Teaching') return 'Global Teaching';
   if (section === 'Global' && profile === 'Non-Teaching') return 'Global Non-Teaching';
   return section + ' ' + location + ' ' + profile;

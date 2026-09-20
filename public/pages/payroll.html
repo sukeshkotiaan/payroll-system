@@ -490,11 +490,17 @@
       tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state">No payroll records found</div></td></tr>';
       return;
     }
-    tbody.innerHTML = records.map(r => `
+    tbody.innerHTML = records.map(r => {
+      // Build display name: patch old records that have "Xaviers X" without profile
+      let displayName = r.groupName || (r.section + ' ' + r.location);
+      if (r.section === 'State' && !displayName.includes('(')) {
+        displayName += ' (' + r.profile + ')';
+      }
+      return `
       <tr>
-        <td>${r.groupName || r.section + ' ' + r.location}</td>
+        <td>${displayName}</td>
         <td>${r.month} ${r.year}</td>
-        <td>${r.records ? r.records.length : '—'}</td>
+        <td>${r.employeeCount || '—'}</td>
         <td>₹${formatNum(r.totalGross)}</td>
         <td>₹${formatNum(r.totalNet)}</td>
         <td>${r.processedBy || '—'}</td>
@@ -504,7 +510,8 @@
           ${r.status === 'Draft' ? '<button class="btn-danger" onclick="deletePayroll(\'' + r._id + '\')" style="margin-left:4px;">Delete</button>' : ''}
         </td>
       </tr>
-    `).join('');
+      `;
+    }).join('');
   }
 
   async function processPayroll() {
