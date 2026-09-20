@@ -22,7 +22,10 @@ router.post('/send-payslip', isLoggedIn, isAccountantOrAdmin, async (req, res) =
     }
 
     const transporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false,   // STARTTLS on 587 (Render blocks 465/SSL)
+      family: 4,       // force IPv4 — Render has no IPv6 outbound
       auth: { user: gmailUser, pass: gmailPass },
       connectionTimeout: 10000,
       greetingTimeout: 10000,
