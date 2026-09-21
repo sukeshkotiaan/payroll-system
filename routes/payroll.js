@@ -294,17 +294,38 @@ router.get('/:id', isLoggedIn, notSupervisor, async (req, res) => {
     const user = req.session.user;
     const isAccountant = user.role === 'accountant';
 
+    const obj = payroll.toObject();
+
+    // Enrich records with employee bank/PAN data if not already stored (backward-compat)
+    const needsEnrich = obj.records.some(r => !r.panNumber && !r.uanNumber && !r.bankName && !r.accountNumber);
+    if (needsEnrich) {
+      const eins = obj.records.map(r => r.ein);
+      const emps = await Employee.find({ ein: { $in: eins } })
+        .select('ein section panNumber uanNumber bankName accountNumber').lean();
+      const empMap = {};
+      for (const e of emps) empMap[e.ein] = e;
+      obj.records = obj.records.map(r => {
+        const e = empMap[r.ein];
+        if (!e) return r;
+        return {
+          ...r,
+          section: r.section || e.section || '',
+          panNumber: r.panNumber || e.panNumber || '',
+          uanNumber: r.uanNumber || e.uanNumber || '',
+          bankName: r.bankName || e.bankName || '',
+          accountNumber: r.accountNumber || e.accountNumber || ''
+        };
+      });
+    }
+
     if (isAccountant) {
-      // Strip management (MGT-prefix) rows and recalculate totals
-      const obj = payroll.toObject();
       obj.records = obj.records.filter(r => !/^MGT-/i.test(r.ein));
       obj.totalGross    = parseFloat(obj.records.reduce((s, r) => s + (r.grossSalary  || 0), 0).toFixed(2));
       obj.totalNet      = parseFloat(obj.records.reduce((s, r) => s + (r.netSalary    || 0), 0).toFixed(2));
       obj.employeeCount = obj.records.length;
-      return res.json({ success: true, payroll: obj });
     }
 
-    return res.json({ success: true, payroll });
+    return res.json({ success: true, payroll: obj });
   } catch (err) {
     return res.status(500).json({ success: false, message: safeError(err, 'payroll get') });
   }
