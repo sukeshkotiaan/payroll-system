@@ -286,6 +286,44 @@
       </div>
     </div>
 
+    <!-- Bank Sheet (Multi-sheet format for bank salary upload) -->
+    <div class="card" style="margin-bottom:20px;">
+      <div class="card-header">
+        <h3>🏦 Bank Sheet (Multi-sheet)</h3>
+        <span style="font-size:12px;color:#666;">Formatted Excel for bank salary upload — same-bank direct credit + NEFT sheets</span>
+      </div>
+      <div class="card-body">
+        <div style="display:flex;gap:15px;flex-wrap:wrap;align-items:flex-end;">
+          <div class="form-group">
+            <label>Month</label>
+            <select id="bsMonth">
+              <option value="">Select Month</option>
+              <option>January</option><option>February</option><option>March</option>
+              <option>April</option><option>May</option><option>June</option>
+              <option>July</option><option>August</option><option>September</option>
+              <option>October</option><option>November</option><option>December</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Year</label>
+            <select id="bsYear"></select>
+          </div>
+          <div class="form-group">
+            <label>Location</label>
+            <select id="bsLocation">
+              <option value="">All Locations</option>
+            </select>
+          </div>
+          <button class="btn-success" id="dlBankSheetBtn" onclick="downloadBankSheet()">⬇️ Download Bank Sheet</button>
+        </div>
+        <p style="font-size:12px;color:#888;margin-top:10px;">
+          Generates separate sheets: State, Global Teaching, Global Non-Teaching (same bank) + NEFT State, NEFT Global (other banks).
+          Employees <strong>without</strong> IFSC code → direct credit sheets. Employees <strong>with</strong> IFSC code → NEFT sheets.
+          Only approved/locked payrolls are included.
+        </p>
+      </div>
+    </div>
+
     <!-- PF ECR -->
     <div class="card" style="margin-bottom:20px;">
       <div class="card-header">
@@ -401,7 +439,7 @@
 
   function populateYears() {
     const now = new Date().getFullYear();
-    ['sumYear','empRepYear','statYear','dlYear','ecrYear'].forEach(id => {
+    ['sumYear','empRepYear','statYear','dlYear','ecrYear','bsYear'].forEach(id => {
       const el = document.getElementById(id);
       el.innerHTML = '<option value="">Select Year</option>';
       for (let y = now + 1; y >= now - 3; y--) {
@@ -419,7 +457,7 @@
 
   function setDefaults() {
     const now = new Date();
-    ['sumMonth','empRepMonth','statMonth','dlMonth','ecrMonth'].forEach(id => {
+    ['sumMonth','empRepMonth','statMonth','dlMonth','ecrMonth','bsMonth'].forEach(id => {
       document.getElementById(id).value = MONTHS[now.getMonth()];
     });
   }
@@ -431,7 +469,7 @@
       const data = await res.json();
       const locs = (data.settings && data.settings.locationSettings)
                    ? data.settings.locationSettings.map(ls => ls.location) : [];
-      ['dlLocation','ecrLocation','ytdLocation'].forEach(id => {
+      ['dlLocation','ecrLocation','ytdLocation','bsLocation'].forEach(id => {
         const el = document.getElementById(id);
         el.innerHTML = '<option value="">All Locations</option>';
         locs.forEach(l => { el.innerHTML += '<option value="' + l + '">' + l + '</option>'; });
@@ -447,6 +485,32 @@
   }
 
   // ── DOWNLOAD FUNCTIONS ──────────────────────────────────────
+
+  async function downloadBankSheet() {
+    const month    = document.getElementById('bsMonth').value;
+    const year     = document.getElementById('bsYear').value;
+    const location = document.getElementById('bsLocation').value;
+    if (!month || !year) { alert('Please select month and year'); return; }
+
+    const btn = document.getElementById('dlBankSheetBtn');
+    btn.disabled = true; btn.textContent = '⏳ Generating…';
+    try {
+      let url = '/api/reports/bank-sheet?month=' + month + '&year=' + year;
+      if (location) url += '&location=' + encodeURIComponent(location);
+      const res = await fetch(url);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(err.message || 'Failed to generate bank sheet');
+        return;
+      }
+      const blob = await res.blob();
+      triggerDownload(blob, 'Bank_Sheet_' + month + '_' + year + '.xlsx');
+    } catch (e) {
+      alert('Error: ' + e.message);
+    } finally {
+      btn.disabled = false; btn.textContent = '⬇️ Download Bank Sheet';
+    }
+  }
 
   async function downloadBankAdvice() {
     const month    = document.getElementById('dlMonth').value;

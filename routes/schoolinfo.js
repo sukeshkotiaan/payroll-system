@@ -27,11 +27,14 @@ router.get('/:type', isLoggedIn, async (req, res) => {
 // SAVE school info (upsert)
 router.post('/', isLoggedIn, isAdmin, async (req, res) => {
   try {
-    const { schoolType, schoolName, address, phone, email, affiliation, logo } = req.body;
+    const { schoolType, schoolName, address, phone, email, affiliation, logo, bankAccountNumber, bankServiceOutlet } = req.body;
     if (!schoolType) return res.status(400).json({ success: false, message: 'School type required' });
     const school = await SchoolInfo.findOneAndUpdate(
       { schoolType },
-      { schoolType, schoolName, address, phone, email, affiliation, logo, updatedAt: new Date() },
+      { schoolType, schoolName, address, phone, email, affiliation, logo,
+        bankAccountNumber: bankAccountNumber || '',
+        bankServiceOutlet: parseInt(bankServiceOutlet) || 430,
+        updatedAt: new Date() },
       { upsert: true, new: true }
     );
     return res.json({ success: true, message: 'School info saved', school });

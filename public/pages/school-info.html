@@ -108,6 +108,14 @@
             <label>Email</label>
             <input type="text" id="xEmail" placeholder="e.g. info@xaviers.edu.in">
           </div>
+          <div class="form-group">
+            <label>School Bank Account No. <span style="font-size:11px;color:#999;">(Sender A/C for NEFT)</span></label>
+            <input type="text" id="xBankAccountNumber" placeholder="e.g. 0430102000010025">
+          </div>
+          <div class="form-group">
+            <label>Bank Service Outlet Code <span style="font-size:11px;color:#999;">(default 430)</span></label>
+            <input type="number" id="xBankServiceOutlet" placeholder="430" value="430">
+          </div>
         </div>
 
         <!-- PREVIEW -->
@@ -177,6 +185,14 @@
             <label>Email</label>
             <input type="text" id="gEmail" placeholder="e.g. info@global.edu.in">
           </div>
+          <div class="form-group">
+            <label>School Bank Account No. <span style="font-size:11px;color:#999;">(Sender A/C for NEFT)</span></label>
+            <input type="text" id="gBankAccountNumber" placeholder="e.g. 0430102000015570">
+          </div>
+          <div class="form-group">
+            <label>Bank Service Outlet Code <span style="font-size:11px;color:#999;">(default 430)</span></label>
+            <input type="number" id="gBankServiceOutlet" placeholder="430" value="430">
+          </div>
         </div>
 
         <!-- PREVIEW -->
@@ -229,6 +245,8 @@
         if (s.phone) document.getElementById(p + 'Phone').value = s.phone;
         if (s.email) document.getElementById(p + 'Email').value = s.email;
         if (s.affiliation) document.getElementById(p + 'Affiliation').value = s.affiliation;
+        if (s.bankAccountNumber) document.getElementById(p + 'BankAccountNumber').value = s.bankAccountNumber;
+        if (s.bankServiceOutlet) document.getElementById(p + 'BankServiceOutlet').value = s.bankServiceOutlet;
         if (s.logo) {
           document.getElementById(p + 'LogoBase64').value = s.logo;
           const preview = document.getElementById(p + 'LogoPreview');
@@ -295,13 +313,15 @@
     const email = document.getElementById(p + 'Email').value;
     const affiliation = document.getElementById(p + 'Affiliation').value;
     const logo = document.getElementById(p + 'LogoBase64').value;
+    const bankAccountNumber = document.getElementById(p + 'BankAccountNumber').value.trim();
+    const bankServiceOutlet = parseInt(document.getElementById(p + 'BankServiceOutlet').value) || 430;
     if (!schoolName) { showAlert('alertError', 'Please enter school name'); return; }
     try {
       const res = await fetch('/api/schoolinfo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ schoolType: type, schoolName, address, phone, email, affiliation, logo })
+        body: JSON.stringify({ schoolType: type, schoolName, address, phone, email, affiliation, logo, bankAccountNumber, bankServiceOutlet })
       });
       const data = await res.json();
       if (data.success) { showAlert('alertSuccess', '✅ ' + (type === 'xaviers' ? 'Xaviers' : 'Global') + ' school info saved!'); }

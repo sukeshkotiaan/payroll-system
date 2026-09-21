@@ -432,4 +432,195 @@ router.get('/ytd', isLoggedIn, isAdmin, async (req, res) => {
   }
 });
 
+// ── BANK SHEET EXPORT ─────────────────────────────────────────────────────────
+// GET /api/reports/bank-sheet?month=August&year=2026&location=Thane
+router.get('/bank-sheet', isLoggedIn, isAdmin, async (req, res) => {
+  try {
+    const { month, year, location } = req.query;
+    if (!month || !year || !location) {
+      return res.status(400).json({ success: false, message: 'month, year and location required' });
+    }
+    const yr = parseInt(year);
+
+    const SchoolInfo = require('../models/SchoolInfo');
+    const xaviersInfo = await SchoolInfo.findOne({ schoolType: 'xaviers' }).lean() || {};
+    const globalInfo  = await SchoolInfo.findOne({ schoolType: 'global' }).lean()  || {};
+
+    // Fetch all approved/locked payrolls for this month/year/location
+    const payrolls = await Payroll.find({
+      month, year: yr, location,
+      status: { $in: ['Approved', 'Locked'] }
+    }).lean();
+
+    if (!payrolls.length) {
+      return res.status(404).json({ success: false, message: 'No approved/locked payrolls found for this period' });
+    }
+
+    // Collect all EINs to batch-fetch employee bank data
+    const allEins = [...new Set(payrolls.flatMap(p => p.records.map(r => r.ein)))];
+    const empDocs = await Employee.find({ ein: { $in: allEins } })
+      .select('ein employeeName accountNumber ifscCode bankName address').lean();
+    const empMap = {};
+    for (const e of empDocs) empMap[e.ein] = e;
+
+    // Bucket records: same-bank (no IFSC) vs NEFT (has IFSC), by section
+    const stateRows   = [];   // same bank, State section
+    const globalTeachRows = []; // same bank, Global, Teaching
+    const globalNonTeachRows = []; // same bank, Global, Non-Teaching
+    const neftStateRows  = [];  // NEFT, State
+    const neftGlobalRows = [];  // NEFT, Global
+
+    for (const payroll of payrolls) {
+      const isGlobal = payroll.section === 'Global';
+      const isTeaching = payroll.profile === 'Teaching';
+
+      for (const r of payroll.records) {
+        const emp = empMap[r.ein] || {};
+        const accountNumber = emp.accountNumber || r.accountNumber || '';
+        const ifscCode      = emp.ifscCode || '';
+        const address       = emp.address || '';
+        const name          = emp.employeeName || r.employeeName || '';
+        const bankName      = emp.bankName || '';
+        const netSalary     = Math.round(r.netSalary || 0);
+
+        if (!accountNumber) continue; // skip if no account
+
+        const row = { name, accountNumber, ifscCode, address, bankName, netSalary, ein: r.ein };
+
+        if (!ifscCode) {
+          // Same bank — direct credit
+          if (!isGlobal) {
+            stateRows.push(row);
+          } else if (isTeaching) {
+            globalTeachRows.push(row);
+          } else {
+            globalNonTeachRows.push(row);
+          }
+        } else {
+          // Different bank — NEFT
+          if (!isGlobal) {
+            neftStateRows.push(row);
+          } else {
+            neftGlobalRows.push(row);
+          }
+        }
+      }
+    }
+
+    const wb = new ExcelJS.Workbook();
+    const TITLE_FONT  = { name: 'Arial', bold: true, size: 11 };
+    const HEADER_FONT = { name: 'Arial', bold: true, size: 10 };
+    const DATA_FONT   = { name: 'Arial', size: 10 };
+    const HEADER_FILL = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9E1F2' } };
+
+    // ── Helper: build a same-bank sheet ─────────────────────────────────────
+    function buildSameBankSheet(name, rows, societyName, schoolName, titleText, serviceOutlet) {
+      if (!rows.length) return;
+      const ws = wb.addWorksheet(name);
+      ws.mergeCells('A1:H1'); ws.getCell('A1').value = societyName;
+      ws.getCell('A1').font = TITLE_FONT; ws.getCell('A1').alignment = { horizontal: 'center' };
+      ws.mergeCells('A2:H2'); ws.getCell('A2').value = schoolName;
+      ws.getCell('A2').font = TITLE_FONT; ws.getCell('A2').alignment = { horizontal: 'center' };
+      ws.mergeCells('A3:H3'); ws.getCell('A3').value = titleText;
+      ws.getCell('A3').font = TITLE_FONT; ws.getCell('A3').alignment = { horizontal: 'center' };
+
+      const hdr = ws.addRow(['Sr.No', 'Name', 'Account No.', 'Currency Code', 'Service Outlet', 'Part Tran Type', 'Transaction Amt', 'Transaction Particulars']);
+      hdr.font = HEADER_FONT; hdr.fill = HEADER_FILL;
+      hdr.eachCell(c => { c.border = { bottom: { style: 'thin' } }; c.alignment = { horizontal: 'center' }; });
+
+      let sr = 1, total = 0;
+      for (const r of rows) {
+        const dataRow = ws.addRow([sr++, r.name, r.accountNumber, 'INR', serviceOutlet || 430, 'C', r.netSalary, 'SALARY CREDIT']);
+        dataRow.font = DATA_FONT;
+        dataRow.getCell(7).numFmt = '#,##0';
+        total += r.netSalary;
+      }
+      const totalRow = ws.addRow(['', 'Total', '', '', '', '', total, '']);
+      totalRow.font = { ...HEADER_FONT };
+      totalRow.getCell(7).numFmt = '#,##0';
+
+      ws.getColumn(1).width = 7;
+      ws.getColumn(2).width = 32;
+      ws.getColumn(3).width = 22;
+      ws.getColumn(4).width = 14;
+      ws.getColumn(5).width = 15;
+      ws.getColumn(6).width = 16;
+      ws.getColumn(7).width = 18;
+      ws.getColumn(8).width = 22;
+    }
+
+    // ── Helper: build a NEFT sheet ──────────────────────────────────────────
+    function buildNeftSheet(name, rows, societyName, schoolLine, senderAccount, originator) {
+      if (!rows.length) return;
+      const ws = wb.addWorksheet(name);
+      ws.mergeCells('A1:J1'); ws.getCell('A1').value = societyName;
+      ws.getCell('A1').font = TITLE_FONT; ws.getCell('A1').alignment = { horizontal: 'center' };
+      ws.mergeCells('A2:J2'); ws.getCell('A2').value = schoolLine + '            Month: ' + month + ' ' + year;
+      ws.getCell('A2').font = TITLE_FONT; ws.getCell('A2').alignment = { horizontal: 'center' };
+
+      const hdr = ws.addRow(['SR NO', 'Amount', 'Sender A/C No.', 'IFSC Code', 'Beneficiary A/C No', 'Ben A/C Type', 'Beneficiary A/C Name', 'Ben Current Address', 'Sender to remitter information', 'Originator of remittance']);
+      hdr.font = HEADER_FONT; hdr.fill = HEADER_FILL;
+      hdr.eachCell(c => { c.border = { bottom: { style: 'thin' } }; c.alignment = { wrapText: true, horizontal: 'center' }; });
+
+      let sr = 1, total = 0;
+      for (const r of rows) {
+        const dataRow = ws.addRow([sr++, r.netSalary, senderAccount, r.ifscCode, r.accountNumber, 'Saving', r.name, r.address, 'SALARY', originator]);
+        dataRow.font = DATA_FONT;
+        dataRow.getCell(2).numFmt = '#,##0';
+        total += r.netSalary;
+      }
+      const totalRow = ws.addRow(['', total, '', '', '', '', '', '', '', '']);
+      totalRow.font = HEADER_FONT;
+      totalRow.getCell(2).numFmt = '#,##0';
+      ws.addRow(['', `Payee Name : Bulk NEFT for salary`]);
+      ws.addRow(['', `Chq Amt: Rs. ${total.toLocaleString('en-IN')} /- (chq no.:                           )`]);
+      ws.addRow(['', 'All Cells -Text format']);
+
+      ws.getColumn(1).width = 7;
+      ws.getColumn(2).width = 14;
+      ws.getColumn(3).width = 22;
+      ws.getColumn(4).width = 16;
+      ws.getColumn(5).width = 24;
+      ws.getColumn(6).width = 14;
+      ws.getColumn(7).width = 35;
+      ws.getColumn(8).width = 30;
+      ws.getColumn(9).width = 22;
+      ws.getColumn(10).width = 28;
+    }
+
+    const society = "Rammurti Education Society's";
+    const xaviersName = xaviersInfo.schoolName || "St. Xavier's English High School & Jr. College";
+    const globalName  = globalInfo.schoolName  || "St. Xavier's Global Academy";
+    const xaviersOutlet = xaviersInfo.bankServiceOutlet || 430;
+    const globalOutlet  = globalInfo.bankServiceOutlet  || 430;
+    const xaviersSenderAcc = xaviersInfo.bankAccountNumber || '';
+    const globalSenderAcc  = globalInfo.bankAccountNumber  || '';
+
+    // Build sheets (only non-empty)
+    buildSameBankSheet('State', stateRows, society, xaviersName,
+      `Salary for the Month of ${month} ${year}`, xaviersOutlet);
+    buildSameBankSheet('Global Teaching', globalTeachRows, society, globalName,
+      `Acquittance roll of the teaching staff for the Month of ${month} ${year}`, globalOutlet);
+    buildSameBankSheet('Global Non Teaching', globalNonTeachRows, society, globalName,
+      `Acquittance roll of the Non-teaching staff for the Month of ${month} ${year}`, globalOutlet);
+    buildNeftSheet('NEFT State', neftStateRows, 'Rammurti Education Society',
+      xaviersName, xaviersSenderAcc, society);
+    buildNeftSheet('NEFT Global', neftGlobalRows, 'Rammurti Education Society',
+      globalName, globalSenderAcc, "ST. Xavier's Global Academy");
+
+    if (wb.worksheets.length === 0) {
+      return res.status(404).json({ success: false, message: 'No employee bank data found — ensure employees have account numbers set' });
+    }
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="Bank_Sheet_${month}_${year}.xlsx"`);
+    await wb.xlsx.write(res);
+    res.end();
+
+  } catch (err) {
+    console.error('Bank sheet error:', err);
+    return res.status(500).json({ success: false, message: safeError(err, 'reports bank-sheet') });
+  }
+});
+
 module.exports = router;
