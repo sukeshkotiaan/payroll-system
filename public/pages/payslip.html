@@ -531,27 +531,40 @@
       const phone = (info && info.phone) ? info.phone : '';
       const affiliation = (info && info.affiliation) ? info.affiliation : '';
 
-      return '<div class="payslip-page" id="slip-' + r.ein + '">' +
-        '<div class="ps-header">' +
+      // Build conditional employee info fields
+      var empFields = [
+        ['Employee Name', r.employeeName],
+        ['EIN', r.ein||'—'],
+        ['Designation', r.designation||'—'],
+        ['Month & Year', month + ' ' + year]
+      ];
+      if (r.section || section) empFields.push(['Section', r.section || section]);
+      if (r.department) empFields.push(['Department', r.department]);
+      if (r.panNumber) empFields.push(['PAN', r.panNumber]);
+      if (r.uanNumber) empFields.push(['UAN', r.uanNumber]);
+      if (r.bankName) empFields.push(['Bank Name', r.bankName]);
+      if (r.accountNumber) empFields.push(['Account No.', r.accountNumber]);
+      if (empFields.length % 2 !== 0) empFields.push(['', '']);
+      var infoGrid = empFields.map(function(f) {
+        return f[0] ? '<div><span style="font-weight:600;">' + f[0] + '</span> : ' + f[1] + '</div>' : '<div></div>';
+      }).join('');
+
+      return '<div class="payslip-page" id="slip-' + r.ein + '" style="background:white;font-family:Arial,sans-serif;font-size:11px;color:#333;padding:25px 30px;">' +
+        '<div class="ps-header" style="display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #1a73e8;padding-bottom:12px;margin-bottom:15px;">' +
         '<div style="display:flex;align-items:center;gap:15px;">' +
-        '<img src="' + logo + '" style="width:70px;height:70px;object-fit:contain;">' +
+        '<img src="' + logo + '" style="width:70px;height:70px;object-fit:contain;flex-shrink:0;">' +
         '<div>' +
         (society ? '<div style="font-size:11px;color:#555;font-weight:600;">' + society + '</div>' : '') +
         '<div style="font-size:16px;font-weight:800;color:#1a1a1a;">' + schoolName + '</div>' +
         '<div style="font-size:10px;color:#666;margin-top:2px;">' + address + '</div>' +
         '</div></div>' +
-        '<div style="text-align:right;">' +
+        '<div style="text-align:right;flex-shrink:0;">' +
         '<div style="font-size:14px;font-weight:700;color:#333;border:1px solid #333;padding:4px 12px;border-radius:4px;">SALARY SLIP</div>' +
         '<div style="font-size:11px;color:#666;margin-top:4px;">' + month + ' ' + year + '</div>' +
         '</div></div>' +
         '<div style="margin-bottom:10px;border:1px solid #ddd;border-radius:4px;padding:10px 12px;">' +
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px;">' +
-        '<div><span style="font-weight:600;">Employee Name</span> : ' + r.employeeName + '</div>' +
-        '<div><span style="font-weight:600;">EIN</span> : ' + (r.ein||'—') + '</div>' +
-        '<div><span style="font-weight:600;">Designation</span> : ' + (r.designation||'—') + '</div>' +
-        '<div><span style="font-weight:600;">Section</span> : ' + (r.section||'—') + '</div>' +
-        '<div><span style="font-weight:600;">Month & Year</span> : ' + month + ' ' + year + '</div>' +
-        '<div><span style="font-weight:600;">Department</span> : ' + (r.department||'—') + '</div>' +
+        infoGrid +
         '</div></div>' +
         '<div style="background:#f0f0f0;padding:6px 12px;display:flex;justify-content:space-between;font-size:11px;font-weight:700;border:1px solid #ddd;border-bottom:none;">' +
         '<span>Gross Salary: Rs ' + formatNum(r.monthlySalary) + ' /-</span>' +
@@ -597,11 +610,7 @@
         '<div style="font-size:10px;padding:6px 10px;border:1px solid #ddd;border-top:none;background:#fffef0;">' +
         '<strong>Amount in Words:</strong> ' + (r.netSalary < 0 ? 'Minus ' : '') + numberToWords(Math.abs(Math.round(r.netSalary||0))) + ' Rupees Only' +
         '</div>' +
-        '<div style="display:flex;justify-content:space-between;margin-top:25px;font-size:10px;color:#555;">' +
-        '<div style="text-align:center;"><div style="height:30px;border-bottom:1px solid #333;width:150px;"></div><div style="margin-top:4px;">Signature of Employer</div></div>' +
-        '<div style="text-align:center;"><div style="height:30px;border-bottom:1px solid #333;width:150px;"></div><div style="margin-top:4px;">Signature of Employee</div></div>' +
-        '</div>' +
-        '<div style="font-size:9px;color:#999;margin-top:8px;text-align:center;font-style:italic;">Salary is subject to change depending on working days of employee.</div>' +
+        '<div style="font-size:9px;color:#555;margin-top:12px;text-align:center;font-style:italic;border-top:1px solid #ddd;padding-top:8px;">NOTE: This is a computer-generated salary slip and does not require a signature or stamp.</div>' +
         '<div class="no-print" style="text-align:right;margin-top:10px;">' +
         '<button onclick="openEmailModal(this)" data-ein="' + r.ein + '" data-name="' + r.employeeName + '" data-month="' + month + '" data-year="' + year + '" ' +
         'style="background:#1a73e8;color:white;border:none;padding:7px 16px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">📧 Send Email</button>' +
