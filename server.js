@@ -1,4 +1,5 @@
 require('dotenv').config();
+const dns = require('dns'); dns.setDefaultResultOrder('ipv4first'); // Render has no IPv6 outbound
 process.on('unhandledRejection', (reason, promise) => {
   console.log('UNHANDLED REJECTION:', reason);
 });
