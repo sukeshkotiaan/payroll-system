@@ -238,7 +238,7 @@
         return u.role === 'supervisor';
       });
 
-      const empRes = await fetch('/api/employees');
+      const empRes = await fetch('/api/employees?all=true');
       const empData = await empRes.json();
       const allEmp = empData.success ? empData.employees : [];
       const totalActive = allEmp.filter(e => e.isActive).length;
@@ -276,7 +276,7 @@
 
   async function showTeamView(supId, supName) {
     try {
-      const res = await fetch('/api/employees');
+      const res = await fetch('/api/employees?all=true');
       const data = await res.json();
       if (!data.success) return;
       const allEmp = data.employees.filter(e => e.isActive);
@@ -319,7 +319,7 @@
       const location = document.getElementById('mapLocation').value;
       const section = document.getElementById('mapSection').value;
       const profile = document.getElementById('mapProfile').value;
-      let url = '/api/employees?';
+      let url = '/api/employees?all=true&';
       if (location) url += 'location=' + encodeURIComponent(location) + '&';
       if (section) url += 'section=' + encodeURIComponent(section) + '&';
       if (profile) url += 'profile=' + encodeURIComponent(profile) + '&';
