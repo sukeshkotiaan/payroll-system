@@ -8,6 +8,8 @@ const appraisalSchema = new mongoose.Schema({
   section: { type: String, default: '' },
   profile: { type: String, default: '' },
   financialYear: { type: String, required: true },
+  effectiveMonth: { type: String, default: '' }, // e.g. 'October'
+  effectiveYear: { type: Number, default: null }, // e.g. 2026
   monthlySalary: { type: Number, required: true, default: 0 },
   ctcAnnual: { type: Number, required: true, default: 0 },
   remarks: { type: String, default: '' },

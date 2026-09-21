@@ -92,9 +92,25 @@
       <input type="number" id="popupCTC" placeholder="e.g. 420000" min="0" oninput="syncCTC('ctc')">
     </div>
   </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:15px;">
+    <div class="form-group">
+      <label>Effective Month <span style="font-weight:400;color:#888;">(optional)</span></label>
+      <select id="popupEffectiveMonth">
+        <option value="">— Select Month —</option>
+        <option>April</option><option>May</option><option>June</option>
+        <option>July</option><option>August</option><option>September</option>
+        <option>October</option><option>November</option><option>December</option>
+        <option>January</option><option>February</option><option>March</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Effective Year <span style="font-weight:400;color:#888;">(optional)</span></label>
+      <input type="number" id="popupEffectiveYear" placeholder="e.g. 2026" min="2020" max="2099">
+    </div>
+  </div>
   <div class="form-group">
     <label>Remarks (optional)</label>
-    <input type="text" id="popupRemarks" placeholder="e.g. Annual increment"
+    <input type="text" id="popupRemarks" placeholder="e.g. Mid-term appraisal"
       onkeypress="if(event.key==='Enter') savePopup()">
   </div>
   <div class="popup-actions">
@@ -359,8 +375,9 @@
         if (rec) {
           row += '<td><div class="fy-cell has-data" onclick="openPopup(\'' +
             emp.ein + '\',\'' + fy + '\',\'' + emp.employeeName.replace(/'/g,'') + '\',' +
-            rec.monthlySalary + ',' + rec.ctcAnnual + ',\'' + (rec.remarks||'').replace(/'/g,'') + '\')">₹' +
-            rec.monthlySalary.toLocaleString('en-IN') + '</div></td>';
+            rec.monthlySalary + ',' + rec.ctcAnnual + ',\'' + (rec.remarks||'').replace(/'/g,'') + '\',\'' +
+            (rec.effectiveMonth||'') + '\',' + (rec.effectiveYear||'null') + ')">₹' +
+            rec.monthlySalary.toLocaleString('en-IN') + (rec.effectiveMonth ? '<br><small style="font-size:9px;color:#666;">eff. '+rec.effectiveMonth+'</small>' : '') + '</div></td>';
         } else {
           row += '<td><div class="fy-cell empty" onclick="openPopup(\'' +
             emp.ein + '\',\'' + fy + '\',\'' + emp.employeeName.replace(/'/g,'') + '\',0,0,\'\')">+</div></td>';
@@ -372,7 +389,7 @@
     document.getElementById('gridBody').innerHTML = body;
   }
 
-  function openPopup(ein, fy, name, monthly, ctc, remarks) {
+  function openPopup(ein, fy, name, monthly, ctc, remarks, effectiveMonth, effectiveYear) {
     document.getElementById('popupTitle').textContent = monthly > 0 ? 'Edit Salary Record' : 'Add Salary Record';
     document.getElementById('popupSub').textContent = name + ' | FY ' + fy;
     document.getElementById('popupEIN').value = ein;
@@ -380,6 +397,8 @@
     document.getElementById('popupMonthly').value = monthly > 0 ? monthly : '';
     document.getElementById('popupCTC').value = ctc > 0 ? ctc : '';
     document.getElementById('popupRemarks').value = remarks || '';
+    document.getElementById('popupEffectiveMonth').value = effectiveMonth || '';
+    document.getElementById('popupEffectiveYear').value = effectiveYear || '';
     document.getElementById('popupOverlay').style.display = 'block';
     document.getElementById('editPopup').style.display = 'block';
     setTimeout(() => document.getElementById('popupMonthly').focus(), 100);
@@ -406,13 +425,15 @@
     const monthlySalary = document.getElementById('popupMonthly').value;
     const ctcAnnual = document.getElementById('popupCTC').value;
     const remarks = document.getElementById('popupRemarks').value;
+    const effectiveMonth = document.getElementById('popupEffectiveMonth').value;
+    const effectiveYear = document.getElementById('popupEffectiveYear').value;
     if (!monthlySalary || !ctcAnnual) { alert('Please enter both monthly salary and CTC'); return; }
     try {
       const res = await fetch('/api/appraisals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ ein, financialYear, monthlySalary: parseFloat(monthlySalary), ctcAnnual: parseFloat(ctcAnnual), remarks })
+        body: JSON.stringify({ ein, financialYear, effectiveMonth, effectiveYear: effectiveYear ? parseInt(effectiveYear) : null, monthlySalary: parseFloat(monthlySalary), ctcAnnual: parseFloat(ctcAnnual), remarks })
       });
       const data = await res.json();
       if (data.success) {

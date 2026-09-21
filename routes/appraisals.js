@@ -57,7 +57,7 @@ router.get('/find-employee/:search', isLoggedIn, async (req, res) => {
 // ADD or UPDATE appraisal (admin/management only — salary change)
 router.post('/', isLoggedIn, isAdmin, async (req, res) => {
   try {
-    const { ein, financialYear, monthlySalary, ctcAnnual, remarks } = req.body;
+    const { ein, financialYear, effectiveMonth, effectiveYear, monthlySalary, ctcAnnual, remarks } = req.body;
     if (!ein || !financialYear || monthlySalary === undefined || ctcAnnual === undefined) {
       return res.status(400).json({ success: false, message: 'All fields required' });
     }
@@ -74,6 +74,8 @@ router.post('/', isLoggedIn, isAdmin, async (req, res) => {
         section: employee.section,
         profile: employee.profile,
         financialYear,
+        effectiveMonth: effectiveMonth || '',
+        effectiveYear: effectiveYear ? parseInt(effectiveYear) : null,
         monthlySalary: parseFloat(monthlySalary),
         ctcAnnual: parseFloat(ctcAnnual),
         remarks: remarks || '',
@@ -83,8 +85,9 @@ router.post('/', isLoggedIn, isAdmin, async (req, res) => {
       { upsert: true, new: true }
     );
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+    const effectiveStr = effectiveMonth && effectiveYear ? ` effective ${effectiveMonth} ${effectiveYear}` : '';
     await logAudit(req.session.user.id, req.session.user.username, req.session.user.fullName, req.session.user.role,
-      'SALARY_CHANGED', `Appraisal saved for ${ein} FY ${financialYear} — ₹${monthlySalary}/month`, ip);
+      'SALARY_CHANGED', `Appraisal saved for ${ein} FY ${financialYear}${effectiveStr} — ₹${monthlySalary}/month`, ip);
     return res.json({ success: true, message: 'Appraisal record saved successfully', appraisal });
   } catch (err) {
     return res.status(500).json({ success: false, message: safeError(err, 'appraisals post') });

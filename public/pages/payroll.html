@@ -790,7 +790,6 @@
     const isApproved = payroll.status === 'Approved';
     const isPending = payroll.status === 'Pending Approval';
     const isDraft = payroll.status === 'Draft';
-    const isLocked = payroll.status === 'Locked';
 
     document.getElementById('btnReprocess').style.display = isDraft ? 'inline-block' : 'none';
     // Approve works from Draft OR Pending Approval — no separate Submit step needed

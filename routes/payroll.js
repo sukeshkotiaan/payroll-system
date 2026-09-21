@@ -454,7 +454,24 @@ router.post('/process', isLoggedIn, isAdmin, async (req, res) => {
 
       // Use appraisal salary as the source of truth; carry-forward noted in remarks
       const ap = appraisalMap[emp.ein];
-      const empForCalc = { ...emp.toObject(), monthlySalary: ap.monthlySalary };
+      // If the appraisal has an effective date and the payroll month is before it, use the old salary
+      let appliedSalary = ap.monthlySalary;
+      let midTermNote = '';
+      if (ap.effectiveMonth && ap.effectiveYear) {
+        const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+        const payrollMonthIdx = MONTHS.indexOf(month) + 1; // 1-based
+        const payrollMonthNum = parseInt(year) * 100 + payrollMonthIdx;
+        const effectiveMonthIdx = MONTHS.indexOf(ap.effectiveMonth) + 1;
+        const effectiveMonthNum = ap.effectiveYear * 100 + effectiveMonthIdx;
+        if (payrollMonthNum < effectiveMonthNum) {
+          // Payroll is before the appraisal kicks in — use old salary from employee record
+          appliedSalary = emp.monthlySalary || ap.monthlySalary;
+          midTermNote = ' [Pre-appraisal salary; new ₹' + ap.monthlySalary + ' eff. ' + ap.effectiveMonth + ' ' + ap.effectiveYear + ']';
+        } else {
+          midTermNote = ' [Appraisal eff. ' + ap.effectiveMonth + ' ' + ap.effectiveYear + ']';
+        }
+      }
+      const empForCalc = { ...emp.toObject(), monthlySalary: appliedSalary };
 
       const calc = calculatePayroll(empForCalc, attRecord, rules, month);
 
@@ -473,9 +490,9 @@ router.post('/process', isLoggedIn, isAdmin, async (req, res) => {
         pfApplicable: emp.pfApplicable,
         esicApplicable: emp.esicApplicable,
         ptApplicable: emp.ptApplicable,
-        remarks: emp.fullAttendance
-          ? '[Full attendance exception]' + (carriedForwardEINs.has(emp.ein) ? ' [Salary carried fwd from FY ' + ap._fromFY + ']' : '')
-          : (carriedForwardEINs.has(emp.ein) ? '[Salary carried fwd from FY ' + ap._fromFY + ']' : ''),
+        remarks: (emp.fullAttendance ? '[Full attendance exception]' : '')
+          + (carriedForwardEINs.has(emp.ein) ? ' [Salary carried fwd from FY ' + ap._fromFY + ']' : '')
+          + midTermNote,
         ...calc
       });
 
