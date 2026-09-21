@@ -1,8 +1,30 @@
 const express = require('express');
 const router = express.Router();
 const nodemailer = require('nodemailer');
+const { google } = require('googleapis');
 const { isLoggedIn, isAccountantOrAdmin } = require('../middleware/auth');
 const { safeError } = require('../middleware/security');
+
+async function createTransporter() {
+  const oauth2Client = new google.auth.OAuth2(
+    process.env.GMAIL_CLIENT_ID,
+    process.env.GMAIL_CLIENT_SECRET,
+    'https://developers.google.com/oauthplayground'
+  );
+  oauth2Client.setCredentials({ refresh_token: process.env.GMAIL_REFRESH_TOKEN });
+  const { token: accessToken } = await oauth2Client.getAccessToken();
+  return nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      type: 'OAuth2',
+      user: process.env.GMAIL_USER,
+      clientId: process.env.GMAIL_CLIENT_ID,
+      clientSecret: process.env.GMAIL_CLIENT_SECRET,
+      refreshToken: process.env.GMAIL_REFRESH_TOKEN,
+      accessToken
+    }
+  });
+}
 
 // SEND PAYSLIP EMAIL — accountant/admin/management only; supervisors cannot send emails
 router.post('/send-payslip', isLoggedIn, isAccountantOrAdmin, async (req, res) => {
@@ -10,27 +32,16 @@ router.post('/send-payslip', isLoggedIn, isAccountantOrAdmin, async (req, res) =
     const { to, subject, html, employeeName, month, year } = req.body;
     if (!to || !html) return res.status(400).json({ success: false, message: 'Email and payslip content required' });
 
-    // Get email settings from env
     const gmailUser = process.env.GMAIL_USER;
-    const gmailPass = process.env.GMAIL_PASS;
+    const clientId = process.env.GMAIL_CLIENT_ID;
+    const clientSecret = process.env.GMAIL_CLIENT_SECRET;
+    const refreshToken = process.env.GMAIL_REFRESH_TOKEN;
 
-    if (!gmailUser || !gmailPass) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email not configured. Please add GMAIL_USER and GMAIL_PASS in settings.'
-      });
+    if (!gmailUser || !clientId || !clientSecret || !refreshToken) {
+      return res.status(400).json({ success: false, message: 'Email not configured. Please set GMAIL_USER, GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET and GMAIL_REFRESH_TOKEN.' });
     }
 
-    const transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 587,
-      secure: false,   // STARTTLS on 587 (Render blocks 465/SSL)
-      family: 4,       // force IPv4 — Render has no IPv6 outbound
-      auth: { user: gmailUser, pass: gmailPass },
-      connectionTimeout: 10000,
-      greetingTimeout: 10000,
-      socketTimeout: 15000
-    });
+    const transporter = await createTransporter();
 
     await transporter.sendMail({
       from: '"Payroll System" <' + gmailUser + '>',
@@ -51,13 +62,10 @@ router.post('/send-payslip', isLoggedIn, isAccountantOrAdmin, async (req, res) =
     return res.json({ success: true, message: 'Payslip sent to ' + to });
   } catch (err) {
     console.error('[email send-payslip]', err.code, err.message);
-    // Surface actionable SMTP errors — these don't leak sensitive details
     const smtpErrors = {
-      EAUTH:        'Gmail authentication failed. Check that the App Password in GMAIL_PASS is correct and 2FA is enabled on the Gmail account.',
-      ECONNECTION:  'Could not connect to Gmail SMTP. The server may be temporarily unreachable — please try again.',
-      ETIMEDOUT:    'Connection to Gmail timed out. Please try again in a moment.',
-      ENETUNREACH:  'Network unreachable — the server cannot reach Gmail SMTP. Contact support.',
-      EMESSAGE:     'Email was rejected by Gmail. Check the recipient address and try again.',
+      EAUTH:       'Gmail authentication failed. Check OAuth credentials.',
+      ECONNECTION: 'Could not connect to Gmail. Please try again.',
+      ETIMEDOUT:   'Connection to Gmail timed out. Please try again.',
     };
     const friendly = smtpErrors[err.code];
     return res.status(500).json({ success: false, message: friendly || safeError(err, 'email send-payslip') });
