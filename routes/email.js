@@ -26,12 +26,16 @@ async function getGmailAccessToken() {
   }
 }
 
+function encodeHeader(str) {
+  return '=?UTF-8?B?' + Buffer.from(str, 'utf8').toString('base64') + '?=';
+}
+
 async function sendGmailMessage(accessToken, { from, to, subject, html }) {
   const mime = [
     'MIME-Version: 1.0',
     `From: ${from}`,
     `To: ${to}`,
-    `Subject: ${subject}`,
+    `Subject: ${encodeHeader(subject)}`,
     'Content-Type: text/html; charset=utf-8',
     '',
     html
@@ -77,7 +81,7 @@ router.post('/send-payslip', isLoggedIn, isAccountantOrAdmin, async (req, res) =
     const accessToken = await getGmailAccessToken();
 
     await sendGmailMessage(accessToken, {
-      from: '"Payroll System" <' + gmailUser + '>',
+      from: '"Pay Slip" <' + gmailUser + '>',
       to,
       subject: subject || 'Salary Slip — ' + month + ' ' + year,
       html: `<div style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto;">
