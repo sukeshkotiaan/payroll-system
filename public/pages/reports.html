@@ -106,7 +106,7 @@
               <th>Group</th><th class="right">Employees</th>
               <th class="right">Gross</th><th class="right">PF</th>
               <th class="right">PT</th><th class="right">ESIC</th>
-              <th class="right">TDS</th><th class="right">Other Ded.</th>
+              <th class="right">Income Tax</th><th class="right">Other Ded.</th>
               <th class="right">Total Ded.</th><th class="right">Net Pay</th>
             </tr>
           </thead>
@@ -180,7 +180,7 @@
               <th class="right">LOP Days</th>
               <th class="right">Gross</th>
               <th class="right">PF</th><th class="right">PT</th>
-              <th class="right">ESIC</th><th class="right">TDS</th>
+              <th class="right">ESIC</th><th class="right">Income Tax</th>
               <th class="right">Loan EMI</th>
               <th class="right">Total Ded.</th>
               <th class="right">Net Pay</th>
@@ -750,7 +750,7 @@
   function exportSummary() {
     const month = document.getElementById('sumMonth').value;
     const year = document.getElementById('sumYear').value;
-    let csv = 'Group,Employees,Gross,PF,PT,ESIC,TDS,Other Deductions,Total Deductions,Net Pay\n';
+    let csv = 'Group,Employees,Gross,PF,PT,ESIC,Income Tax,Other Deductions,Total Deductions,Net Pay\n';
     summaryData.forEach(r => {
       const emp = r.employeeCount || (r.records ? r.records.length : 0);
       const other = (r.records||[]).reduce((s,e) => s+(e.advance||0), 0);
@@ -765,7 +765,7 @@
   function exportEmpReport() {
     const month = document.getElementById('empRepMonth').value;
     const year = document.getElementById('empRepYear').value;
-    let csv = 'EIN,Name,Designation,Monthly Salary,Present Days,LOP Days,Gross,PF,PT,ESIC,TDS,Loan EMI,Total Deductions,Net Pay\n';
+    let csv = 'EIN,Name,Designation,Monthly Salary,Present Days,LOP Days,Gross,PF,PT,ESIC,Income Tax,Loan EMI,Total Deductions,Net Pay\n';
     empRepData.forEach(r => {
       csv += [r.ein, '"'+r.employeeName+'"', '"'+(r.designation||'')+'"',
         r.monthlySalary||0, r.presentDays||0, r.lopDays||0,

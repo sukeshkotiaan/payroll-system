@@ -379,7 +379,7 @@ router.get('/ytd', isLoggedIn, isAdmin, async (req, res) => {
 
     const hdr = ws.addRow([
       'EIN', 'Employee Name', 'Designation', 'Months Paid',
-      'Gross (₹)', 'PF (₹)', 'PT (₹)', 'ESIC (₹)', 'TDS (₹)', 'Loan/Adv (₹)', 'Net Pay (₹)'
+      'Gross (₹)', 'PF (₹)', 'PT (₹)', 'ESIC (₹)', 'Income Tax (₹)', 'Loan/Adv (₹)', 'Net Pay (₹)'
     ]);
     applyHeaderStyle(hdr);
 

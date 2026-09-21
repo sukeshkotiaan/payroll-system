@@ -280,7 +280,7 @@
       <div class="summary-card"><label>Total Gross</label><span id="sumGross">₹0</span></div>
       <div class="summary-card"><label>Total PF</label><span id="sumPF">₹0</span></div>
       <div class="summary-card"><label>Total PT</label><span id="sumPT">₹0</span></div>
-      <div class="summary-card"><label>Total TDS</label><span id="sumTDS">₹0</span></div>
+      <div class="summary-card"><label>Total Income Tax</label><span id="sumTDS">₹0</span></div>
       <div class="summary-card"><label>Total Net</label><span id="sumNet" style="color:#34a853;">₹0</span></div>
     </div>
 
@@ -311,7 +311,7 @@
               <th style="min-width:60px;">PF</th>
               <th style="min-width:50px;">PT</th>
               <th style="min-width:60px;">ESIC</th>
-              <th class="editable" style="min-width:60px;">TDS ✏️</th>
+              <th class="editable" style="min-width:60px;">Income Tax ✏️</th>
               <th class="editable" style="min-width:70px;">Arrear ✏️</th>
               <th class="editable" style="min-width:70px;">Advance ✏️</th>
               <th style="min-width:60px;">OT Hrs</th>
@@ -349,22 +349,22 @@
     <div style="font-size:13px;font-weight:600;color:#333;margin-bottom:15px;" id="tdsEmpName"></div>
 
     <div style="margin-bottom:15px;">
-      <label style="font-size:13px;font-weight:600;color:#555;display:block;margin-bottom:8px;">TDS Type</label>
+      <label style="font-size:13px;font-weight:600;color:#555;display:block;margin-bottom:8px;">Income Tax Type</label>
       <div class="tds-options">
-        <div class="tds-option active" id="tdsNone" onclick="setTdsType('none')">No TDS</div>
+        <div class="tds-option active" id="tdsNone" onclick="setTdsType('none')">No Income Tax</div>
         <div class="tds-option" id="tdsManual" onclick="setTdsType('manual')">Manual Amount</div>
         <div class="tds-option" id="tdsPercent" onclick="setTdsType('percent')">% of Gross</div>
       </div>
     </div>
 
     <div id="tdsManualField" style="display:none;margin-bottom:15px;">
-      <label style="font-size:13px;font-weight:600;color:#555;display:block;margin-bottom:5px;">TDS Amount (₹)</label>
-      <input type="number" id="tdsAmount" placeholder="Enter TDS amount"
+      <label style="font-size:13px;font-weight:600;color:#555;display:block;margin-bottom:5px;">Income Tax Amount (₹)</label>
+      <input type="number" id="tdsAmount" placeholder="Enter income tax amount"
         style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-size:13px;outline:none;">
     </div>
 
     <div id="tdsPercentField" style="display:none;margin-bottom:15px;">
-      <label style="font-size:13px;font-weight:600;color:#555;display:block;margin-bottom:5px;">TDS % of Gross</label>
+      <label style="font-size:13px;font-weight:600;color:#555;display:block;margin-bottom:5px;">Income Tax % of Gross</label>
       <input type="number" id="tdsPercentVal" placeholder="e.g. 10"
         style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-size:13px;outline:none;">
     </div>
@@ -1025,7 +1025,7 @@
     if (!currentPayroll) return;
     const headers = ['#','EIN','Name','Designation','Monthly Salary','Days','Present',
       'LOP Days','LOP Deduction','Gross Salary','Basic','HRA',
-      'PF','PT','ESIC','TDS','Arrear','Advance','OT Hours','OT Amount',
+      'PF','PT','ESIC','Income Tax','Arrear','Advance','OT Hours','OT Amount',
       'Total Deductions','Net Salary','Remarks'];
     const rows = [headers];
     currentPayroll.records.forEach((r, i) => {
