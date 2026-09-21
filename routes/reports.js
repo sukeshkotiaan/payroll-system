@@ -437,8 +437,8 @@ router.get('/ytd', isLoggedIn, isAdmin, async (req, res) => {
 router.get('/bank-sheet', isLoggedIn, isAdmin, async (req, res) => {
   try {
     const { month, year, location } = req.query;
-    if (!month || !year || !location) {
-      return res.status(400).json({ success: false, message: 'month, year and location required' });
+    if (!month || !year) {
+      return res.status(400).json({ success: false, message: 'month and year required' });
     }
     const yr = parseInt(year);
 
@@ -447,10 +447,9 @@ router.get('/bank-sheet', isLoggedIn, isAdmin, async (req, res) => {
     const globalInfo  = await SchoolInfo.findOne({ schoolType: 'global' }).lean()  || {};
 
     // Fetch all approved/locked payrolls for this month/year/location
-    const payrolls = await Payroll.find({
-      month, year: yr, location,
-      status: { $in: ['Approved', 'Locked'] }
-    }).lean();
+    const payrollFilter = { month, year: yr, status: { $in: ['Approved', 'Locked'] } };
+    if (location) payrollFilter.location = location;
+    const payrolls = await Payroll.find(payrollFilter).lean();
 
     if (!payrolls.length) {
       return res.status(404).json({ success: false, message: 'No approved/locked payrolls found for this period' });
