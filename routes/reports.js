@@ -588,7 +588,8 @@ router.get('/bank-sheet', isLoggedIn, isAdmin, async (req, res) => {
       ws.getColumn(10).width = 28;
     }
 
-    const society = "Rammurti Education Society's";
+    const xaviersSociety = xaviersInfo.society || "Rammurti Education Society's";
+    const globalSociety  = globalInfo.society  || '';
     const xaviersName = xaviersInfo.schoolName || "St. Xavier's English High School & Jr. College";
     const globalName  = globalInfo.schoolName  || "St. Xavier's Global Academy";
     const xaviersOutlet = xaviersInfo.bankServiceOutlet || 430;
@@ -597,16 +598,16 @@ router.get('/bank-sheet', isLoggedIn, isAdmin, async (req, res) => {
     const globalSenderAcc  = globalInfo.bankAccountNumber  || '';
 
     // Build sheets (only non-empty)
-    buildSameBankSheet('State', stateRows, society, xaviersName,
+    buildSameBankSheet('State', stateRows, xaviersSociety, xaviersName,
       `Salary for the Month of ${month} ${year}`, xaviersOutlet);
-    buildSameBankSheet('Global Teaching', globalTeachRows, society, globalName,
+    buildSameBankSheet('Global Teaching', globalTeachRows, globalSociety, globalName,
       `Acquittance roll of the teaching staff for the Month of ${month} ${year}`, globalOutlet);
-    buildSameBankSheet('Global Non Teaching', globalNonTeachRows, society, globalName,
+    buildSameBankSheet('Global Non Teaching', globalNonTeachRows, globalSociety, globalName,
       `Acquittance roll of the Non-teaching staff for the Month of ${month} ${year}`, globalOutlet);
-    buildNeftSheet('NEFT State', neftStateRows, 'Rammurti Education Society',
-      xaviersName, xaviersSenderAcc, society);
-    buildNeftSheet('NEFT Global', neftGlobalRows, 'Rammurti Education Society',
-      globalName, globalSenderAcc, "ST. Xavier's Global Academy");
+    buildNeftSheet('NEFT State', neftStateRows, xaviersSociety,
+      xaviersName, xaviersSenderAcc, xaviersSociety);
+    buildNeftSheet('NEFT Global', neftGlobalRows, globalSociety,
+      globalName, globalSenderAcc, globalName);
 
     if (wb.worksheets.length === 0) {
       return res.status(404).json({ success: false, message: 'No employee bank data found — ensure employees have account numbers set' });

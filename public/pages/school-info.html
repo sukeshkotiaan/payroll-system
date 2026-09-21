@@ -88,6 +88,10 @@
 
         <!-- DETAILS -->
         <div class="form-grid">
+          <div class="form-group" style="grid-column:1/-1;">
+            <label>Society / Trust Name</label>
+            <input type="text" id="xSociety" placeholder="e.g. Rammurti Education Society's">
+          </div>
           <div class="form-group">
             <label>School Name *</label>
             <input type="text" id="xSchoolName" placeholder="e.g. St. Xavier's High School">
@@ -165,6 +169,10 @@
 
         <!-- DETAILS -->
         <div class="form-grid">
+          <div class="form-group" style="grid-column:1/-1;">
+            <label>Society / Trust Name</label>
+            <input type="text" id="gSociety" placeholder="e.g. Rammurti Education Society's">
+          </div>
           <div class="form-group">
             <label>School Name *</label>
             <input type="text" id="gSchoolName" placeholder="e.g. Global International School">
@@ -240,6 +248,7 @@
       if (!data.success) return;
       data.schools.forEach(s => {
         const p = s.schoolType === 'xaviers' ? 'x' : 'g';
+        if (s.society) document.getElementById(p + 'Society').value = s.society;
         if (s.schoolName) document.getElementById(p + 'SchoolName').value = s.schoolName;
         if (s.address) document.getElementById(p + 'Address').value = s.address;
         if (s.phone) document.getElementById(p + 'Phone').value = s.phone;
@@ -311,6 +320,7 @@
     const address = document.getElementById(p + 'Address').value;
     const phone = document.getElementById(p + 'Phone').value;
     const email = document.getElementById(p + 'Email').value;
+    const society = document.getElementById(p + 'Society').value.trim();
     const affiliation = document.getElementById(p + 'Affiliation').value;
     const logo = document.getElementById(p + 'LogoBase64').value;
     const bankAccountNumber = document.getElementById(p + 'BankAccountNumber').value.trim();
@@ -321,7 +331,7 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ schoolType: type, schoolName, address, phone, email, affiliation, logo, bankAccountNumber, bankServiceOutlet })
+        body: JSON.stringify({ schoolType: type, society, schoolName, address, phone, email, affiliation, logo, bankAccountNumber, bankServiceOutlet })
       });
       const data = await res.json();
       if (data.success) { showAlert('alertSuccess', '✅ ' + (type === 'xaviers' ? 'Xaviers' : 'Global') + ' school info saved!'); }

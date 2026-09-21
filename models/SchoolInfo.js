@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const schoolInfoSchema = new mongoose.Schema({
   schoolType: { type: String, enum: ['xaviers', 'global'], required: true, unique: true },
+  society: { type: String, default: '' },
   schoolName: { type: String, default: '' },
   address: { type: String, default: '' },
   phone: { type: String, default: '' },

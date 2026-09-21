@@ -526,7 +526,7 @@
       // Use DB info if available, else fallback to defaults
       const logo = (info && info.logo) ? info.logo : (isGlobal ? GLOBAL_LOGO : STATE_LOGO);
       const schoolName = (info && info.schoolName) ? info.schoolName : (isGlobal ? "St. Xavier's Global Academy" : "St. Xaviers' English High School & Jr. College");
-      const society = isGlobal ? '' : "Rammurti Education Society's";
+      const society = (info && info.society) ? info.society : (isGlobal ? '' : "Rammurti Education Society's");
       const address = (info && info.address) ? info.address : (isGlobal ? 'Panvel, Maharashtra' : 'Rai Master Campus, Chitalsar Manpada, Thane (W)');
       const phone = (info && info.phone) ? info.phone : '';
       const affiliation = (info && info.affiliation) ? info.affiliation : '';
