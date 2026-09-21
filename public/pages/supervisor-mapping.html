@@ -153,7 +153,7 @@
         <h3>All Employees <span id="empCount" style="color:#666;font-weight:400;font-size:13px;"></span>
           <span id="unmappedBadge" style="background:#fce8e6;color:#ea4335;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:600;margin-left:8px;display:none;"></span>
         </h3>
-        <button class="btn-primary" onclick="saveAllMappings()">💾 Save Mapping</button>
+        <span style="font-size:12px;color:#34a853;font-weight:600;">✅ Changes auto-save on selection</span>
       </div>
       <table>
         <thead>
@@ -403,51 +403,46 @@
     });
   }
 
-  let changedMappings = {};
-
-  function markChanged(selectEl) {
+  async function markChanged(selectEl) {
     const empId = selectEl.dataset.empId;
+    const supId = selectEl.value;
+    const sup = supervisors.find(s => s._id.toString() === supId);
     const row = document.getElementById('erow-' + empId);
+    // Show saving indicator
     if (row) row.style.background = '#fffde7';
-    changedMappings[empId] = selectEl.value;
+    const savedEl = document.getElementById('saved-' + empId);
+    if (savedEl) { savedEl.textContent = '⏳'; savedEl.style.display = 'inline'; }
+    try {
+      const res = await fetch('/api/employees/bulk-update-supervisor', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          employeeIds: [empId],
+          supervisorId: supId || null,
+          supervisorName: sup ? sup.fullName : ''
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (row) { row.style.background = '#e6f4ea'; setTimeout(function() { if (row) row.style.background = ''; }, 1500); }
+        if (savedEl) { savedEl.textContent = '✅ Saved'; savedEl.style.display = 'inline'; setTimeout(function() { if (savedEl) savedEl.style.display = 'none'; }, 2000); }
+        // Refresh stats
+        await loadSupervisors();
+      } else {
+        if (row) row.style.background = '#fce8e6';
+        if (savedEl) { savedEl.textContent = '❌ Error'; savedEl.style.display = 'inline'; }
+        showAlert('alertError', 'Error: ' + (data.message || 'Save failed'));
+      }
+    } catch(e) {
+      if (row) row.style.background = '#fce8e6';
+      if (savedEl) { savedEl.textContent = '❌ Error'; savedEl.style.display = 'inline'; }
+      showAlert('alertError', 'Network error — try again');
+    }
   }
 
   async function saveAllMappings() {
-    const changedIds = Object.keys(changedMappings);
-    if (!changedIds.length) {
-      showAlert('alertError', 'No changes to save. Select supervisors first.');
-      return;
-    }
-    let saved = 0;
-    for (const empId of changedIds) {
-      const supId = changedMappings[empId];
-      const sup = supervisors.find(s => s._id === supId);
-      try {
-        const res = await fetch('/api/employees/bulk-update-supervisor', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({
-            employeeIds: [empId],
-            supervisorId: supId || null,
-            supervisorName: sup ? sup.fullName : ''
-          })
-        });
-        const data = await res.json();
-        if (data.success) {
-          saved++;
-          const row = document.getElementById('erow-' + empId);
-          if (row) row.style.background = '#e6f4ea';
-          setTimeout(function() {
-            if (row) row.style.background = '';
-          }, 2000);
-        }
-      } catch(e) {}
-    }
-    changedMappings = {};
-    showAlert('alertSuccess', '✅ Mapping saved for ' + saved + ' employees');
-    await loadSupervisors();
-    await loadEmployeesForMapping();
+    showAlert('alertError', 'Changes are now auto-saved when you select a supervisor.');
   }
 
   function switchTab(tab) {
