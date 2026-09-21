@@ -122,10 +122,10 @@
     <div class="alert alert-error" id="listAlertError"></div>
     <div class="card">
       <div class="card-body">
-        <div class="form-grid">
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
           <div class="form-group">
             <label>Month</label>
-            <select id="filterMonth">
+            <select id="filterMonth" onchange="loadAttendanceList()">
               <option value="">All Months</option>
               <option>January</option><option>February</option><option>March</option>
               <option>April</option><option>May</option><option>June</option>
@@ -135,45 +135,49 @@
           </div>
           <div class="form-group">
             <label>Year</label>
-            <select id="filterYear"><option value="">All Years</option></select>
+            <select id="filterYear" onchange="loadAttendanceList()"><option value="">All Years</option></select>
           </div>
           <div class="form-group">
             <label>Location</label>
-            <select id="filterLocation"><option value="">All Locations</option></select>
+            <select id="filterLocation" onchange="loadAttendanceList()"><option value="">All Locations</option></select>
           </div>
           <div class="form-group">
-            <label>Status</label>
-            <select id="filterStatus">
-              <option value="">All Status</option>
-              <option value="Draft">Draft</option>
-              <option value="Pending">Pending</option>
-              <option value="Approved">Approved</option>
-              <option value="Rejected">Rejected</option>
-            </select>
+            <label>Search EIN / Name</label>
+            <input type="text" id="viewSearch" placeholder="Type to filter..." oninput="filterViewGrid()" style="padding:9px 11px;border:1px solid #ddd;border-radius:6px;font-size:13px;outline:none;">
           </div>
-          <div class="form-group" style="align-self:end;">
-            <button class="btn-primary" onclick="loadAttendanceList()">🔍 Search</button>
+          <div style="margin-left:auto;align-self:flex-end;">
+            <button class="btn-primary" onclick="showNewView()">+ New Attendance</button>
           </div>
         </div>
       </div>
     </div>
-    <div class="card">
-      <div class="card-header">
-        <h3>Attendance Records <span id="listCount" style="color:#666;font-weight:400;font-size:13px;"></span></h3>
-        <button class="btn-primary" onclick="showNewView()">+ New Attendance</button>
+
+    <!-- Group status chips -->
+    <div id="groupStatusBar" style="display:none;margin-bottom:12px;gap:8px;flex-wrap:wrap;align-items:center;"></div>
+
+    <!-- Combined attendance grid -->
+    <div id="viewGridCard" class="card" style="display:none;overflow:visible;">
+      <div class="summary-bar">
+        <div class="summary-item"><label>Employees</label><span id="vSumTotal">0</span></div>
+        <div class="summary-item"><label>Avg Present</label><span id="vSumPresent">0</span></div>
+        <div class="summary-item"><label>Total CL</label><span id="vSumCL">0</span></div>
+        <div class="summary-item"><label>Total SL</label><span id="vSumSL">0</span></div>
+        <div class="summary-item"><label>Total Absent</label><span id="vSumAbsent" style="color:#ea4335;">0</span></div>
+        <div class="summary-item"><label>Total OT Hrs</label><span id="vSumOT">0</span></div>
+        <div class="summary-item"><label>Days</label><span id="vSumDays">0</span></div>
       </div>
-      <table>
-        <thead>
-          <tr>
-            <th>Group</th><th>Month / Year</th><th>Location</th>
-            <th>Employees</th><th>Uploaded By</th><th>Updated</th>
-            <th>Status</th><th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="attendanceList">
-          <tr><td colspan="8"><div class="empty-state">Loading...</div></td></tr>
-        </tbody>
-      </table>
+      <div class="attendance-grid-wrapper">
+        <table class="attendance-grid">
+          <thead id="viewGridHead"></thead>
+          <tbody id="viewGridBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="viewEmpty" class="card">
+      <div class="card-body">
+        <div class="empty-state" id="viewEmptyMsg">Select month and year to view attendance</div>
+      </div>
     </div>
   </div>
 </div>
@@ -396,6 +400,9 @@
   let uploadedData = [];
   let allGroups = [];
   let activeGroupFilter = '';
+  let viewAttendanceRecords = [];
+  let viewDisplayRecords = [];
+  let viewGroupMeta = [];
 
   const MONTHS = ['January','February','March','April','May','June',
     'July','August','September','October','November','December'];
@@ -426,13 +433,8 @@
   }
 
   function setupAccountantView() {
-    // Branch access comes from currentUser.branches (assigned by Admin/Management L1)
-    // Default to Pending status; branch filtering happens client-side in renderAttendanceList
-    setTimeout(function() {
-      const filterStat = document.getElementById('filterStatus');
-      if (filterStat) filterStat.value = 'Pending';
-      loadAttendanceList();
-    }, 400);
+    // Branch access enforced client-side in loadAttendanceList
+    // loadAttendanceList is already called from window.onload after setDefaultMonthYear
   }
 
   function hasAccessToLocation(location) {
@@ -655,58 +657,124 @@
     const y = document.getElementById('selYear');
     if (m) m.value = MONTHS[now.getMonth()];
     if (y) y.value = now.getFullYear();
+    const fm = document.getElementById('filterMonth');
+    const fy = document.getElementById('filterYear');
+    if (fm) fm.value = MONTHS[now.getMonth()];
+    if (fy) fy.value = now.getFullYear();
   }
 
   async function loadAttendanceList() {
+    const month = document.getElementById('filterMonth').value;
+    const year = document.getElementById('filterYear').value;
+    const location = document.getElementById('filterLocation').value;
+
+    const statusBar = document.getElementById('groupStatusBar');
+    const gridCard = document.getElementById('viewGridCard');
+    const emptyDiv = document.getElementById('viewEmpty');
+    const emptyMsg = document.getElementById('viewEmptyMsg');
+
+    statusBar.style.display = 'none';
+    gridCard.style.display = 'none';
+    emptyDiv.style.display = 'block';
+
+    if (!month || !year) {
+      emptyMsg.textContent = 'Select month and year to view attendance';
+      return;
+    }
+
+    emptyMsg.textContent = 'Loading...';
+
     try {
-      const month = document.getElementById('filterMonth').value;
-      const year = document.getElementById('filterYear').value;
-      const location = document.getElementById('filterLocation').value;
-      const status = document.getElementById('filterStatus').value;
-      let url = '/api/attendance?';
-      if (month) url += 'month=' + month + '&';
-      if (year) url += 'year=' + year + '&';
-      if (location) url += 'location=' + location + '&';
-      if (status) url += 'status=' + status + '&';
+      let url = '/api/attendance?month=' + encodeURIComponent(month) + '&year=' + year;
+      if (location) url += '&location=' + encodeURIComponent(location);
       const res = await fetch(url);
       const data = await res.json();
-      if (data.success) {
-        let records = data.records;
-        // Restrict to assigned branches for accountant / management L2/L3
-        const isFullAccess = currentUser.role === 'admin' ||
-          (currentUser.role === 'management' && currentUser.managementLevel === 1);
-        if (!isFullAccess && (currentUser.role === 'accountant' || currentUser.role === 'management')) {
-          records = records.filter(r => hasAccessToLocation(r.location));
-        }
-        renderAttendanceList(records);
+      if (!data.success) { emptyMsg.textContent = 'Error loading attendance'; return; }
+
+      let records = data.records;
+      const isFullAccess = currentUser.role === 'admin' ||
+        (currentUser.role === 'management' && currentUser.managementLevel === 1);
+      if (!isFullAccess && (currentUser.role === 'accountant' || currentUser.role === 'management')) {
+        records = records.filter(r => hasAccessToLocation(r.location));
       }
-    } catch(e) {}
+
+      if (!records.length) {
+        emptyMsg.textContent = 'No attendance records found for this period';
+        return;
+      }
+
+      currentMonth = month;
+      currentYear = year;
+      currentDaysInMonth = 30;
+      viewGroupMeta = [];
+      viewAttendanceRecords = [];
+
+      for (const rec of records) {
+        const fullRes = await fetch('/api/attendance/' + rec._id);
+        const fullData = await fullRes.json();
+        if (!fullData.success) continue;
+        const fr = fullData.record;
+        viewGroupMeta.push({
+          id: rec._id,
+          groupName: rec.groupName || (rec.section + ' ' + rec.location + ' ' + rec.profile),
+          status: rec.status,
+          location: rec.location
+        });
+        if (fr.records && fr.records.length) {
+          const days = fr.records[0].daysInMonth || fr.daysInMonth || 30;
+          if (days > currentDaysInMonth) currentDaysInMonth = days;
+          fr.records.forEach(r => viewAttendanceRecords.push(Object.assign({}, r, { daysInMonth: days })));
+        }
+      }
+
+      viewAttendanceRecords.sort((a, b) => (a.ein || '').localeCompare(b.ein || ''));
+      viewDisplayRecords = viewAttendanceRecords;
+      const srch = document.getElementById('viewSearch');
+      if (srch) srch.value = '';
+
+      emptyDiv.style.display = 'none';
+      gridCard.style.display = 'block';
+      renderGroupStatusBar();
+      renderViewGrid();
+    } catch(e) {
+      emptyMsg.textContent = 'Error: ' + e.message;
+    }
   }
 
-  function renderAttendanceList(records) {
-    const tbody = document.getElementById('attendanceList');
-    document.getElementById('listCount').textContent = '(' + records.length + ' records)';
-    if (!records.length) { tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state">No records found</div></td></tr>'; return; }
-    tbody.innerHTML = records.map(function(r) {
-      const isApproved = r.status === 'Approved';
-      const isPending = r.status === 'Pending';
-      const isDraft = r.status === 'Draft';
-      let actions = '<button class="btn-warning" onclick="editAttendance(\'' + r._id + '\')"> ' + (isApproved ? '👁 View' : '✏️ Edit') + '</button>';
-      if (isDraft) actions += ' <button class="btn-danger" onclick="deleteAtt(\'' + r._id + '\'" style="margin-left:4px;">Delete</button>';
-      if (isPending) actions += ' <button class="btn-success" style="padding:5px 10px;font-size:11px;margin-left:4px;" onclick="approveAtt(\'' + r._id + '\')">✅ Approve</button>';
-      if (isPending) actions += ' <button class="btn-danger" style="padding:5px 10px;font-size:11px;margin-left:4px;" onclick="rejectAtt(\'' + r._id + '\')">❌ Reject</button>';
-      const statusBadge = '<span class="badge badge-' + r.status.toLowerCase() + '">' + r.status + '</span>';
-      return '<tr>' +
-        '<td><strong>' + (r.groupName || r.section + ' ' + r.location) + '</strong></td>' +
-        '<td>' + r.month + ' ' + r.year + '</td>' +
-        '<td>' + r.location + '</td>' +
-        '<td>' + (r.records ? r.records.length : '—') + '</td>' +
-        '<td>' + (r.uploadedBy || '—') + '</td>' +
-        '<td>' + (r.updatedAt ? new Date(r.updatedAt).toLocaleDateString('en-IN') : '—') + '</td>' +
-        '<td>' + statusBadge + '</td>' +
-        '<td>' + actions + '</td>' +
-        '</tr>';
-    }).join('');
+  function renderGroupStatusBar() {
+    const bar = document.getElementById('groupStatusBar');
+    if (!viewGroupMeta.length) { bar.style.display = 'none'; return; }
+    const SC = { Draft: '#666', Pending: '#d97706', Submitted: '#d97706', Approved: '#34a853', Rejected: '#ea4335' };
+    const SB = { Draft: '#f5f5f5', Pending: '#fef3c7', Submitted: '#fef3c7', Approved: '#e6f4ea', Rejected: '#fce8e6' };
+    const canApprove = ['admin','management','accountant'].includes(currentUser.role);
+    bar.innerHTML = '<span style="font-size:12px;font-weight:600;color:#555;flex-shrink:0;">Groups:</span>' +
+      viewGroupMeta.map(function(g) {
+        const st = g.status || 'Draft';
+        let acts = '';
+        if (canApprove && (st === 'Pending' || st === 'Submitted')) {
+          acts += ' <button onclick="approveAtt(\'' + g.id + '\')" title="Approve" style="margin-left:4px;padding:1px 6px;background:#34a853;color:white;border:none;border-radius:4px;cursor:pointer;font-size:10px;">✅</button>';
+          acts += ' <button onclick="rejectAtt(\'' + g.id + '\')" title="Reject" style="margin-left:2px;padding:1px 6px;background:#ea4335;color:white;border:none;border-radius:4px;cursor:pointer;font-size:10px;">❌</button>';
+        }
+        if (currentUser.role !== 'supervisor') {
+          acts += ' <button onclick="editAttendance(\'' + g.id + '\')" title="Edit/View" style="margin-left:2px;padding:1px 6px;background:#1a73e8;color:white;border:none;border-radius:4px;cursor:pointer;font-size:10px;">✏️</button>';
+        }
+        return '<span style="display:inline-flex;align-items:center;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:600;background:' + (SB[st]||'#f5f5f5') + ';color:' + (SC[st]||'#666') + ';border:1px solid ' + (SC[st]||'#ccc') + ';">' +
+          g.groupName + ' · ' + st + acts + '</span>';
+      }).join('');
+    bar.style.display = 'flex';
+  }
+
+  function filterViewGrid() {
+    const q = (document.getElementById('viewSearch').value || '').trim().toLowerCase();
+    viewDisplayRecords = q ? viewAttendanceRecords.filter(function(r) {
+      return (r.ein && r.ein.toLowerCase().indexOf(q) >= 0) ||
+             (r.employeeName && r.employeeName.toLowerCase().indexOf(q) >= 0);
+    }) : viewAttendanceRecords;
+    renderViewGrid();
+  }
+
+  function renderViewGrid() {
+    renderGrid('viewGridHead','viewGridBody','vSumTotal','vSumPresent','vSumCL','vSumSL','vSumAbsent','vSumOT','vSumDays', viewDisplayRecords, true);
   }
 
   async function initAttendance() {
