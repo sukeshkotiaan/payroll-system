@@ -327,17 +327,15 @@
       const data = await res.json();
       if (!data.success) return;
 
-      // Get staff EINs (supervisor/accountant/management) to mark or exclude
+      // Get staff EINs to mark supervisor rows with a badge
       const usersRes = await fetch('/api/users');
       const usersData = await usersRes.json();
       const staffEINs = usersData.success ?
         usersData.users.filter(u => u.role !== 'admin' && u.ein).map(u => u.ein) : [];
 
-      const isAdmin = currentUser.role === 'admin';
-      // Admin sees everyone (marked with Staff badge); others have staff excluded entirely
+      // Show all active employees including supervisors (marked with Staff badge)
       allEmployees = data.employees
         .filter(e => e.isActive)
-        .filter(e => isAdmin || !staffEINs.includes(e.ein))
         .map(e => ({ ...e, isStaff: staffEINs.includes(e.ein) }));
       filteredEmployees = [...allEmployees];
       renderMappingTable(filteredEmployees);
