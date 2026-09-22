@@ -197,7 +197,7 @@
               <th id="th-dateOfExit" onclick="sortEmployeeTable('dateOfExit')" style="cursor:pointer;">Exit Date<span id="sortind-dateOfExit"></span></th>
               <th id="th-isActive" onclick="sortEmployeeTable('isActive')" style="cursor:pointer;">Status<span id="sortind-isActive"></span></th>
               <th style="min-width:90px;">Completeness</th>
-              <th style="min-width:90px;">Actions</th>
+              <th style="min-width:220px;">Actions</th>
             </tr>
           </thead>
           <tbody id="employeeTable">
@@ -719,11 +719,11 @@
       '<td>' + (emp.dateOfExit ? new Date(emp.dateOfExit).toLocaleDateString('en-IN') : '—') + '</td>' +
       '<td><span class="badge ' + (emp.isActive ? 'badge-active' : 'badge-inactive') + '">' + (emp.isActive ? 'Active' : 'Inactive') + '</span></td>' +
       '<td>' + profileCompletionHTML(emp) + '</td>' +
-      '<td><div style="display:flex;flex-direction:column;gap:4px;align-items:flex-start;">' +
-      '<button class="btn-edit" style="width:100%;min-width:70px;" onclick="editEmployee(\'' + emp._id + '\')">Edit</button>' +
-      (emp.isActive && currentUser.role !== 'supervisor' ? '<button class="btn-secondary" style="width:100%;min-width:70px;padding:4px 8px;font-size:12px;" onclick="goToOfferLetterPopup(\'' + emp._id + '\')">Offer Letter</button>' : '') +
-      (!emp.isActive ? '<button class="btn-secondary" style="width:100%;min-width:70px;padding:4px 8px;font-size:12px;" onclick="goToExperienceLetterPopup(\'' + emp._id + '\')">Exp. Letter</button>' : '') +
-      (emp.isActive && (currentUser.role === 'admin' || currentUser.role === 'management') ? '<button class="btn-danger" style="width:100%;min-width:70px;" onclick="goToExit()">Exit</button>' : '') +
+      '<td><div style="display:flex;flex-direction:row;flex-wrap:nowrap;gap:4px;">' +
+      '<button class="btn-edit" style="white-space:nowrap;" onclick="editEmployee(\'' + emp._id + '\')">Edit</button>' +
+      (emp.isActive && currentUser.role !== 'supervisor' ? '<button class="btn-secondary" style="white-space:nowrap;padding:4px 8px;font-size:12px;" onclick="goToOfferLetterPopup(\'' + emp._id + '\')">Offer Letter</button>' : '') +
+      (!emp.isActive ? '<button class="btn-secondary" style="white-space:nowrap;padding:4px 8px;font-size:12px;" onclick="goToExperienceLetterPopup(\'' + emp._id + '\')">Exp. Letter</button>' : '') +
+      (emp.isActive && (currentUser.role === 'admin' || currentUser.role === 'management') ? '<button class="btn-danger" style="white-space:nowrap;" onclick="goToExit()">Exit</button>' : '') +
       '</div></td>' +
       '</tr>'
     ).join('');
