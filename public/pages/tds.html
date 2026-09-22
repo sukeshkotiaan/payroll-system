@@ -159,7 +159,6 @@
 
   <!-- TAB 2: MONTHLY ENTRY -->
   <div class="tab-section" id="sectionMonthly">
-    <!-- FILTER -->
     <div class="card">
       <div class="card-body">
         <div style="display:flex;gap:15px;flex-wrap:wrap;align-items:end;">
@@ -178,70 +177,45 @@
             <select id="monthlyYear"></select>
           </div>
           <div class="form-group" style="align-self:end;">
-            <button class="btn-primary" onclick="loadMonthlyTDS()">📋 Load</button>
+            <button class="btn-primary" onclick="loadMonthlyBulk()">📋 Load</button>
+          </div>
+          <div class="form-group" style="align-self:end;">
+            <button class="btn-secondary" id="copyLastMonthBtn" onclick="copyFromLastMonth()" style="display:none;">↩ Copy Last Month</button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- ADD FORM -->
-    <div class="card" id="monthlyAddCard" style="display:none;overflow:visible;">
+    <div class="card" id="bulkCard" style="display:none;">
       <div class="card-header">
-        <h3>+ Add TDS Entry</h3>
-        <button class="btn-secondary" onclick="hideMonthlyAddForm()">✕ Close</button>
-      </div>
-      <div class="card-body">
-        <div style="display:flex;gap:10px;margin-bottom:15px;">
-          <input type="text" id="monthlyEmpSearch" placeholder="Search EIN or Name"
-            style="flex:1;max-width:300px;padding:10px;border:2px solid #1a73e8;border-radius:6px;font-size:13px;outline:none;"
-            onkeypress="if(event.key==='Enter') searchMonthlyEmployee()">
-          <button class="btn-primary" onclick="searchMonthlyEmployee()">🔍 Search</button>
-        </div>
-        <div id="monthlyEmpInfo" style="display:none;margin-bottom:15px;">
-          <div class="emp-info-bar">
-            <div class="emp-info-item"><label>EIN</label><span id="mInfoEIN">—</span></div>
-            <div class="emp-info-item"><label>Name</label><span id="mInfoName">—</span></div>
-            <div class="emp-info-item"><label>Location</label><span id="mInfoLoc">—</span></div>
-            <div class="emp-info-item"><label>Monthly Salary</label><span id="mInfoSalary">—</span></div>
-          </div>
-        </div>
-        <div id="monthlyAmtFields" style="display:none;">
-          <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:15px;align-items:end;">
-            <div class="form-group">
-              <label>TDS Amount (₹) *</label>
-              <input type="number" id="monthlyAddAmount" placeholder="e.g. 2500" min="0"
-                onkeypress="if(event.key==='Enter') saveMonthlyTDS()">
-            </div>
-            <div class="form-group">
-              <label>Remarks</label>
-              <input type="text" id="monthlyAddRemarks" placeholder="As per CA advice">
-            </div>
-            <button class="btn-primary" onclick="saveMonthlyTDS()">💾 Save</button>
-          </div>
+        <h3 id="bulkTitle">TDS Entry</h3>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <span id="bulkInfo" style="font-size:13px;color:#666;"></span>
+          <input type="text" id="bulkSearch" placeholder="Filter EIN / Name" oninput="filterBulkTable()"
+            style="padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:12px;width:180px;outline:none;">
+          <button class="btn-primary" onclick="saveBulkTDS()">💾 Save All</button>
         </div>
       </div>
-    </div>
-
-    <!-- MONTHLY LIST -->
-    <div class="card">
-      <div class="card-header">
-        <h3 id="monthlyListTitle">Monthly TDS Entries</h3>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <span id="monthlyListInfo" style="font-size:13px;color:#666;"></span>
-          <button class="btn-primary" id="monthlyAddBtn" onclick="showMonthlyAddForm()" style="display:none;">+ Add TDS Entry</button>
-        </div>
+      <div style="overflow-x:auto;">
+        <table style="font-size:12px;">
+          <thead>
+            <tr>
+              <th style="min-width:90px;">EIN</th>
+              <th style="min-width:180px;">Name</th>
+              <th style="min-width:80px;">Location</th>
+              <th style="min-width:100px;text-align:right;">Salary</th>
+              <th style="min-width:110px;text-align:right;">Last Month</th>
+              <th style="min-width:140px;">This Month (₹)</th>
+              <th style="min-width:160px;">Remarks</th>
+            </tr>
+          </thead>
+          <tbody id="bulkBody"></tbody>
+        </table>
       </div>
-      <table>
-        <thead>
-          <tr>
-            <th>EIN</th><th>Employee Name</th><th>Location</th>
-            <th>TDS Amount</th><th>Remarks</th><th>Added By</th><th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="monthlyList">
-          <tr><td colspan="7"><div class="empty-state">Select month and year then click Load</div></td></tr>
-        </tbody>
-      </table>
+      <div style="padding:12px 20px;border-top:1px solid #eee;display:flex;justify-content:space-between;align-items:center;">
+        <span id="bulkTotalBar" style="font-size:13px;font-weight:600;color:#1a73e8;"></span>
+        <button class="btn-primary" onclick="saveBulkTDS()">💾 Save All</button>
+      </div>
     </div>
   </div>
 </div>
@@ -251,25 +225,16 @@
   let allTDS = [];
   let allEmployees = [];
   let currentYear = new Date().getFullYear();
-  let currentMonthlyEIN = '';
-  let currentMonthlyMonth = '';
-  let currentMonthlyYear = '';
+  let bulkAllRows = [];    // all TDS-applicable employees for bulk table
+  let bulkMonth = '';
+  let bulkYear = '';
+  let lastMonthTDSMap = {}; // ein -> amount for previous month
 
   const MONTHS = ['January','February','March','April','May','June',
     'July','August','September','October','November','December'];
   const SHORT_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
   window.onload = async () => {
-    // Attach auto-suggest to employee search
-    attachEINSearch('monthlyEmpSearch', function(emp) {
-      currentMonthlyEIN = emp.ein;
-      document.getElementById('mInfoEIN').textContent = emp.ein;
-      document.getElementById('mInfoName').textContent = emp.employeeName;
-      document.getElementById('mInfoLoc').textContent = emp.location;
-      document.getElementById('mInfoSalary').textContent = '₹' + (emp.monthlySalary||0).toLocaleString('en-IN');
-      document.getElementById('monthlyEmpInfo').style.display = 'block';
-      document.getElementById('monthlyAmtFields').style.display = 'block';
-    });
     await checkAuth();
     await loadLocations();
     populateYears();
@@ -466,116 +431,156 @@
     } catch(e) {}
   }
 
-  async function loadMonthlyTDS() {
+  async function loadMonthlyBulk() {
     const month = document.getElementById('monthlyMonth').value;
     const year = document.getElementById('monthlyYear').value;
-    if (!month || !year) { alert('Please select month and year'); return; }
-    currentMonthlyMonth = month;
-    currentMonthlyYear = year;
+    if (!month || !year) { showAlert('alertError', 'Please select month and year'); return; }
+    bulkMonth = month;
+    bulkYear = year;
+
     try {
-      const res = await fetch('/api/tds?month=' + encodeURIComponent(month) + '&year=' + year);
-      const data = await res.json();
-      if (!data.success) return;
-      const records = data.records;
-      const total = records.reduce((s,r) => s + (r.amount||0), 0);
-      document.getElementById('monthlyListTitle').textContent = 'TDS Entries — ' + month + ' ' + year;
-      document.getElementById('monthlyListInfo').textContent = records.length + ' entries | Total: ₹' + total.toLocaleString('en-IN');
-      document.getElementById('monthlyAddBtn').style.display = 'inline-block';
-      renderMonthlyList(records);
-    } catch(e) { console.error(e); }
+      // Load all TDS-applicable employees
+      const empRes = await fetch('/api/employees?all=true&tdsApplicable=true');
+      const empData = await empRes.json();
+      const tdsEmps = (empData.success ? empData.employees : []).filter(e => e.isActive && e.tdsApplicable);
+
+      // Load this month's existing TDS entries
+      const tdsRes = await fetch('/api/tds?month=' + encodeURIComponent(month) + '&year=' + year);
+      const tdsData = await tdsRes.json();
+      const existing = {};
+      if (tdsData.success) tdsData.records.forEach(r => { existing[r.ein] = r; });
+
+      // Load last month's TDS for reference
+      const prevDate = new Date(parseInt(year), MONTHS.indexOf(month) - 1, 1);
+      const prevMonth = MONTHS[prevDate.getMonth()];
+      const prevYear = prevDate.getFullYear();
+      const prevRes = await fetch('/api/tds?month=' + encodeURIComponent(prevMonth) + '&year=' + prevYear);
+      const prevData = await prevRes.json();
+      lastMonthTDSMap = {};
+      if (prevData.success) prevData.records.forEach(r => { lastMonthTDSMap[r.ein] = r.amount; });
+
+      bulkAllRows = tdsEmps.map(emp => ({
+        ein: emp.ein,
+        name: emp.employeeName,
+        location: emp.location,
+        salary: emp.monthlySalary || 0,
+        amount: existing[emp.ein] ? existing[emp.ein].amount : '',
+        remarks: existing[emp.ein] ? (existing[emp.ein].remarks || '') : ''
+      }));
+
+      const filled = bulkAllRows.filter(r => r.amount !== '').length;
+      document.getElementById('bulkTitle').textContent = 'TDS Entry — ' + month + ' ' + year;
+      document.getElementById('bulkInfo').textContent = tdsEmps.length + ' employees | ' + filled + ' entered';
+      document.getElementById('bulkCard').style.display = 'block';
+      document.getElementById('copyLastMonthBtn').style.display = Object.keys(lastMonthTDSMap).length ? 'inline-block' : 'none';
+      renderBulkTable(bulkAllRows);
+    } catch(e) { showAlert('alertError', 'Error loading: ' + e.message); }
   }
 
-  function renderMonthlyList(records) {
-    const tbody = document.getElementById('monthlyList');
-    if (!records.length) {
-      tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state">No TDS entries for this month. Click + Add TDS Entry.</div></td></tr>';
+  function renderBulkTable(rows) {
+    const tbody = document.getElementById('bulkBody');
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state">No TDS-applicable employees found. Mark employees as "TDS Applicable" in Employee Master.</div></td></tr>';
+      updateBulkTotal();
       return;
     }
-    tbody.innerHTML = records.map(r => '<tr>' +
-      '<td><strong>' + r.ein + '</strong></td>' +
-      '<td>' + r.employeeName + '</td>' +
-      '<td>' + r.location + '</td>' +
-      '<td><strong style="color:#1a73e8;">₹' + (r.amount||0).toLocaleString('en-IN') + '</strong></td>' +
-      '<td>' + (r.remarks||'—') + '</td>' +
-      '<td>' + (r.addedBy||'—') + '</td>' +
-      '<td>' +
-        '<button class="btn-warning" onclick="editMonthlyEntry(\'' + r._id + '\',\'' + r.ein + '\',\'' +
-        r.employeeName.replace(/'/g,'') + '\',' + r.amount + ',\'' + (r.remarks||'').replace(/'/g,'') + '\')">Edit</button> ' +
-        '<button class="btn-danger" onclick="deleteMonthlyEntry(\'' + r._id + '\')">Delete</button>' +
-      '</td></tr>'
-    ).join('');
+    tbody.innerHTML = rows.map((r, i) => {
+      const lastAmt = lastMonthTDSMap[r.ein];
+      const lastText = lastAmt ? '₹' + lastAmt.toLocaleString('en-IN') : '—';
+      const hasValue = r.amount !== '' && r.amount !== null && r.amount !== undefined;
+      return '<tr id="brow-' + r.ein + '" style="' + (hasValue ? 'background:#f0fdf4;' : '') + '">' +
+        '<td style="font-weight:700;font-size:11px;">' + r.ein + '</td>' +
+        '<td>' + r.name + '</td>' +
+        '<td style="color:#666;">' + r.location + '</td>' +
+        '<td style="text-align:right;color:#555;">₹' + (r.salary||0).toLocaleString('en-IN') + '</td>' +
+        '<td style="text-align:right;color:#888;font-size:11px;">' + lastText + '</td>' +
+        '<td><input type="number" min="0" step="1" placeholder="0" value="' + (hasValue ? r.amount : '') + '" ' +
+          'id="amt-' + r.ein + '" oninput="onBulkAmtChange(\'' + r.ein + '\')" ' +
+          'style="width:120px;padding:6px 8px;border:1px solid #ddd;border-radius:5px;font-size:13px;text-align:right;outline:none;" ' +
+          'onfocus="this.style.borderColor=\'#1a73e8\'" onblur="this.style.borderColor=\'#ddd\'"></td>' +
+        '<td><input type="text" placeholder="Remarks" value="' + (r.remarks||'').replace(/"/g,'&quot;') + '" ' +
+          'id="rem-' + r.ein + '" ' +
+          'style="width:150px;padding:6px 8px;border:1px solid #ddd;border-radius:5px;font-size:12px;outline:none;" ' +
+          'onfocus="this.style.borderColor=\'#1a73e8\'" onblur="this.style.borderColor=\'#ddd\'"></td>' +
+        '</tr>';
+    }).join('');
+    updateBulkTotal();
   }
 
-  function showMonthlyAddForm() {
-    document.getElementById('monthlyAddCard').style.display = 'block';
-    document.getElementById('monthlyEmpSearch').value = '';
-    document.getElementById('monthlyEmpInfo').style.display = 'none';
-    document.getElementById('monthlyAmtFields').style.display = 'none';
-    document.getElementById('monthlyAddAmount').value = '';
-    document.getElementById('monthlyAddRemarks').value = '';
-    currentMonthlyEIN = '';
-    document.getElementById('monthlyEmpSearch').focus();
+  function onBulkAmtChange(ein) {
+    const val = document.getElementById('amt-' + ein).value;
+    const row = document.getElementById('brow-' + ein);
+    if (row) row.style.background = val ? '#f0fdf4' : '';
+    updateBulkTotal();
   }
 
-  function hideMonthlyAddForm() {
-    document.getElementById('monthlyAddCard').style.display = 'none';
-    currentMonthlyEIN = '';
+  function filterBulkTable() {
+    const q = document.getElementById('bulkSearch').value.toLowerCase();
+    if (!q) { renderBulkTable(bulkAllRows); return; }
+    const filtered = bulkAllRows.filter(r =>
+      r.ein.toLowerCase().includes(q) || r.name.toLowerCase().includes(q)
+    );
+    renderBulkTable(filtered);
   }
 
-  async function searchMonthlyEmployee() {
-    const search = document.getElementById('monthlyEmpSearch').value.trim();
-    if (!search) return;
+  function updateBulkTotal() {
+    let total = 0, count = 0;
+    bulkAllRows.forEach(r => {
+      const el = document.getElementById('amt-' + r.ein);
+      const v = el ? parseFloat(el.value) : (r.amount ? parseFloat(r.amount) : 0);
+      if (v > 0) { total += v; count++; }
+    });
+    document.getElementById('bulkTotalBar').textContent =
+      count + ' employees | Total TDS: ₹' + total.toLocaleString('en-IN');
+    document.getElementById('bulkInfo').textContent =
+      bulkAllRows.length + ' employees | ' + count + ' entered';
+  }
+
+  function copyFromLastMonth() {
+    if (!Object.keys(lastMonthTDSMap).length) return;
+    bulkAllRows.forEach(r => {
+      if (lastMonthTDSMap[r.ein]) {
+        const el = document.getElementById('amt-' + r.ein);
+        if (el && !el.value) {
+          el.value = lastMonthTDSMap[r.ein];
+          const row = document.getElementById('brow-' + r.ein);
+          if (row) row.style.background = '#f0fdf4';
+        }
+      }
+    });
+    updateBulkTotal();
+    showAlert('alertSuccess', '↩ Copied last month\'s amounts for employees with no entry yet');
+  }
+
+  async function saveBulkTDS() {
+    const entries = [];
+    bulkAllRows.forEach(r => {
+      const amtEl = document.getElementById('amt-' + r.ein);
+      const remEl = document.getElementById('rem-' + r.ein);
+      const amt = amtEl ? parseFloat(amtEl.value) : 0;
+      if (amt > 0) {
+        entries.push({ ein: r.ein, amount: amt, remarks: remEl ? remEl.value : '' });
+      }
+    });
+    if (!entries.length) { showAlert('alertError', 'No amounts entered'); return; }
     try {
-      const res = await fetch('/api/tds/find-employee/' + encodeURIComponent(search));
-      const data = await res.json();
-      if (data.success) {
-        currentMonthlyEIN = data.employee.ein;
-        document.getElementById('mInfoEIN').textContent = data.employee.ein;
-        document.getElementById('mInfoName').textContent = data.employee.employeeName;
-        document.getElementById('mInfoLoc').textContent = data.employee.location;
-        document.getElementById('mInfoSalary').textContent = '₹' + (data.employee.monthlySalary||0).toLocaleString('en-IN');
-        document.getElementById('monthlyEmpInfo').style.display = 'block';
-        document.getElementById('monthlyAmtFields').style.display = 'block';
-        document.getElementById('monthlyAddAmount').focus();
-      } else { alert(data.message); }
-    } catch(e) {}
-  }
-
-  async function saveMonthlyTDS() {
-    if (!currentMonthlyEIN) { alert('Please search employee first'); return; }
-    if (!currentMonthlyMonth || !currentMonthlyYear) { alert('Please load month first'); return; }
-    const amount = document.getElementById('monthlyAddAmount').value;
-    const remarks = document.getElementById('monthlyAddRemarks').value;
-    if (!amount) { alert('Please enter TDS amount'); return; }
-    try {
-      const res = await fetch('/api/tds', {
+      const res = await fetch('/api/tds/bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ ein: currentMonthlyEIN, month: currentMonthlyMonth,
-          year: parseInt(currentMonthlyYear), amount: parseFloat(amount), remarks })
+        body: JSON.stringify({ month: bulkMonth, year: parseInt(bulkYear), entries })
       });
       const data = await res.json();
       if (data.success) {
-        showAlert('alertSuccess', '✅ TDS saved');
-        hideMonthlyAddForm();
-        await loadMonthlyTDS();
-      } else { alert('Error: ' + data.message); }
-    } catch(e) { alert('Error: ' + e.message); }
+        showAlert('alertSuccess', '✅ ' + data.message);
+        await loadMonthlyBulk();
+        await loadTDSGrid();
+      } else { showAlert('alertError', data.message); }
+    } catch(e) { showAlert('alertError', 'Error: ' + e.message); }
   }
 
-  function editMonthlyEntry(id, ein, name, amount, remarks) {
-    openPopup(ein, currentMonthlyMonth, parseInt(currentMonthlyYear), name, amount, remarks, id);
-  }
-
-  async function deleteMonthlyEntry(id) {
-    if (!confirm('Delete this TDS entry?')) return;
-    try {
-      const res = await fetch('/api/tds/' + id, { method: 'DELETE', credentials: 'include' });
-      const data = await res.json();
-      if (data.success) { showAlert('alertSuccess', data.message); await loadMonthlyTDS(); }
-    } catch(e) {}
-  }
+  // Keep loadMonthlyTDS as alias so switchTab still works
+  async function loadMonthlyTDS() { await loadMonthlyBulk(); }
 
   function showAlert(id, msg) {
     const el = document.getElementById(id);

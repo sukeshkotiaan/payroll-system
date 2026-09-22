@@ -85,6 +85,51 @@ router.post('/', isLoggedIn, isAccountantOrAdmin, async (req, res) => {
   }
 });
 
+// BULK SAVE TDS entries for a month
+router.post('/bulk', isLoggedIn, isAccountantOrAdmin, async (req, res) => {
+  try {
+    const { month, year, entries } = req.body;
+    if (!month || !year || !Array.isArray(entries)) {
+      return res.status(400).json({ success: false, message: 'month, year and entries required' });
+    }
+    const eins = entries.map(e => e.ein.toUpperCase());
+    const employees = await Employee.find({ ein: { $in: eins } });
+    const empMap = {};
+    employees.forEach(e => { empMap[e.ein] = e; });
+
+    const ops = entries.map(entry => {
+      const emp = empMap[entry.ein.toUpperCase()];
+      if (!emp) return null;
+      return {
+        updateOne: {
+          filter: { ein: emp.ein, month, year: parseInt(year) },
+          update: {
+            $set: {
+              ein: emp.ein,
+              employeeId: emp._id,
+              employeeName: emp.employeeName,
+              location: emp.location,
+              section: emp.section,
+              profile: emp.profile,
+              month, year: parseInt(year),
+              amount: parseFloat(entry.amount) || 0,
+              remarks: entry.remarks || '',
+              addedBy: req.session.user.username,
+              updatedAt: new Date()
+            }
+          },
+          upsert: true
+        }
+      };
+    }).filter(Boolean);
+
+    if (ops.length) await TDS.bulkWrite(ops);
+    return res.json({ success: true, message: ops.length + ' TDS records saved' });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: safeError(err, 'tds bulk') });
+  }
+});
+
 // DELETE TDS
 router.delete('/:id', isLoggedIn, isAdmin, async (req, res) => {
   try {

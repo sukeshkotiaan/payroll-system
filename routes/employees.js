@@ -223,6 +223,8 @@ router.get('/', isLoggedIn, async (req, res) => {
       filter.isActive = req.query.isActive === 'true';
     if (req.query.fullAttendance !== undefined && req.query.fullAttendance !== '')
       filter.fullAttendance = req.query.fullAttendance === 'true';
+    if (req.query.tdsApplicable !== undefined && req.query.tdsApplicable !== '')
+      filter.tdsApplicable = req.query.tdsApplicable === 'true';
 
     // Server-side search across EIN and name (regex sanitized against ReDoS)
     if (req.query.search) {
