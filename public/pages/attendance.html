@@ -152,8 +152,8 @@
       </div>
     </div>
 
-    <!-- Group status chips -->
-    <div id="groupStatusBar" style="display:none;margin-bottom:12px;gap:8px;flex-wrap:wrap;align-items:center;"></div>
+    <!-- Group action cards -->
+    <div id="groupStatusBar" style="display:none;margin-bottom:12px;gap:10px;flex-wrap:wrap;align-items:stretch;"></div>
 
     <!-- Combined attendance grid -->
     <div id="viewGridCard" class="card" style="display:none;overflow:visible;">
@@ -744,24 +744,59 @@
   function renderGroupStatusBar() {
     const bar = document.getElementById('groupStatusBar');
     if (!viewGroupMeta.length) { bar.style.display = 'none'; return; }
-    const SC = { Draft: '#666', Pending: '#d97706', Submitted: '#d97706', Approved: '#34a853', Rejected: '#ea4335' };
-    const SB = { Draft: '#f5f5f5', Pending: '#fef3c7', Submitted: '#fef3c7', Approved: '#e6f4ea', Rejected: '#fce8e6' };
+    const SC  = { Draft:'#555', Pending:'#d97706', Submitted:'#d97706', Approved:'#34a853', Rejected:'#ea4335' };
+    const SBG = { Draft:'#f5f5f5', Pending:'#fef3c7', Submitted:'#fef3c7', Approved:'#e6f4ea', Rejected:'#fce8e6' };
+    const SBD = { Draft:'#ddd', Pending:'#fcd34d', Submitted:'#fcd34d', Approved:'#86efac', Rejected:'#fca5a5' };
     const canApprove = ['admin','management','accountant'].includes(currentUser.role);
-    bar.innerHTML = '<span style="font-size:12px;font-weight:600;color:#555;flex-shrink:0;">Groups:</span>' +
-      viewGroupMeta.map(function(g) {
-        const st = g.status || 'Draft';
-        let acts = '';
-        if (canApprove && (st === 'Pending' || st === 'Submitted')) {
-          acts += ' <button onclick="approveAtt(\'' + g.id + '\')" title="Approve" style="margin-left:4px;padding:1px 6px;background:#34a853;color:white;border:none;border-radius:4px;cursor:pointer;font-size:10px;">✅</button>';
-          acts += ' <button onclick="rejectAtt(\'' + g.id + '\')" title="Reject" style="margin-left:2px;padding:1px 6px;background:#ea4335;color:white;border:none;border-radius:4px;cursor:pointer;font-size:10px;">❌</button>';
-        }
-        if (currentUser.role !== 'supervisor') {
-          acts += ' <button onclick="editAttendance(\'' + g.id + '\')" title="Edit/View" style="margin-left:2px;padding:1px 6px;background:#1a73e8;color:white;border:none;border-radius:4px;cursor:pointer;font-size:10px;">✏️</button>';
-        }
-        return '<span style="display:inline-flex;align-items:center;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:600;background:' + (SB[st]||'#f5f5f5') + ';color:' + (SC[st]||'#666') + ';border:1px solid ' + (SC[st]||'#ccc') + ';">' +
-          g.groupName + ' · ' + st + acts + '</span>';
-      }).join('');
+    const canEdit    = currentUser.role !== 'supervisor';
+
+    bar.innerHTML = viewGroupMeta.map(function(g) {
+      const st = g.status || 'Draft';
+      let btns = '';
+
+      if (canEdit) {
+        btns += '<button onclick="editAttendance(\'' + g.id + '\')" ' +
+          'style="padding:5px 12px;background:#1a73e8;color:white;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-weight:600;">✏️ Edit</button>';
+      }
+
+      if (canEdit && (st === 'Draft' || st === 'Rejected')) {
+        btns += '<button onclick="submitAttendanceDirect(\'' + g.id + '\')" ' +
+          'style="padding:5px 12px;background:#34a853;color:white;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-weight:600;">▶ Send for Approval</button>';
+      }
+
+      if (canApprove && (st === 'Pending' || st === 'Submitted')) {
+        btns += '<button onclick="approveAtt(\'' + g.id + '\')" ' +
+          'style="padding:5px 12px;background:#34a853;color:white;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-weight:600;">✅ Approve</button>';
+        btns += '<button onclick="rejectAtt(\'' + g.id + '\')" ' +
+          'style="padding:5px 12px;background:#ea4335;color:white;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-weight:600;">❌ Reject</button>';
+      }
+
+      return '<div style="background:white;border:1px solid ' + (SBD[st]||'#ddd') + ';border-left:4px solid ' + (SC[st]||'#ccc') + ';' +
+        'border-radius:8px;padding:10px 14px;display:flex;flex-direction:column;gap:6px;min-width:220px;max-width:280px;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+          '<span style="font-size:12px;font-weight:700;color:#333;">' + g.groupName + '</span>' +
+          '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:' + (SBG[st]||'#f5f5f5') + ';color:' + (SC[st]||'#666') + ';">' + st + '</span>' +
+        '</div>' +
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;">' + btns + '</div>' +
+        '</div>';
+    }).join('');
     bar.style.display = 'flex';
+  }
+
+  async function submitAttendanceDirect(id) {
+    if (!confirm('Send this attendance for approval?')) return;
+    try {
+      const res = await fetch('/api/attendance/' + id + '/submit', { method: 'PATCH', credentials: 'include' });
+      const data = await res.json();
+      if (data.success) {
+        showAlert('listAlertSuccess', '✅ Sent for approval');
+        const g = viewGroupMeta.find(x => x.id === id);
+        if (g) g.status = 'Submitted';
+        renderGroupStatusBar();
+      } else {
+        showAlert('listAlertError', data.message || 'Error submitting');
+      }
+    } catch(e) { showAlert('listAlertError', 'Network error'); }
   }
 
   function filterViewGrid() {
