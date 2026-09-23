@@ -176,36 +176,33 @@
             <select id="filterLocation" onchange="loadAttendanceList()"><option value="">All Locations</option></select>
           </div>
           <div class="form-group">
-            <label>Status</label>
-            <select id="filterStatus" onchange="renderGroupTable()" style="padding:9px 11px;border:1px solid #ddd;border-radius:6px;font-size:13px;outline:none;">
-              <option value="">All</option>
-              <option value="open">Open</option>
-              <option value="Submitted">Submitted</option>
-              <option value="Approved">Approved</option>
-              <option value="Locked">Locked</option>
+            <label>Group</label>
+            <select id="filterGroup" onchange="applyGroupFilter()" style="padding:9px 11px;border:1px solid #ddd;border-radius:6px;font-size:13px;outline:none;min-width:170px;">
+              <option value="">All Groups</option>
             </select>
           </div>
           <div class="form-group">
             <label>Search EIN / Name</label>
             <input type="text" id="viewSearch" placeholder="Type to filter..." oninput="filterViewGrid()" style="padding:9px 11px;border:1px solid #ddd;border-radius:6px;font-size:13px;outline:none;">
           </div>
-          <div style="margin-left:auto;align-self:flex-end;">
+          <div style="margin-left:auto;align-self:flex-end;display:flex;gap:8px;">
+            <button id="listExcelBtn" onclick="downloadAttendanceExcel()" style="display:none;padding:9px 14px;border:1px solid #34a853;background:#fff;color:#34a853;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;">⬇ Excel</button>
             <button class="btn-primary" onclick="showNewView()">+ New Attendance</button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Group compact table -->
-    <div id="groupTableCard" class="card" style="display:none;overflow:visible;">
-      <table class="group-table" style="width:100%;">
-        <thead><tr><th>Group</th><th>Status</th><th>Actions</th></tr></thead>
-        <tbody id="groupTableBody"></tbody>
-      </table>
-    </div>
-
     <!-- Combined attendance grid -->
     <div id="viewGridCard" class="card" style="display:none;overflow:visible;">
+      <!-- Action bar: shown when a group is selected -->
+      <div id="gridActionBar" style="display:none;padding:10px 16px;border-bottom:1px solid #eee;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span id="gridGroupLabel" style="font-weight:600;font-size:13px;flex:1;"></span>
+        <span id="gridStatusBadge"></span>
+        <button id="listSubmitBtn"   onclick="listSubmit()"   style="display:none;padding:7px 14px;border:none;border-radius:6px;background:#1a73e8;color:white;font-size:12px;font-weight:600;cursor:pointer;">▶ Submit</button>
+        <button id="listApproveBtn"  onclick="listApprove()"  style="display:none;padding:7px 14px;border:none;border-radius:6px;background:#34a853;color:white;font-size:12px;font-weight:600;cursor:pointer;">✅ Approve</button>
+        <button id="listSendBackBtn" onclick="listSendBack()" style="display:none;padding:7px 14px;border:none;border-radius:6px;background:#ea4335;color:white;font-size:12px;font-weight:600;cursor:pointer;">↩️ Send Back</button>
+      </div>
       <div class="summary-bar">
         <div class="summary-item"><label>Employees</label><span id="vSumTotal">0</span></div>
         <div class="summary-item"><label>Avg Present</label><span id="vSumPresent">0</span></div>
@@ -436,6 +433,7 @@
   let viewAttendanceRecords = [];
   let viewDisplayRecords = [];
   let viewGroupMeta = [];
+  let employeeGroupMap = {}; // ein -> { id, status, groupName }
 
   const MONTHS = ['January','February','March','April','May','June',
     'July','August','September','October','November','December'];
@@ -741,17 +739,15 @@
   }
 
   async function loadAttendanceList() {
-    const month = document.getElementById('filterMonth').value;
-    const year = document.getElementById('filterYear').value;
+    const month    = document.getElementById('filterMonth').value;
+    const year     = document.getElementById('filterYear').value;
     const location = document.getElementById('filterLocation').value;
 
-    const groupCard = document.getElementById('groupTableCard');
-    const gridCard  = document.getElementById('viewGridCard');
-    const emptyDiv  = document.getElementById('viewEmpty');
-    const emptyMsg  = document.getElementById('viewEmptyMsg');
+    const gridCard = document.getElementById('viewGridCard');
+    const emptyDiv = document.getElementById('viewEmpty');
+    const emptyMsg = document.getElementById('viewEmptyMsg');
 
-    groupCard.style.display = 'none';
-    gridCard.style.display  = 'none';
+    gridCard.style.display = 'none';
     emptyDiv.style.display = 'block';
 
     if (!month || !year) {
@@ -764,7 +760,7 @@
     try {
       let url = '/api/attendance?month=' + encodeURIComponent(month) + '&year=' + year;
       if (location) url += '&location=' + encodeURIComponent(location);
-      const res = await fetch(url);
+      const res  = await fetch(url);
       const data = await res.json();
       if (!data.success) { emptyMsg.textContent = 'Error loading attendance'; return; }
 
@@ -781,38 +777,46 @@
       }
 
       currentMonth = month;
-      currentYear = year;
+      currentYear  = year;
       currentDaysInMonth = 30;
-      viewGroupMeta = [];
+      viewGroupMeta         = [];
       viewAttendanceRecords = [];
+      employeeGroupMap      = {};
 
       for (const rec of records) {
-        const fullRes = await fetch('/api/attendance/' + rec._id);
+        const fullRes  = await fetch('/api/attendance/' + rec._id);
         const fullData = await fullRes.json();
         if (!fullData.success) continue;
         const fr = fullData.record;
-        viewGroupMeta.push({
-          id: rec._id,
-          groupName: rec.groupName || (rec.section + ' ' + rec.location + ' ' + rec.profile),
-          status: rec.status,
-          location: rec.location
-        });
+        const gName = rec.groupName || (rec.section + ' ' + rec.location + ' ' + rec.profile);
+        viewGroupMeta.push({ id: rec._id, groupName: gName, status: rec.status, location: rec.location });
         if (fr.records && fr.records.length) {
-          const days = fr.records[0].daysInMonth || fr.daysInMonth || 30;
+          const days = fr.records[0].daysInMonth || 30;
           if (days > currentDaysInMonth) currentDaysInMonth = days;
-          fr.records.forEach(r => viewAttendanceRecords.push(Object.assign({}, r, { daysInMonth: days })));
+          fr.records.forEach(r => {
+            viewAttendanceRecords.push(Object.assign({}, r, { daysInMonth: days, _groupId: rec._id }));
+            employeeGroupMap[r.ein] = { id: rec._id, status: rec.status, groupName: gName };
+          });
         }
       }
 
       viewAttendanceRecords.sort((a, b) => (a.ein || '').localeCompare(b.ein || ''));
       viewDisplayRecords = viewAttendanceRecords;
+
+      // Populate group dropdown
+      const fg = document.getElementById('filterGroup');
+      const prevGroup = fg.value;
+      fg.innerHTML = '<option value="">All Groups</option>' +
+        viewGroupMeta.map(g => '<option value="' + g.id + '">' + g.groupName + ' (' + (g.status || 'Open') + ')</option>').join('');
+      if (prevGroup && viewGroupMeta.find(g => g.id === prevGroup)) fg.value = prevGroup;
+
       const srch = document.getElementById('viewSearch');
       if (srch) srch.value = '';
+      document.getElementById('listExcelBtn').style.display = 'inline-block';
 
-      emptyDiv.style.display  = 'none';
-      groupCard.style.display = 'block';
-      gridCard.style.display  = 'none';
-      renderGroupTable();
+      emptyDiv.style.display = 'none';
+      gridCard.style.display = 'block';
+      applyGroupFilter();
     } catch(e) {
       emptyMsg.textContent = 'Error: ' + e.message;
     }
@@ -824,87 +828,6 @@
     if (st === 'Approved')                          return '<span class="badge-approved">Approved</span>';
     if (st === 'Locked')                            return '<span class="badge-locked">Locked</span>';
     return '<span class="badge-open">' + st + '</span>';
-  }
-
-  function renderGroupTable() {
-    const tbody = document.getElementById('groupTableBody');
-    if (!viewGroupMeta.length) { tbody.innerHTML = ''; return; }
-
-    const role       = currentUser.role;
-    const isMgmt     = role === 'admin' || role === 'management';
-    const isAcct     = role === 'accountant';
-    const isSup      = role === 'supervisor';
-    const statusFilter = (document.getElementById('filterStatus').value || '').toLowerCase();
-
-    const rows = viewGroupMeta.filter(function(g) {
-      const st = g.status || '';
-      const norm = (!st || st === 'Draft' || st === 'Rejected') ? 'open' : st.toLowerCase();
-      return !statusFilter || norm === statusFilter;
-    });
-
-    tbody.innerHTML = rows.map(function(g) {
-      const st = g.status || '';
-      let btns = '';
-
-      // Edit / View button
-      if (!isSup) {
-        const isLocked = st === 'Locked';
-        const isApproved = st === 'Approved';
-        const label  = isLocked ? '🔒 Locked' : (isApproved && !isMgmt) ? '👁 View' : '✏️ Edit';
-        const bg     = isLocked ? '#9e9e9e' : (isApproved && !isMgmt) ? '#757575' : '#1a73e8';
-        btns += '<button class="act-btn" style="background:' + bg + ';color:white;" onclick="editAttendance(\'' + g.id + '\')">' + label + '</button>';
-      }
-      if (isSup && (st === '' || st === 'Draft' || st === 'Rejected')) {
-        btns += '<button class="act-btn" style="background:#1a73e8;color:white;" onclick="editAttendance(\'' + g.id + '\')">✏️ Edit</button>';
-      }
-
-      // Submit (Open → Submitted): supervisor, accountant, mgmt all can
-      const isOpen = (st === '' || st === 'Draft' || st === 'Rejected');
-      if (isOpen && (isSup || isAcct || isMgmt)) {
-        btns += '<button class="act-btn" style="background:#34a853;color:white;" onclick="submitAttendanceDirect(\'' + g.id + '\')">▶ Submit</button>';
-      }
-
-      // Management/Admin approve & send back
-      if (isMgmt && (st === 'Submitted' || st === 'Pending')) {
-        btns += '<button class="act-btn" style="background:#34a853;color:white;" onclick="approveAtt(\'' + g.id + '\')">✅ Approve</button>';
-        btns += '<button class="act-btn" style="background:#ea4335;color:white;" onclick="openSendBack(\'' + g.id + '\')">↩️ Send Back</button>';
-      }
-      // Mgmt can also approve Approved (re-confirm) — not needed; edit is enough
-
-      return '<tr><td style="font-weight:600;font-size:13px;">' + g.groupName + '</td>' +
-             '<td>' + statusBadge(st) + '</td>' +
-             '<td>' + (btns || '<span style="color:#999;font-size:12px;">—</span>') + '</td></tr>';
-    }).join('') || '<tr><td colspan="3" class="empty-state">No groups match the selected status</td></tr>';
-  }
-
-  async function submitAttendanceDirect(id) {
-    try {
-      const res = await fetch('/api/attendance/' + id + '/submit', { method: 'PATCH', credentials: 'include' });
-      const data = await res.json();
-      if (data.success) {
-        showAlert('listAlertSuccess', '✅ Submitted for approval');
-        const g = viewGroupMeta.find(x => x.id === id);
-        if (g) g.status = 'Submitted';
-        renderGroupTable();
-      } else {
-        showAlert('listAlertError', data.message || 'Error submitting');
-      }
-    } catch(e) { showAlert('listAlertError', 'Network error'); }
-  }
-
-  async function approveAtt(id) {
-    try {
-      const res = await fetch('/api/attendance/' + id + '/approve', { method: 'PATCH', credentials: 'include' });
-      const data = await res.json();
-      if (data.success) {
-        showAlert('listAlertSuccess', '✅ Approved');
-        const g = viewGroupMeta.find(x => x.id === id);
-        if (g) g.status = 'Approved';
-        renderGroupTable();
-      } else {
-        showAlert('listAlertError', data.message || 'Error');
-      }
-    } catch(e) { showAlert('listAlertError', 'Network error'); }
   }
 
   function openSendBack(id) {
@@ -929,26 +852,127 @@
       closeSendBackModal();
       if (data.success) {
         showAlert('listAlertSuccess', '↩️ Sent back to accountant');
-        const g = viewGroupMeta.find(x => x.id === sendBackTargetId);
-        if (g) g.status = '';
-        renderGroupTable();
+        await loadAttendanceList();
+        const fg = document.getElementById('filterGroup');
+        if (fg && sendBackTargetId) { /* id cleared by closeSendBackModal */ }
       } else {
         showAlert('listAlertError', data.message || 'Error');
       }
     } catch(e) { closeSendBackModal(); showAlert('listAlertError', 'Network error'); }
   }
 
-  function filterViewGrid() {
+  function isViewEmpLocked(ein) {
+    const role = currentUser.role;
+    const isMgmt = role === 'admin' || role === 'management';
+    const info = employeeGroupMap[ein];
+    if (!info) return true;
+    const st = info.status || '';
+    if (st === 'Locked') return true;
+    if (isMgmt)  return false;
+    if (role === 'accountant') return st === 'Approved';
+    // supervisor: can only edit open records they own — in list view read-only for simplicity
+    return true;
+  }
+
+  function applyGroupFilter() {
+    const groupId = document.getElementById('filterGroup').value;
     const q = (document.getElementById('viewSearch').value || '').trim().toLowerCase();
-    viewDisplayRecords = q ? viewAttendanceRecords.filter(function(r) {
-      return (r.ein && r.ein.toLowerCase().indexOf(q) >= 0) ||
-             (r.employeeName && r.employeeName.toLowerCase().indexOf(q) >= 0);
-    }) : viewAttendanceRecords;
+    let base = groupId
+      ? viewAttendanceRecords.filter(r => r._groupId === groupId)
+      : viewAttendanceRecords;
+    viewDisplayRecords = q ? base.filter(r =>
+      (r.ein && r.ein.toLowerCase().includes(q)) ||
+      (r.employeeName && r.employeeName.toLowerCase().includes(q))
+    ) : base;
     renderViewGrid();
+    updateListActionBar(groupId);
+  }
+
+  function updateListActionBar(groupId) {
+    const bar = document.getElementById('gridActionBar');
+    if (!groupId) { bar.style.display = 'none'; return; }
+    const g = viewGroupMeta.find(x => x.id === groupId);
+    if (!g) { bar.style.display = 'none'; return; }
+    const role   = currentUser.role;
+    const isMgmt = role === 'admin' || role === 'management';
+    const isAcct = role === 'accountant';
+    const st     = g.status || '';
+    const isOpen = !st || st === '';
+    document.getElementById('gridGroupLabel').textContent = g.groupName;
+    document.getElementById('gridStatusBadge').innerHTML = statusBadge(st);
+    const show = (id, v) => { const el = document.getElementById(id); if (el) el.style.display = v ? 'inline-block' : 'none'; };
+    const canSubmit = st !== 'Locked' && st !== 'Approved' && st !== 'Submitted' && (isAcct || isMgmt);
+    show('listSubmitBtn',   canSubmit);
+    show('listApproveBtn',  isMgmt && st === 'Submitted');
+    show('listSendBackBtn', isMgmt && st === 'Submitted');
+    bar.style.display = 'flex';
+  }
+
+  function filterViewGrid() {
+    applyGroupFilter();
   }
 
   function renderViewGrid() {
-    renderGrid('viewGridHead','viewGridBody','vSumTotal','vSumPresent','vSumCL','vSumSL','vSumAbsent','vSumOT','vSumDays', viewDisplayRecords, true);
+    renderGrid('viewGridHead','viewGridBody','vSumTotal','vSumPresent','vSumCL','vSumSL','vSumAbsent','vSumOT','vSumDays', viewDisplayRecords, isViewEmpLocked);
+  }
+
+  async function listSubmit() {
+    const groupId = document.getElementById('filterGroup').value;
+    if (!groupId) return;
+    try {
+      const res = await fetch('/api/attendance/' + groupId + '/submit', { method: 'PATCH', credentials: 'include' });
+      const d = await res.json();
+      if (d.success) {
+        showAlert('listAlertSuccess', '✅ Submitted for approval');
+        await loadAttendanceList();
+        document.getElementById('filterGroup').value = groupId;
+        applyGroupFilter();
+      } else { showAlert('listAlertError', d.message); }
+    } catch(e) { showAlert('listAlertError', 'Error: ' + e.message); }
+  }
+
+  async function listApprove() {
+    const groupId = document.getElementById('filterGroup').value;
+    if (!groupId) return;
+    try {
+      const res = await fetch('/api/attendance/' + groupId + '/approve', { method: 'PATCH', credentials: 'include' });
+      const d = await res.json();
+      if (d.success) {
+        showAlert('listAlertSuccess', '✅ Approved');
+        await loadAttendanceList();
+        document.getElementById('filterGroup').value = groupId;
+        applyGroupFilter();
+      } else { showAlert('listAlertError', d.message); }
+    } catch(e) { showAlert('listAlertError', 'Error: ' + e.message); }
+  }
+
+  function listSendBack() {
+    const groupId = document.getElementById('filterGroup').value;
+    if (!groupId) return;
+    sendBackTargetId = groupId;
+    document.getElementById('sendBackNote').value = '';
+    document.getElementById('sendBackModal').classList.add('open');
+  }
+
+  function downloadAttendanceExcel() {
+    if (!viewDisplayRecords.length) return;
+    const days = viewDisplayRecords[0].daysInMonth || currentDaysInMonth;
+    let hdr = 'EIN,Name,Designation';
+    for (let d = 1; d <= days; d++) hdr += ',' + d;
+    hdr += ',Present,Absent,CL,SL,PL,SpL,WO,H,HD,OT,LOP,Payable\n';
+    const rows = viewDisplayRecords.map(emp => {
+      let row = '"' + (emp.ein||'') + '","' + (emp.employeeName||'') + '","' + (emp.designation||'') + '"';
+      for (let d = 1; d <= days; d++) {
+        const dd = emp.days ? emp.days.find(x => x.day === d) : null;
+        row += ',' + (dd ? (dd.status || '') : '');
+      }
+      row += ',' + [(emp.presentDays||0),(emp.absent||0),(emp.cl||0),(emp.sl||0),(emp.pl||0),(emp.spL||0),(emp.weekOff||0),(emp.holidays||0),(emp.halfDays||0),(emp.otHours||0),(emp.lopDays||0),(emp.payableDays||0)].join(',');
+      return row;
+    }).join('\n');
+    const blob = new Blob([hdr + rows], { type: 'text/csv' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = 'Attendance_' + currentMonth + '_' + currentYear + '.csv';
+    a.click();
   }
 
   async function initAttendance() {
@@ -1121,6 +1145,8 @@
       return;
     }
     const days = records[0].daysInMonth || currentDaysInMonth;
+    // locked can be boolean OR function(ein) => boolean
+    const isLockFn = typeof locked === 'function';
 
     let hrow = '<tr><th class="emp-col">EIN</th><th class="name-col">Name</th><th class="desig-col">Designation</th>';
     for (let d = 1; d <= days; d++) {
@@ -1133,13 +1159,14 @@
     thead.innerHTML = hrow;
 
     tbody.innerHTML = records.map((emp, ei) => {
+      const empLocked = isLockFn ? locked(emp.ein) : !!locked;
       let row = '<tr><td class="emp-col">' + (emp.ein||'') + '</td><td class="name-col">' + emp.employeeName + '</td><td class="desig-col">' + (emp.designation||'') + '</td>';
       for (let d = 1; d <= days; d++) {
         const dd = emp.days ? emp.days.find(x => x.day === d) : null;
         const st = dd ? dd.status : '';
         const cls = st ? (STATUS_COLORS[st] || '') : '';
-        const lk = locked ? ' locked' : '';
-        const clk = locked ? '' : 'onclick="openPicker(\'' + emp.ein + '\',' + d + ',event)"';
+        const lk  = empLocked ? ' locked' : '';
+        const clk = empLocked ? '' : 'onclick="openPicker(\'' + emp.ein + '\',' + d + ',event)"';
         row += '<td class="day-cell ' + cls + lk + '" id="cell-' + emp.ein + '-' + d + '" ' + clk + '>' + (st || '·') + '</td>';
       }
       row += '<td class="total-col" id="tp-' + ei + '">' + (emp.presentDays||0) + '</td>';
@@ -1225,9 +1252,11 @@
     }
     updateSummary('sumTotal','sumPresent','sumCL','sumSL','sumAbsent','sumOT','sumDays', displayRecords);
     document.getElementById('statusPicker').style.display = 'none';
-    // Auto-save single cell when editing a saved record
-    if (activeMode === 'edit' && currentAttendanceId) {
-      fetch('/api/attendance/' + currentAttendanceId + '/day', {
+    // Auto-save single cell
+    const attId = activeMode === 'edit' ? currentAttendanceId
+                : (employeeGroupMap[pickerEin] ? employeeGroupMap[pickerEin].id : null);
+    if (attId) {
+      fetch('/api/attendance/' + attId + '/day', {
         method: 'PATCH', credentials: 'include',
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify({ ein: pickerEin, day: pickerDay, status, otHours: 0 })
