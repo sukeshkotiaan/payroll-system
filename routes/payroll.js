@@ -802,6 +802,11 @@ router.patch('/:id/lock', isLoggedIn, isAdmin, async (req, res) => {
     payroll.status = 'Locked';
     payroll.updatedAt = new Date();
     await payroll.save();
+    // Lock the corresponding attendance record so it can no longer be edited
+    await Attendance.updateOne(
+      { month: payroll.month, year: payroll.year, location: payroll.location, section: payroll.section, profile: payroll.profile },
+      { $set: { status: 'Locked' } }
+    );
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
     await logAudit(req.session.user.id, req.session.user.username, req.session.user.fullName, req.session.user.role,
       'PAYROLL_LOCKED', `Locked payroll: ${payroll.groupName} ${payroll.month} ${payroll.year}`, ip);

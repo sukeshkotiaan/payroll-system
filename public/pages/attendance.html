@@ -92,6 +92,27 @@
     td { padding: 10px 15px; border-bottom: 1px solid #f5f5f5; color: #333; }
     tr:hover { background: #f8f9ff; }
     .sup-card { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: #f8f9fa; border-radius: 8px; margin-bottom: 10px; border: 1px solid #eee; }
+    /* Status badges */
+    .badge-open     { background:#f5f5f5; color:#666; padding:3px 9px; border-radius:10px; font-size:11px; font-weight:700; }
+    .badge-submitted{ background:#fef3c7; color:#d97706; padding:3px 9px; border-radius:10px; font-size:11px; font-weight:700; }
+    .badge-approved { background:#e6f4ea; color:#34a853; padding:3px 9px; border-radius:10px; font-size:11px; font-weight:700; }
+    .badge-locked   { background:#e8eaf6; color:#3949ab; padding:3px 9px; border-radius:10px; font-size:11px; font-weight:700; }
+    /* Group table */
+    .group-table td { padding:10px 14px; border-bottom:1px solid #f0f0f0; vertical-align:middle; }
+    .group-table th { padding:10px 14px; font-size:12px; font-weight:700; color:#555; background:#f8f9fa; border-bottom:2px solid #eee; text-align:left; }
+    .group-table tr:hover td { background:#f8f9ff; }
+    .group-table .act-btn { padding:5px 11px; border:none; border-radius:5px; cursor:pointer; font-size:12px; font-weight:600; margin-right:4px; }
+    /* Rejection banner */
+    .rejection-banner { background:#fff3e0; border:1px solid #ffb74d; border-radius:8px; padding:10px 16px; margin-bottom:12px; color:#e65100; font-size:13px; }
+    /* Modal overlay */
+    .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:10000; align-items:center; justify-content:center; }
+    .modal-overlay.open { display:flex; }
+    .modal-box { background:white; border-radius:12px; padding:24px; width:420px; max-width:92vw; box-shadow:0 8px 32px rgba(0,0,0,0.2); }
+    .modal-box h3 { margin:0 0 8px; font-size:16px; color:#333; }
+    .modal-box p  { font-size:13px; color:#666; margin-bottom:12px; }
+    .modal-box textarea { width:100%; border:1px solid #ddd; border-radius:6px; padding:10px; font-size:13px; font-family:inherit; resize:vertical; outline:none; }
+    .modal-box textarea:focus { border-color:#1a73e8; }
+    .modal-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:16px; }
   </style>
 </head>
 <body>
@@ -113,6 +134,19 @@
   <div class="status-option status-CL" onclick="setStatus('CL')">CL<br><span style="font-size:9px;">Casual</span></div>
   <div class="status-option status-SL" onclick="setStatus('SL')">SL<br><span style="font-size:9px;">Sick</span></div>
   <div class="status-option status-PL" onclick="setStatus('PL')">PL<br><span style="font-size:9px;">Paid</span></div>
+</div>
+
+<!-- Send Back modal -->
+<div class="modal-overlay" id="sendBackModal">
+  <div class="modal-box">
+    <h3>↩️ Send Back to Accountant</h3>
+    <p>Describe what needs to be corrected (optional but recommended):</p>
+    <textarea id="sendBackNote" rows="4" placeholder="e.g. Employee Ramesh incorrectly marked Present on 5th–10th. New joiners missing."></textarea>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeSendBackModal()">Cancel</button>
+      <button class="btn-danger" onclick="confirmSendBack()">Send Back</button>
+    </div>
+  </div>
 </div>
 
 <!-- LIST VIEW -->
@@ -142,6 +176,16 @@
             <select id="filterLocation" onchange="loadAttendanceList()"><option value="">All Locations</option></select>
           </div>
           <div class="form-group">
+            <label>Status</label>
+            <select id="filterStatus" onchange="renderGroupTable()" style="padding:9px 11px;border:1px solid #ddd;border-radius:6px;font-size:13px;outline:none;">
+              <option value="">All</option>
+              <option value="open">Open</option>
+              <option value="Submitted">Submitted</option>
+              <option value="Approved">Approved</option>
+              <option value="Locked">Locked</option>
+            </select>
+          </div>
+          <div class="form-group">
             <label>Search EIN / Name</label>
             <input type="text" id="viewSearch" placeholder="Type to filter..." oninput="filterViewGrid()" style="padding:9px 11px;border:1px solid #ddd;border-radius:6px;font-size:13px;outline:none;">
           </div>
@@ -152,8 +196,13 @@
       </div>
     </div>
 
-    <!-- Group action cards -->
-    <div id="groupStatusBar" style="display:none;margin-bottom:12px;gap:10px;flex-wrap:wrap;align-items:stretch;"></div>
+    <!-- Group compact table -->
+    <div id="groupTableCard" class="card" style="display:none;overflow:visible;">
+      <table class="group-table" style="width:100%;">
+        <thead><tr><th>Group</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="groupTableBody"></tbody>
+      </table>
+    </div>
 
     <!-- Combined attendance grid -->
     <div id="viewGridCard" class="card" style="display:none;overflow:visible;">
@@ -324,7 +373,8 @@
     </div>
     <div class="alert alert-success" id="editAlertSuccess"></div>
     <div class="alert alert-error" id="editAlertError"></div>
-    <div id="editLockedBanner" style="display:none;background:#e6f4ea;border:1px solid #86efac;border-radius:8px;padding:10px 16px;margin-bottom:12px;color:#1a6b3a;font-size:13px;">🔒 This attendance is <strong>Approved</strong> and cannot be edited. Contact an admin to revert.</div>
+    <div id="editRejectionBanner" class="rejection-banner" style="display:none;">↩️ <strong>Sent back by <span id="editRejectedBy"></span>:</strong> <span id="editRejectionNote"></span></div>
+    <div id="editLockedBanner" style="display:none;background:#e6f4ea;border:1px solid #86efac;border-radius:8px;padding:10px 16px;margin-bottom:12px;color:#1a6b3a;font-size:13px;">🔒 This attendance is <strong>Locked</strong> — payroll has been finalized.</div>
     <div class="group-info" id="editGroupInfo"></div>
     <div class="card" style="overflow:visible;">
       <div style="padding:15px 20px;">
@@ -354,9 +404,10 @@
       </div>
       <div class="action-bar">
         <button class="btn-secondary" onclick="showListView()">Close</button>
-        <button class="btn-primary" id="editSaveBtn" onclick="saveEditGrid('Draft')">💾 Save</button>
-        <button class="btn-success" id="editSubmitBtn" onclick="saveEditGrid('Submit')">✅ Send for Approval</button>
-        
+        <button class="btn-primary" id="editSaveBtn" onclick="saveEditGrid()" style="display:none;">💾 Save</button>
+        <button class="btn-success" id="editSubmitBtn" onclick="submitEdit()" style="display:none;">▶ Submit</button>
+        <button class="btn-success" id="editApproveBtn" onclick="approveEdit()" style="display:none;">✅ Approve</button>
+        <button class="btn-danger"  id="editSendBackBtn" onclick="openSendBackFromEdit()" style="display:none;">↩️ Send Back</button>
       </div>
     </div>
   </div>
@@ -375,6 +426,7 @@
   let currentSection = '';
   let currentProfile = '';
   let isLocked = false;
+  let currentRecordStatus = '';
   let pickerEin = '';
   let pickerDay = 0;
   let activeMode = 'new';
@@ -389,6 +441,7 @@
     'July','August','September','October','November','December'];
   let STATUS_COLORS = { P:'status-P', A:'status-A', CL:'status-CL', SL:'status-SL', PL:'status-PL', SpL:'status-SpL', H:'status-H', WO:'status-WO', HD:'status-HD', OT:'status-OT' };
   let attendanceCodes = []; // loaded from API
+  let sendBackTargetId = null; // id being sent back
 
   window.onload = async () => {
     await checkAuth();
@@ -692,13 +745,13 @@
     const year = document.getElementById('filterYear').value;
     const location = document.getElementById('filterLocation').value;
 
-    const statusBar = document.getElementById('groupStatusBar');
-    const gridCard = document.getElementById('viewGridCard');
-    const emptyDiv = document.getElementById('viewEmpty');
-    const emptyMsg = document.getElementById('viewEmptyMsg');
+    const groupCard = document.getElementById('groupTableCard');
+    const gridCard  = document.getElementById('viewGridCard');
+    const emptyDiv  = document.getElementById('viewEmpty');
+    const emptyMsg  = document.getElementById('viewEmptyMsg');
 
-    statusBar.style.display = 'none';
-    gridCard.style.display = 'none';
+    groupCard.style.display = 'none';
+    gridCard.style.display  = 'none';
     emptyDiv.style.display = 'block';
 
     if (!month || !year) {
@@ -756,73 +809,134 @@
       const srch = document.getElementById('viewSearch');
       if (srch) srch.value = '';
 
-      emptyDiv.style.display = 'none';
-      gridCard.style.display = 'block';
-      renderGroupStatusBar();
+      emptyDiv.style.display  = 'none';
+      groupCard.style.display = 'block';
+      gridCard.style.display  = 'block';
+      renderGroupTable();
       renderViewGrid();
     } catch(e) {
       emptyMsg.textContent = 'Error: ' + e.message;
     }
   }
 
-  function renderGroupStatusBar() {
-    const bar = document.getElementById('groupStatusBar');
-    if (!viewGroupMeta.length) { bar.style.display = 'none'; return; }
-    const SC  = { Draft:'#555', Pending:'#d97706', Submitted:'#d97706', Approved:'#34a853', Rejected:'#ea4335' };
-    const SBG = { Draft:'#f5f5f5', Pending:'#fef3c7', Submitted:'#fef3c7', Approved:'#e6f4ea', Rejected:'#fce8e6' };
-    const SBD = { Draft:'#ddd', Pending:'#fcd34d', Submitted:'#fcd34d', Approved:'#86efac', Rejected:'#fca5a5' };
-    const canApprove = ['admin','management','accountant'].includes(currentUser.role);
-    const canEdit    = currentUser.role !== 'supervisor';
+  function statusBadge(st) {
+    if (!st || st === 'Draft' || st === 'Rejected') return '<span class="badge-open">Open</span>';
+    if (st === 'Submitted' || st === 'Pending')     return '<span class="badge-submitted">Submitted</span>';
+    if (st === 'Approved')                          return '<span class="badge-approved">Approved</span>';
+    if (st === 'Locked')                            return '<span class="badge-locked">Locked</span>';
+    return '<span class="badge-open">' + st + '</span>';
+  }
 
-    bar.innerHTML = viewGroupMeta.map(function(g) {
-      const st = g.status || 'Draft';
+  function renderGroupTable() {
+    const tbody = document.getElementById('groupTableBody');
+    if (!viewGroupMeta.length) { tbody.innerHTML = ''; return; }
+
+    const role       = currentUser.role;
+    const isMgmt     = role === 'admin' || role === 'management';
+    const isAcct     = role === 'accountant';
+    const isSup      = role === 'supervisor';
+    const statusFilter = (document.getElementById('filterStatus').value || '').toLowerCase();
+
+    const rows = viewGroupMeta.filter(function(g) {
+      const st = g.status || '';
+      const norm = (!st || st === 'Draft' || st === 'Rejected') ? 'open' : st.toLowerCase();
+      return !statusFilter || norm === statusFilter;
+    });
+
+    tbody.innerHTML = rows.map(function(g) {
+      const st = g.status || '';
       let btns = '';
 
-      if (canEdit) {
+      // Edit / View button
+      if (!isSup) {
+        const isLocked = st === 'Locked';
         const isApproved = st === 'Approved';
-        btns += '<button onclick="editAttendance(\'' + g.id + '\')" ' +
-          'style="padding:5px 12px;background:' + (isApproved ? '#757575' : '#1a73e8') + ';color:white;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-weight:600;">' +
-          (isApproved ? '👁 View' : '✏️ Edit') + '</button>';
+        const label  = isLocked ? '🔒 Locked' : (isApproved && !isMgmt) ? '👁 View' : '✏️ Edit';
+        const bg     = isLocked ? '#9e9e9e' : (isApproved && !isMgmt) ? '#757575' : '#1a73e8';
+        btns += '<button class="act-btn" style="background:' + bg + ';color:white;" onclick="editAttendance(\'' + g.id + '\')">' + label + '</button>';
+      }
+      if (isSup && (st === '' || st === 'Draft' || st === 'Rejected')) {
+        btns += '<button class="act-btn" style="background:#1a73e8;color:white;" onclick="editAttendance(\'' + g.id + '\')">✏️ Edit</button>';
       }
 
-      if (canEdit && (st === 'Draft' || st === 'Rejected')) {
-        btns += '<button onclick="submitAttendanceDirect(\'' + g.id + '\')" ' +
-          'style="padding:5px 12px;background:#34a853;color:white;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-weight:600;">▶ Send for Approval</button>';
+      // Submit (Open → Submitted): supervisor, accountant, mgmt all can
+      const isOpen = (st === '' || st === 'Draft' || st === 'Rejected');
+      if (isOpen && (isSup || isAcct || isMgmt)) {
+        btns += '<button class="act-btn" style="background:#34a853;color:white;" onclick="submitAttendanceDirect(\'' + g.id + '\')">▶ Submit</button>';
       }
 
-      if (canApprove && (st === 'Pending' || st === 'Submitted')) {
-        btns += '<button onclick="approveAtt(\'' + g.id + '\')" ' +
-          'style="padding:5px 12px;background:#34a853;color:white;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-weight:600;">✅ Approve</button>';
-        btns += '<button onclick="rejectAtt(\'' + g.id + '\')" ' +
-          'style="padding:5px 12px;background:#ea4335;color:white;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-weight:600;">❌ Reject</button>';
+      // Management/Admin approve & send back
+      if (isMgmt && (st === 'Submitted' || st === 'Pending')) {
+        btns += '<button class="act-btn" style="background:#34a853;color:white;" onclick="approveAtt(\'' + g.id + '\')">✅ Approve</button>';
+        btns += '<button class="act-btn" style="background:#ea4335;color:white;" onclick="openSendBack(\'' + g.id + '\')">↩️ Send Back</button>';
       }
+      // Mgmt can also approve Approved (re-confirm) — not needed; edit is enough
 
-      return '<div style="background:white;border:1px solid ' + (SBD[st]||'#ddd') + ';border-left:4px solid ' + (SC[st]||'#ccc') + ';' +
-        'border-radius:8px;padding:10px 14px;display:flex;flex-direction:column;gap:6px;min-width:220px;max-width:280px;">' +
-        '<div style="display:flex;justify-content:space-between;align-items:center;">' +
-          '<span style="font-size:12px;font-weight:700;color:#333;">' + g.groupName + '</span>' +
-          '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:' + (SBG[st]||'#f5f5f5') + ';color:' + (SC[st]||'#666') + ';">' + st + '</span>' +
-        '</div>' +
-        '<div style="display:flex;gap:6px;flex-wrap:wrap;">' + btns + '</div>' +
-        '</div>';
-    }).join('');
-    bar.style.display = 'flex';
+      return '<tr><td style="font-weight:600;font-size:13px;">' + g.groupName + '</td>' +
+             '<td>' + statusBadge(st) + '</td>' +
+             '<td>' + (btns || '<span style="color:#999;font-size:12px;">—</span>') + '</td></tr>';
+    }).join('') || '<tr><td colspan="3" class="empty-state">No groups match the selected status</td></tr>';
   }
 
   async function submitAttendanceDirect(id) {
-    if (!confirm('Send this attendance for approval?')) return;
     try {
       const res = await fetch('/api/attendance/' + id + '/submit', { method: 'PATCH', credentials: 'include' });
       const data = await res.json();
       if (data.success) {
-        showAlert('listAlertSuccess', '✅ Sent for approval');
+        showAlert('listAlertSuccess', '✅ Submitted for approval');
         const g = viewGroupMeta.find(x => x.id === id);
         if (g) g.status = 'Submitted';
-        renderGroupStatusBar();
+        renderGroupTable();
       } else {
         showAlert('listAlertError', data.message || 'Error submitting');
       }
     } catch(e) { showAlert('listAlertError', 'Network error'); }
+  }
+
+  async function approveAtt(id) {
+    try {
+      const res = await fetch('/api/attendance/' + id + '/approve', { method: 'PATCH', credentials: 'include' });
+      const data = await res.json();
+      if (data.success) {
+        showAlert('listAlertSuccess', '✅ Approved');
+        const g = viewGroupMeta.find(x => x.id === id);
+        if (g) g.status = 'Approved';
+        renderGroupTable();
+      } else {
+        showAlert('listAlertError', data.message || 'Error');
+      }
+    } catch(e) { showAlert('listAlertError', 'Network error'); }
+  }
+
+  function openSendBack(id) {
+    sendBackTargetId = id;
+    document.getElementById('sendBackNote').value = '';
+    document.getElementById('sendBackModal').classList.add('open');
+  }
+  function closeSendBackModal() {
+    document.getElementById('sendBackModal').classList.remove('open');
+    sendBackTargetId = null;
+  }
+  async function confirmSendBack() {
+    if (!sendBackTargetId) return;
+    const note = document.getElementById('sendBackNote').value.trim();
+    try {
+      const res = await fetch('/api/attendance/' + sendBackTargetId + '/sendback', {
+        method: 'PATCH', credentials: 'include',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ note })
+      });
+      const data = await res.json();
+      closeSendBackModal();
+      if (data.success) {
+        showAlert('listAlertSuccess', '↩️ Sent back to accountant');
+        const g = viewGroupMeta.find(x => x.id === sendBackTargetId);
+        if (g) g.status = '';
+        renderGroupTable();
+      } else {
+        showAlert('listAlertError', data.message || 'Error');
+      }
+    } catch(e) { closeSendBackModal(); showAlert('listAlertError', 'Network error'); }
   }
 
   function filterViewGrid() {
@@ -1112,6 +1226,14 @@
     }
     updateSummary('sumTotal','sumPresent','sumCL','sumSL','sumAbsent','sumOT','sumDays', displayRecords);
     document.getElementById('statusPicker').style.display = 'none';
+    // Auto-save single cell when editing a saved record
+    if (activeMode === 'edit' && currentAttendanceId) {
+      fetch('/api/attendance/' + currentAttendanceId + '/day', {
+        method: 'PATCH', credentials: 'include',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ ein: pickerEin, day: pickerDay, status, otHours: 0 })
+      }).catch(() => {});
+    }
   }
 
   function recalcEmp(idx) {
@@ -1331,6 +1453,32 @@
     showAlert('newAlertSuccess', 'Data applied. Review and submit.');
   }
 
+  function updateEditButtons(status) {
+    const role   = currentUser.role;
+    const isMgmt = role === 'admin' || role === 'management';
+    const isAcct = role === 'accountant';
+    const isSup  = role === 'supervisor';
+    const locked = status === 'Locked';
+    const isOpen = !status || status === '' || status === 'Draft' || status === 'Rejected';
+    // Role-aware edit lock
+    if (locked) { isLocked = true; }
+    else if (isMgmt) { isLocked = false; }
+    else if (isAcct) { isLocked = status === 'Approved'; }
+    else { isLocked = status === 'Submitted' || status === 'Approved'; }
+    const canEdit = !isLocked;
+    const show = (id, v) => { const el = document.getElementById(id); if (el) el.style.display = v ? 'inline-block' : 'none'; };
+    show('editSaveBtn',     canEdit);
+    show('editSubmitBtn',   canEdit && (isOpen || isAcct));
+    show('editApproveBtn',  isMgmt && status === 'Submitted');
+    show('editSendBackBtn', isMgmt && status === 'Submitted');
+    const bulkBar = document.getElementById('editBulkBar');
+    if (bulkBar) bulkBar.style.display = canEdit ? 'flex' : 'none';
+    const lb = document.getElementById('editLockedBanner');
+    if (lb) lb.style.display = locked ? 'block' : 'none';
+    const st2 = document.getElementById('sumStatus2');
+    if (st2) st2.textContent = isOpen ? 'Open' : status;
+  }
+
   async function editAttendance(id) {
     try {
       const res = await fetch('/api/attendance/' + id);
@@ -1338,112 +1486,81 @@
       if (!data.success) return;
       const rec = data.record;
       currentAttendanceId = id;
+      currentRecordStatus = rec.status || '';
       currentMonth = rec.month;
-      currentYear = String(rec.year);
+      currentYear  = String(rec.year);
       currentDaysInMonth = rec.records.length > 0 ? rec.records[0].daysInMonth : 30;
-      isLocked = rec.status === 'Approved';
-      activeMode = 'edit';
-      displayRecords = rec.records;
+      activeMode   = 'edit';
+      displayRecords    = rec.records;
       attendanceRecords = rec.records;
       const sname = rec.section === 'State' ? 'Xaviers' : 'Global';
-      document.getElementById('editViewTitle').textContent = (rec.groupName || sname+' '+rec.location+' '+rec.profile) + ' — ' + rec.month + ' ' + rec.year;
+      document.getElementById('editViewTitle').textContent =
+        (rec.groupName || sname + ' ' + rec.location + ' ' + rec.profile) + ' — ' + rec.month + ' ' + rec.year;
       document.getElementById('editGroupInfo').innerHTML =
         '<div class="group-info-item"><label>Group</label><span>' + (rec.groupName||'') + '</span></div>' +
         '<div class="group-info-item"><label>Period</label><span>' + rec.month + ' ' + rec.year + '</span></div>' +
-        '<div class="group-info-item"><label>Employees</label><span>' + rec.records.length + '</span></div>' +
-        '<div class="group-info-item"><label>Status</label><span>' + rec.status + '</span></div>';
-      document.getElementById('editSaveBtn').style.display = isLocked ? 'none' : 'inline-block';
-      document.getElementById('editSubmitBtn').style.display = isLocked ? 'none' : 'inline-block';
-      document.getElementById('editBulkBar').style.display = isLocked ? 'none' : 'flex';
-      document.getElementById('editLockedBanner').style.display = isLocked ? 'block' : 'none';
-      document.getElementById('sumStatus2').textContent = rec.status;
+        '<div class="group-info-item"><label>Employees</label><span>' + rec.records.length + '</span></div>';
+      const rb = document.getElementById('editRejectionBanner');
+      if (rb) {
+        if (rec.rejectionNote) {
+          document.getElementById('editRejectedBy').textContent   = rec.rejectedBy || 'Management';
+          document.getElementById('editRejectionNote').textContent = rec.rejectionNote;
+          rb.style.display = 'block';
+        } else { rb.style.display = 'none'; }
+      }
+      updateEditButtons(currentRecordStatus);
       renderGrid('editGridHead','editGridBody','sumTotal2','sumPresent2','sumCL2','sumSL2','sumAbsent2','sumOT2','sumDays2', rec.records, isLocked);
       switchView('editView');
     } catch(e) { console.error(e); }
   }
 
-  async function saveEditGrid(action) {
+  async function saveEditGrid() {
     try {
       const loc = attendanceRecords[0]?.location || '';
       const sec = attendanceRecords[0]?.section || '';
       const pro = attendanceRecords[0]?.profile || '';
       const res = await fetch('/api/attendance', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
+        method: 'POST', credentials: 'include',
+        headers: {'Content-Type':'application/json'},
         body: JSON.stringify({ month: currentMonth, year: parseInt(currentYear), location: loc, section: sec, profile: pro, records: attendanceRecords })
       });
       const data = await res.json();
       if (!data.success) { showAlert('editAlertError', data.message); return; }
       currentAttendanceId = data.record._id;
-      if (action === 'Submit') {
-        await fetch('/api/attendance/' + currentAttendanceId + '/submit', { method: 'PATCH', credentials: 'include' });
-        showAlert('editAlertSuccess', '✅ Submitted for payroll');
-        document.getElementById('sumStatus2').textContent = 'Submitted';
-        document.getElementById('editSubmitBtn').style.display = 'none';
-        document.getElementById('editSaveBtn').style.display = 'none';
-        document.getElementById('editApproveBtn').style.display = 'inline-block';
-        document.getElementById('editRejectBtn').style.display = 'inline-block';
-      } else {
-        showAlert('editAlertSuccess', '✅ Saved as draft');
-      }
+      showAlert('editAlertSuccess', '✅ Saved');
+    } catch(e) { showAlert('editAlertError', 'Error: ' + e.message); }
+  }
+
+  async function submitEdit() {
+    if (!currentAttendanceId) { await saveEditGrid(); }
+    if (!currentAttendanceId) return;
+    try {
+      const res = await fetch('/api/attendance/' + currentAttendanceId + '/submit', { method: 'PATCH', credentials: 'include' });
+      const data = await res.json();
+      if (data.success) {
+        currentRecordStatus = 'Submitted';
+        updateEditButtons('Submitted');
+        showAlert('editAlertSuccess', '✅ Submitted for approval');
+      } else { showAlert('editAlertError', data.message); }
     } catch(e) { showAlert('editAlertError', 'Error: ' + e.message); }
   }
 
   async function approveEdit() {
-    if (!confirm('Approve this attendance?')) return;
     try {
       const res = await fetch('/api/attendance/' + currentAttendanceId + '/approve', { method: 'PATCH', credentials: 'include' });
       const data = await res.json();
       if (data.success) {
-        isLocked = true;
-        document.getElementById('editSubmitBtn').style.display = 'none';
-        document.getElementById('editSaveBtn').style.display = 'none';
-        document.getElementById('sumStatus2').textContent = 'Approved';
-        showAlert('editAlertSuccess', data.message);
-      }
-    } catch(e) {}
+        currentRecordStatus = 'Approved';
+        updateEditButtons('Approved');
+        showAlert('editAlertSuccess', '✅ Approved');
+      } else { showAlert('editAlertError', data.message); }
+    } catch(e) { showAlert('editAlertError', 'Error: ' + e.message); }
   }
 
-  async function rejectEdit() {
-    if (!confirm('Reject attendance? It will return to Draft for editing.')) return;
-    try {
-      const res = await fetch('/api/attendance/' + currentAttendanceId + '/reject', { method: 'PATCH', credentials: 'include' });
-      const data = await res.json();
-      if (data.success) {
-        isLocked = false;
-        document.getElementById('editApproveBtn').style.display = 'none';
-        document.getElementById('editRejectBtn').style.display = 'none';
-        document.getElementById('editSubmitBtn').style.display = 'inline-block';
-        document.getElementById('editSaveBtn').style.display = 'inline-block';
-        document.getElementById('sumStatus2').textContent = 'Draft';
-        showAlert('editAlertSuccess', data.message);
-      }
-    } catch(e) {}
-  }
-
-  async function approveAtt(id) {
-    if (!confirm('Approve this attendance? It cannot be edited after approval.')) return;
-    try {
-      const res = await fetch('/api/attendance/' + id + '/approve', { method: 'PATCH', credentials: 'include' });
-      const data = await res.json();
-      if (data.success) {
-        alert('✅ Attendance approved successfully!');
-        await loadAttendanceList();
-      } else { alert('Error: ' + data.message); }
-    } catch(e) { alert('Error: ' + e.message); }
-  }
-
-  async function rejectAtt(id) {
-    if (!confirm('Reject attendance? It will return to Draft for editing.')) return;
-    try {
-      const res = await fetch('/api/attendance/' + id + '/reject', { method: 'PATCH', credentials: 'include' });
-      const data = await res.json();
-      if (data.success) {
-        alert('❌ Attendance rejected — returned to Draft');
-        await loadAttendanceList();
-      } else { alert('Error: ' + data.message); }
-    } catch(e) { alert('Error: ' + e.message); }
+  function openSendBackFromEdit() {
+    sendBackTargetId = currentAttendanceId;
+    document.getElementById('sendBackNote').value = '';
+    document.getElementById('sendBackModal').classList.add('open');
   }
 
   async function deleteAtt(id) {

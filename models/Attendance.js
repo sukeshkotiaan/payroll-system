@@ -42,9 +42,12 @@ const attendanceSchema = new mongoose.Schema({
   supervisorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   status: {
     type: String,
-    enum: ['Draft', 'Pending', 'Approved', 'Rejected'],
-    default: 'Draft'
+    enum: ['', 'Submitted', 'Approved', 'Locked'],
+    default: ''
   },
+  rejectionNote: { type: String, default: '' },
+  rejectedBy:   { type: String, default: '' },
+  rejectedAt:   { type: Date, default: null },
   records: { type: [attendanceRecordSchema], default: [] },
   uploadedBy: { type: String, default: '' },
   uploadedAt: { type: Date, default: Date.now },
