@@ -324,6 +324,7 @@
     </div>
     <div class="alert alert-success" id="editAlertSuccess"></div>
     <div class="alert alert-error" id="editAlertError"></div>
+    <div id="editLockedBanner" style="display:none;background:#e6f4ea;border:1px solid #86efac;border-radius:8px;padding:10px 16px;margin-bottom:12px;color:#1a6b3a;font-size:13px;">🔒 This attendance is <strong>Approved</strong> and cannot be edited. Contact an admin to revert.</div>
     <div class="group-info" id="editGroupInfo"></div>
     <div class="card" style="overflow:visible;">
       <div style="padding:15px 20px;">
@@ -404,9 +405,11 @@
       const data = await res.json();
       if (!data.success) return;
       attendanceCodes = data.codes;
-      // Build STATUS_COLORS from loaded codes
-      STATUS_COLORS = {};
-      attendanceCodes.forEach(c => { STATUS_COLORS[c.code] = 'status-' + c.code; });
+      // Rebuild STATUS_COLORS only if codes were returned
+      if (attendanceCodes.length > 0) {
+        STATUS_COLORS = {};
+        attendanceCodes.forEach(c => { STATUS_COLORS[c.code] = 'status-' + c.code; });
+      }
       // Inject dynamic CSS for each code
       let css = '';
       attendanceCodes.forEach(c => {
@@ -776,8 +779,10 @@
       let btns = '';
 
       if (canEdit) {
+        const isApproved = st === 'Approved';
         btns += '<button onclick="editAttendance(\'' + g.id + '\')" ' +
-          'style="padding:5px 12px;background:#1a73e8;color:white;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-weight:600;">✏️ Edit</button>';
+          'style="padding:5px 12px;background:' + (isApproved ? '#757575' : '#1a73e8') + ';color:white;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-weight:600;">' +
+          (isApproved ? '👁 View' : '✏️ Edit') + '</button>';
       }
 
       if (canEdit && (st === 'Draft' || st === 'Rejected')) {
@@ -1349,8 +1354,8 @@
         '<div class="group-info-item"><label>Status</label><span>' + rec.status + '</span></div>';
       document.getElementById('editSaveBtn').style.display = isLocked ? 'none' : 'inline-block';
       document.getElementById('editSubmitBtn').style.display = isLocked ? 'none' : 'inline-block';
-      // approve/reject handled from list view
       document.getElementById('editBulkBar').style.display = isLocked ? 'none' : 'flex';
+      document.getElementById('editLockedBanner').style.display = isLocked ? 'block' : 'none';
       document.getElementById('sumStatus2').textContent = rec.status;
       renderGrid('editGridHead','editGridBody','sumTotal2','sumPresent2','sumCL2','sumSL2','sumAbsent2','sumOT2','sumDays2', rec.records, isLocked);
       switchView('editView');
