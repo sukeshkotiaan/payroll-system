@@ -220,6 +220,7 @@
     <button class="tab" onclick="switchTab('title', this)">🪪 Titles</button>
     <button class="tab" onclick="switchTab('gender', this)">⚧ Gender</button>
     <button class="tab" onclick="switchTab('role', this)">🔐 Roles & Permissions</button>
+    <button class="tab" onclick="switchTab('attendance-codes', this)">📋 Attendance Codes</button>
   </div>
 
   <!-- NORMAL VIEW -->
@@ -246,6 +247,61 @@
         <tbody id="mastersList">
           <tr><td colspan="4"><div class="empty">Loading...</div></td></tr>
         </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ATTENDANCE CODES VIEW -->
+  <div class="roles-view" id="attCodesView">
+    <div class="card" style="margin-bottom:20px;">
+      <div class="card-header"><h3>➕ Add Attendance Code</h3></div>
+      <div style="padding:20px;display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-size:12px;font-weight:600;color:#555;">Code * (max 5 chars)</label>
+          <input type="text" id="ac-code" maxlength="5" placeholder="e.g. ML" style="padding:8px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;width:100px;outline:none;text-transform:uppercase;">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-size:12px;font-weight:600;color:#555;">Name *</label>
+          <input type="text" id="ac-name" placeholder="e.g. Maternity Leave" style="padding:8px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;width:180px;outline:none;">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-size:12px;font-weight:600;color:#555;">Logic *</label>
+          <select id="ac-logic" style="padding:8px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;outline:none;">
+            <option value="present">Present (counts as paid)</option>
+            <option value="absent">Absent (LOP)</option>
+            <option value="half">Half Day (0.5 days)</option>
+            <option value="off">Off (no deduction, no present)</option>
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-size:12px;font-weight:600;color:#555;">Background</label>
+          <input type="color" id="ac-bg" value="#fff3e0" style="height:38px;width:50px;border:1px solid #ddd;border-radius:6px;cursor:pointer;padding:2px;">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-size:12px;font-weight:600;color:#555;">Text Color</label>
+          <input type="color" id="ac-text" value="#e65100" style="height:38px;width:50px;border:1px solid #ddd;border-radius:6px;cursor:pointer;padding:2px;">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-size:12px;font-weight:600;color:#555;">Preview</label>
+          <span id="ac-preview" style="display:inline-block;padding:5px 10px;border-radius:5px;font-size:12px;font-weight:700;background:#fff3e0;color:#e65100;">CODE</span>
+        </div>
+        <button class="btn-primary" onclick="addAttCode()">+ Add Code</button>
+      </div>
+      <div class="alert alert-success" id="acAlertSuccess" style="margin:0 20px 10px;"></div>
+      <div class="alert alert-error" id="acAlertError" style="margin:0 20px 10px;"></div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <h3>Attendance Codes <span class="count-badge" id="acCount">0</span></h3>
+        <span style="font-size:12px;color:#666;">🔒 System codes cannot be deleted or deactivated</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Code</th><th>Name</th><th>Logic</th><th>Preview</th><th>System</th><th>Status</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="acList"></tbody>
       </table>
     </div>
   </div>
@@ -308,12 +364,21 @@
   function switchTab(type, btn) {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     btn.classList.add('active');
+    document.getElementById('normalView').classList.remove('active');
+    document.getElementById('rolesView').classList.remove('active');
+    document.getElementById('attCodesView').classList.remove('active');
     if (type === 'role') {
-      document.getElementById('normalView').classList.remove('active');
       document.getElementById('rolesView').classList.add('active');
       loadRoles();
+    } else if (type === 'attendance-codes') {
+      document.getElementById('attCodesView').classList.add('active');
+      loadAttCodes();
+      // live preview
+      ['ac-code','ac-bg','ac-text'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.oninput = updateACPreview;
+      });
     } else {
-      document.getElementById('rolesView').classList.remove('active');
       document.getElementById('normalView').classList.add('active');
       currentType = type;
       document.getElementById('cardTitle').innerHTML =
@@ -325,6 +390,122 @@
       document.getElementById('newValue').value = '';
       loadMasters(type);
     }
+  }
+
+  function updateACPreview() {
+    const code = (document.getElementById('ac-code').value || 'CODE').toUpperCase();
+    const bg = document.getElementById('ac-bg').value;
+    const tc = document.getElementById('ac-text').value;
+    const pr = document.getElementById('ac-preview');
+    pr.textContent = code;
+    pr.style.background = bg;
+    pr.style.color = tc;
+  }
+
+  async function loadAttCodes() {
+    try {
+      const res = await fetch('/api/attendance-codes?all=true');
+      const data = await res.json();
+      if (!data.success) return;
+      const codes = data.codes;
+      document.getElementById('acCount').textContent = codes.length;
+      const logicLabel = { present:'Present (paid)', absent:'Absent (LOP)', half:'Half Day', off:'Off (WO/Holiday)' };
+      document.getElementById('acList').innerHTML = codes.map(c => `
+        <tr id="acrow-${c._id}" style="${c.isActive ? '' : 'opacity:0.5;'}">
+          <td><strong>${c.code}</strong></td>
+          <td id="acname-${c._id}">${c.name}</td>
+          <td><span style="font-size:11px;background:#f0f2f5;padding:2px 6px;border-radius:4px;">${logicLabel[c.logic]||c.logic}</span></td>
+          <td><span style="display:inline-block;padding:4px 10px;border-radius:5px;font-size:12px;font-weight:700;background:${c.bgColor};color:${c.textColor};">${c.code}</span></td>
+          <td>${c.isSystem ? '<span style="font-size:11px;background:#e8f0fe;color:#1a73e8;padding:2px 8px;border-radius:10px;">System</span>' : '—'}</td>
+          <td><span class="badge ${c.isActive ? 'badge-active' : 'badge-inactive'}">${c.isActive ? 'Active' : 'Inactive'}</span></td>
+          <td style="display:flex;gap:6px;">
+            <button class="btn-edit" onclick="editAttCode('${c._id}','${c.name}','${c.bgColor}','${c.textColor}','${c.logic}')">Edit</button>
+            ${!c.isSystem ? `<button class="${c.isActive ? 'btn-deactivate' : 'btn-activate'}" onclick="toggleAttCode('${c._id}')">${c.isActive ? 'Deactivate' : 'Activate'}</button>` : ''}
+            ${!c.isSystem ? `<button class="btn-danger" style="padding:5px 10px;font-size:12px;" onclick="deleteAttCode('${c._id}','${c.code}')">Delete</button>` : ''}
+          </td>
+        </tr>
+      `).join('');
+    } catch(e) { console.error(e); }
+  }
+
+  async function addAttCode() {
+    const code  = document.getElementById('ac-code').value.trim().toUpperCase();
+    const name  = document.getElementById('ac-name').value.trim();
+    const logic = document.getElementById('ac-logic').value;
+    const bg    = document.getElementById('ac-bg').value;
+    const tc    = document.getElementById('ac-text').value;
+    if (!code || !name) { showACAlert('error','Code and name are required'); return; }
+    try {
+      const res = await fetch('/api/attendance-codes', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ code, name, logic, bgColor: bg, textColor: tc })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showACAlert('success', '✅ ' + code + ' added');
+        document.getElementById('ac-code').value = '';
+        document.getElementById('ac-name').value = '';
+        await loadAttCodes();
+      } else { showACAlert('error', data.message); }
+    } catch(e) { showACAlert('error', 'Error'); }
+  }
+
+  function editAttCode(id, name, bg, tc, logic) {
+    const logicOpts = ['present','absent','half','off'].map(v =>
+      `<option value="${v}" ${v===logic?'selected':''}>${{present:'Present',absent:'Absent (LOP)',half:'Half Day',off:'Off'}[v]}</option>`
+    ).join('');
+    document.getElementById('acname-' + id).innerHTML = `
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+        <input id="acedit-name-${id}" value="${name}" style="padding:5px 8px;border:1px solid #1a73e8;border-radius:5px;font-size:13px;width:140px;outline:none;">
+        <select id="acedit-logic-${id}" style="padding:5px;border:1px solid #ddd;border-radius:5px;font-size:12px;">${logicOpts}</select>
+        <input type="color" id="acedit-bg-${id}" value="${bg}" style="height:30px;width:40px;cursor:pointer;border:1px solid #ddd;border-radius:5px;">
+        <input type="color" id="acedit-tc-${id}" value="${tc}" style="height:30px;width:40px;cursor:pointer;border:1px solid #ddd;border-radius:5px;">
+        <button class="btn-save" onclick="saveAttCode('${id}')">✅ Save</button>
+        <button class="btn-cancel" onclick="loadAttCodes()">Cancel</button>
+      </div>`;
+  }
+
+  async function saveAttCode(id) {
+    const name  = document.getElementById('acedit-name-' + id).value.trim();
+    const logic = document.getElementById('acedit-logic-' + id).value;
+    const bg    = document.getElementById('acedit-bg-' + id).value;
+    const tc    = document.getElementById('acedit-tc-' + id).value;
+    try {
+      const res = await fetch('/api/attendance-codes/' + id, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ name, logic, bgColor: bg, textColor: tc })
+      });
+      const data = await res.json();
+      if (data.success) { showACAlert('success','✅ Updated'); await loadAttCodes(); }
+      else { showACAlert('error', data.message); }
+    } catch(e) { showACAlert('error','Error'); }
+  }
+
+  async function toggleAttCode(id) {
+    try {
+      const res = await fetch('/api/attendance-codes/' + id + '/toggle', { method: 'PATCH', credentials: 'include' });
+      const data = await res.json();
+      if (data.success) { showACAlert('success','✅ ' + data.message); await loadAttCodes(); }
+      else { showACAlert('error', data.message); }
+    } catch(e) {}
+  }
+
+  async function deleteAttCode(id, code) {
+    if (!confirm('Delete attendance code "' + code + '"? This cannot be undone.')) return;
+    try {
+      const res = await fetch('/api/attendance-codes/' + id, { method: 'DELETE', credentials: 'include' });
+      const data = await res.json();
+      if (data.success) { showACAlert('success','✅ Deleted'); await loadAttCodes(); }
+      else { showACAlert('error', data.message); }
+    } catch(e) {}
+  }
+
+  function showACAlert(type, msg) {
+    const el = document.getElementById('acAlert' + (type === 'success' ? 'Success' : 'Error'));
+    el.textContent = msg; el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 4000);
   }
 
   async function loadMasters(type) {

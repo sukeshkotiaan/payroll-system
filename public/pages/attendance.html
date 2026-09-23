@@ -238,16 +238,7 @@
       <div class="input-section active" id="sectionGrid">
         <div class="card" style="overflow:visible;">
           <div style="padding:15px 20px;">
-            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;font-size:11px;">
-              <span style="padding:3px 8px;border-radius:4px;" class="status-P">P=Present</span>
-              <span style="padding:3px 8px;border-radius:4px;" class="status-A">A=Absent</span>
-              <span style="padding:3px 8px;border-radius:4px;" class="status-HD">HD=Half Day</span>
-              <span style="padding:3px 8px;border-radius:4px;" class="status-WO">WO=Week Off</span>
-              <span style="padding:3px 8px;border-radius:4px;" class="status-H">H=Holiday</span>
-              <span style="padding:3px 8px;border-radius:4px;" class="status-CL">CL=Casual</span>
-              <span style="padding:3px 8px;border-radius:4px;" class="status-SL">SL=Sick</span>
-              <span style="padding:3px 8px;border-radius:4px;" class="status-PL">PL=Paid</span>
-            </div>
+            <div class="att-legend" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;font-size:11px;"></div>
             <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
               <strong style="font-size:12px;color:#666;">Bulk Mark:</strong>
               <button onclick="bulkMark('P')" style="padding:5px 10px;background:#e6f4ea;color:#34a853;border:1px solid #34a853;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700;">All Present</button>
@@ -336,18 +327,7 @@
     <div class="group-info" id="editGroupInfo"></div>
     <div class="card" style="overflow:visible;">
       <div style="padding:15px 20px;">
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;font-size:11px;">
-          <span style="padding:3px 8px;border-radius:4px;" class="status-P">P=Present</span>
-          <span style="padding:3px 8px;border-radius:4px;" class="status-A">A=Absent</span>
-          <span style="padding:3px 8px;border-radius:4px;" class="status-HD">HD=Half</span>
-          <span style="padding:3px 8px;border-radius:4px;" class="status-WO">WO=Week Off</span>
-          <span style="padding:3px 8px;border-radius:4px;" class="status-H">H=Holiday</span>
-          <span style="padding:3px 8px;border-radius:4px;" class="status-CL">CL</span>
-          <span style="padding:3px 8px;border-radius:4px;" class="status-SL">SL</span>
-          <span style="padding:3px 8px;border-radius:4px;" class="status-PL">PL</span>
-          <span style="padding:3px 8px;border-radius:4px;" class="status-SpL">SpL</span>
-          <span style="padding:3px 8px;border-radius:4px;" class="status-OT">OT</span>
-        </div>
+        <div class="att-legend" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;font-size:11px;"></div>
         <div id="editBulkBar" style="display:flex;gap:10px;align-items:center;">
           <strong style="font-size:12px;color:#666;">Bulk:</strong>
           <button onclick="bulkMark('P')" style="padding:5px 10px;background:#e6f4ea;color:#34a853;border:1px solid #34a853;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700;">All P</button>
@@ -406,15 +386,56 @@
 
   const MONTHS = ['January','February','March','April','May','June',
     'July','August','September','October','November','December'];
-  const STATUS_COLORS = { P:'status-P', A:'status-A', CL:'status-CL', SL:'status-SL', PL:'status-PL', SpL:'status-SpL', H:'status-H', WO:'status-WO', HD:'status-HD', OT:'status-OT' };
+  let STATUS_COLORS = { P:'status-P', A:'status-A', CL:'status-CL', SL:'status-SL', PL:'status-PL', SpL:'status-SpL', H:'status-H', WO:'status-WO', HD:'status-HD', OT:'status-OT' };
+  let attendanceCodes = []; // loaded from API
 
   window.onload = async () => {
     await checkAuth();
+    await loadAttendanceCodes();
     await loadMasterData();
     populateYears();
     setDefaultMonthYear();
     await loadAttendanceList();
   };
+
+  async function loadAttendanceCodes() {
+    try {
+      const res = await fetch('/api/attendance-codes');
+      const data = await res.json();
+      if (!data.success) return;
+      attendanceCodes = data.codes;
+      // Build STATUS_COLORS from loaded codes
+      STATUS_COLORS = {};
+      attendanceCodes.forEach(c => { STATUS_COLORS[c.code] = 'status-' + c.code; });
+      // Inject dynamic CSS for each code
+      let css = '';
+      attendanceCodes.forEach(c => {
+        css += `.status-${c.code}{background:${c.bgColor};color:${c.textColor};}`;
+      });
+      const style = document.createElement('style');
+      style.textContent = css;
+      document.head.appendChild(style);
+      // Build picker HTML dynamically
+      buildPickerHTML();
+      // Build legend dynamically
+      buildLegend();
+    } catch(e) { console.warn('Could not load attendance codes', e); }
+  }
+
+  function buildPickerHTML() {
+    const picker = document.getElementById('statusPicker');
+    picker.innerHTML = attendanceCodes.filter(c => c.isActive).map(c =>
+      `<div class="status-option" style="background:${c.bgColor};color:${c.textColor};" onclick="setStatus('${c.code}')">${c.code}<br><span style="font-size:9px;">${c.name}</span></div>`
+    ).join('') + `<div class="status-option" style="background:#f5f5f5;color:#999;grid-column:1/-1;text-align:center;font-size:11px;" onclick="clearStatus()">✕ Clear</div>`;
+  }
+
+  function buildLegend() {
+    const legends = document.querySelectorAll('.att-legend');
+    const html = attendanceCodes.filter(c => c.isActive).map(c =>
+      `<span style="padding:3px 8px;border-radius:4px;font-size:11px;font-weight:700;background:${c.bgColor};color:${c.textColor};">${c.code}=${c.name}</span>`
+    ).join('');
+    legends.forEach(el => { el.innerHTML = html; });
+  }
 
   async function checkAuth() {
     const res = await fetch('/api/auth/me');
@@ -1090,22 +1111,30 @@
 
   function recalcEmp(idx) {
     const emp = attendanceRecords[idx];
-    let p=0, a=0, cl=0, sl=0, pl=0, spL=0, hd=0, wo=0, h=0, ot=0, otH=0;
+    let p=0, a=0, cl=0, sl=0, pl=0, spL=0, hd=0, wo=0, h=0, otH=0;
+    const codeMap = {};
+    attendanceCodes.forEach(c => { codeMap[c.code] = c; });
     (emp.days||[]).forEach(d => {
-      if (d.status==='P') p++;
-      else if (d.status==='A') a++;
-      else if (d.status==='CL') { cl++; p++; }
-      else if (d.status==='SL') { sl++; p++; }
-      else if (d.status==='PL') { pl++; p++; }
-      else if (d.status==='SpL') { spL++; p++; }
-      else if (d.status==='H') h++;
-      else if (d.status==='WO') wo++;
-      else if (d.status==='HD') { hd++; p+=0.5; }
-      else if (d.status==='OT') { ot++; p++; otH+=d.otHours||0; }
+      if (!d.status) return;
+      const ac = codeMap[d.status];
+      const logic = ac ? ac.logic : 'absent';
+      if (logic === 'present') {
+        p++;
+        if (d.status==='CL') cl++;
+        else if (d.status==='SL') sl++;
+        else if (d.status==='PL') pl++;
+        else if (d.status==='SpL') spL++;
+      } else if (logic === 'absent') { a++; }
+      else if (logic === 'half') { hd++; p+=0.5; }
+      else if (logic === 'off') { if (d.status==='WO') wo++; else h++; }
     });
     emp.presentDays=p; emp.absent=a; emp.cl=cl; emp.sl=sl; emp.pl=pl; emp.spL=spL;
     emp.halfDays=hd; emp.weekOff=wo; emp.holidays=h; emp.otHours=otH;
     emp.lopDays=a; emp.payableDays=parseFloat(p.toFixed(1));
+  }
+
+  function clearStatus() {
+    setStatus('');
   }
 
   function bulkMark(status) {

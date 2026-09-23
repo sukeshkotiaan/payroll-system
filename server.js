@@ -147,6 +147,7 @@ app.use('/api/attendance-template', require('./routes/attendance-template'));
 app.use('/api/payroll', require('./routes/payroll'));
 app.use('/api/arrears', require('./routes/arrears'));
 app.use('/api/tds', require('./routes/tds'));
+app.use('/api/attendance-codes', require('./routes/attendanceCodes'));
 app.use('/api/ot', require('./routes/ot'));
 app.use('/api/appraisals', require('./routes/appraisals'));
 app.use('/api/security', require('./routes/security').router);
