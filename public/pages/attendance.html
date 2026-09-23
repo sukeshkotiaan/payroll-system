@@ -212,7 +212,7 @@
         <div class="summary-item"><label>Total WO</label><span id="vSumWO">0</span></div>
         <div class="summary-item"><label>Total CL</label><span id="vSumCL">0</span></div>
         <div class="summary-item"><label>Total SL</label><span id="vSumSL">0</span></div>
-        <div class="summary-item"><label>Days</label><span id="vSumDays">0</span></div>
+        <div class="summary-item"><label>Pending</label><span id="vSumPending" style="color:#f59e0b;">0</span></div>
       </div>
       <div class="attendance-grid-wrapper">
         <table class="attendance-grid">
@@ -435,7 +435,8 @@
   let viewAttendanceRecords = [];
   let viewDisplayRecords = [];
   let viewGroupMeta = [];
-  let employeeGroupMap = {}; // ein -> { id, status, groupName }
+  let employeeGroupMap = {}; // ein -> { id, status, groupName, location, section, profile, groupKey }
+  let viewGroupInfoMap = {}; // groupKey -> { location, section, profile, groupName }
 
   const MONTHS = ['January','February','March','April','May','June',
     'July','August','September','October','November','December'];
@@ -523,42 +524,25 @@
     return currentUser.branches.includes(location);
   }
 
-  let supervisorViewMode = 'current'; // 'current' or 'previous'
-
   function setupSupervisorView() {
-    switchView('newView');
-
-    const backBtn = document.querySelector('.btn-back-list');
-    if (backBtn) backBtn.style.display = 'none';
-
-    const heading = document.querySelector('.form-view-header h2');
-
+    // Supervisor uses the same list view as everyone else, filtered to their team.
+    // During days 1-3 of a new month they can still edit the previous month.
     const now = new Date();
     const todayDate = now.getDate();
-    const selMonthEl = document.getElementById('selMonth');
-    const selYearEl = document.getElementById('selYear');
+    const fm = document.getElementById('filterMonth');
+    const fy = document.getElementById('filterYear');
 
-    // Days 1-3 of the month: show PREVIOUS month for final submission to accountant
-    // Otherwise: show CURRENT month for daily marking
     if (todayDate >= 1 && todayDate <= 3) {
-      supervisorViewMode = 'previous';
       let prevMonthIdx = now.getMonth() - 1;
       let prevYear = now.getFullYear();
       if (prevMonthIdx < 0) { prevMonthIdx = 11; prevYear -= 1; }
-      if (selMonthEl) selMonthEl.value = MONTHS[prevMonthIdx];
-      if (selYearEl) selYearEl.value = prevYear;
-      if (heading) heading.textContent = 'Submit Attendance - ' + MONTHS[prevMonthIdx] + ' ' + prevYear;
+      if (fm) fm.value = MONTHS[prevMonthIdx];
+      if (fy) fy.value = prevYear;
     } else {
-      supervisorViewMode = 'current';
-      if (selMonthEl) selMonthEl.value = MONTHS[now.getMonth()];
-      if (selYearEl) selYearEl.value = now.getFullYear();
-      if (heading) heading.textContent = 'Mark Attendance - ' + MONTHS[now.getMonth()] + ' ' + now.getFullYear();
+      if (fm) fm.value = MONTHS[now.getMonth()];
+      if (fy) fy.value = now.getFullYear();
     }
-
-    const periodCard = selMonthEl ? selMonthEl.closest('.card') : null;
-    if (periodCard) periodCard.style.display = 'none';
-
-    setTimeout(function() { initSupervisorAttendance(); }, 300);
+    // loadAttendanceList() is already called from window.onload after this
   }
 
   async function initSupervisorAttendance() {
@@ -760,140 +744,202 @@
       return;
     }
 
-    emptyMsg.textContent = 'Loading...';
+    emptyMsg.textContent = 'Loading…';
+    activeMode = 'view';
+
+    viewGroupMeta         = [];
+    viewAttendanceRecords = [];
+    viewDisplayRecords    = [];
+    employeeGroupMap      = {};
+    viewGroupInfoMap      = {};
+    currentDaysInMonth    = 30;
 
     try {
-      let url = '/api/attendance?month=' + encodeURIComponent(month) + '&year=' + year;
-      if (location) url += '&location=' + encodeURIComponent(location);
-      const res  = await fetch(url);
-      const data = await res.json();
-      if (!data.success) { emptyMsg.textContent = 'Error loading attendance'; return; }
+      // -- Fetch ALL existing attendance records for this month in one shot --
+      let attUrl = '/api/attendance?month=' + encodeURIComponent(month) + '&year=' + year;
+      if (location) attUrl += '&location=' + encodeURIComponent(location);
+      const attRes = await fetch(attUrl).then(r => r.json());
+      const existingList = attRes.success ? attRes.records : [];
 
-      let records = data.records;
-      const isFullAccess = currentUser.role === 'admin' ||
-        (currentUser.role === 'management' && currentUser.managementLevel === 1);
-      if (!isFullAccess && (currentUser.role === 'accountant' || currentUser.role === 'management')) {
-        records = records.filter(r => hasAccessToLocation(r.location));
-      }
+      // Build lookup: gkey -> { id, status }
+      const existingByKey = {};
+      const existingByEinMap = {}; // id -> { ein: record }
 
-      if (!records.length) {
-        const role = currentUser.role;
-        const canInit = role === 'admin' || role === 'accountant' ||
-          (role === 'management' && currentUser.managementLevel === 1);
-        if (canInit) {
-          emptyMsg.innerHTML = 'No attendance for <strong>' + month + ' ' + year + '</strong>.<br>' +
-            '<button class="btn-primary" onclick="createAttendanceForMonth()" style="margin-top:12px;padding:9px 20px;">📋 Initialize Attendance</button>';
-        } else {
-          emptyMsg.textContent = 'No attendance records found for this period';
-        }
-        return;
-      }
-
-      currentMonth = month;
-      currentYear  = year;
-      currentDaysInMonth = 30;
-      viewGroupMeta         = [];
-      viewAttendanceRecords = [];
-      employeeGroupMap      = {};
-
-      for (const rec of records) {
-        const fullRes  = await fetch('/api/attendance/' + rec._id);
-        const fullData = await fullRes.json();
-        if (!fullData.success) continue;
-        const fr = fullData.record;
-        const gName = rec.groupName || (rec.section + ' ' + rec.location + ' ' + rec.profile);
-        viewGroupMeta.push({ id: rec._id, groupName: gName, status: rec.status, location: rec.location });
-        if (fr.records && fr.records.length) {
-          const days = fr.records[0].daysInMonth || 30;
-          if (days > currentDaysInMonth) currentDaysInMonth = days;
-          fr.records.forEach(r => {
-            viewAttendanceRecords.push(Object.assign({}, r, { daysInMonth: days, _groupId: rec._id }));
-            employeeGroupMap[r.ein] = { id: rec._id, status: rec.status, groupName: gName };
-          });
-        }
-      }
-
-      viewAttendanceRecords.sort((a, b) => (a.ein || '').localeCompare(b.ein || ''));
-      viewDisplayRecords = viewAttendanceRecords;
-
-      // Populate group dropdown
-      const fg = document.getElementById('filterGroup');
-      const prevGroup = fg.value;
-      fg.innerHTML = '<option value="">All Groups</option>' +
-        viewGroupMeta.map(g => '<option value="' + g.id + '">' + g.groupName + ' (' + (g.status || 'Open') + ')</option>').join('');
-      if (prevGroup && viewGroupMeta.find(g => g.id === prevGroup)) fg.value = prevGroup;
-
-      const srch = document.getElementById('viewSearch');
-      if (srch) srch.value = '';
-      document.getElementById('listExcelBtn').style.display = 'inline-block';
-
-      emptyDiv.style.display = 'none';
-      gridCard.style.display = 'block';
-      applyGroupFilter();
-    } catch(e) {
-      emptyMsg.textContent = 'Error: ' + e.message;
-    }
-  }
-
-  async function createAttendanceForMonth() {
-    const month = document.getElementById('filterMonth').value;
-    const year  = document.getElementById('filterYear').value;
-    if (!month || !year) return;
-
-    const emptyMsg = document.getElementById('viewEmptyMsg');
-    emptyMsg.innerHTML = 'Initializing attendance for <strong>' + month + ' ' + year + '</strong>…';
-
-    try {
-      const [locData, secData, proData] = await Promise.all([
-        fetch('/api/masters/location').then(r => r.json()),
-        fetch('/api/masters/section').then(r => r.json()),
-        fetch('/api/masters/profile').then(r => r.json())
-      ]);
-      const locs = locData.success ? locData.masters.map(m => m.value) : [];
-      const secs = secData.success ? secData.masters.map(m => m.value) : [];
-      const pros = proData.success ? proData.masters.map(m => m.value) : [];
-
-      let created = 0;
-      for (const loc of locs) {
-        for (const sec of secs) {
-          for (const pro of pros) {
-            try {
-              const empData = await fetch('/api/attendance/template/employees?location=' +
-                encodeURIComponent(loc) + '&section=' + encodeURIComponent(sec) +
-                '&profile=' + encodeURIComponent(pro) + '&month=' + encodeURIComponent(month) +
-                '&year=' + year).then(r => r.json());
-              if (!empData.success || !empData.employees || !empData.employees.length) continue;
-              const days = empData.daysInMonth;
-              const cleanRecs = empData.employees.map(emp => ({
-                ein: emp.ein, employeeId: emp._id, employeeName: emp.employeeName,
-                designation: emp.designation || '', daysInMonth: days,
-                days: Array.from({ length: days }, (_, i) => ({ day: i + 1, status: '', otHours: 0 })),
-                presentDays: 0, cl: 0, sl: 0, pl: 0, spL: 0,
-                absent: 0, halfDays: 0, weekOff: 0, holidays: 0, otHours: 0, lopDays: 0, payableDays: 0
-              }));
-              const res = await fetch('/api/attendance', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ month, year: parseInt(year), location: loc, section: sec, profile: pro, records: cleanRecs })
-              });
-              const data = await res.json();
-              if (data.success) created++;
-            } catch(ex) {}
+      // Fetch full employee data for existing records in parallel
+      await Promise.all(existingList.map(async rec => {
+        const gkey = rec.location + '|' + rec.section + '|' + rec.profile;
+        existingByKey[gkey] = { id: rec._id, status: rec.status || '' };
+        try {
+          const full = await fetch('/api/attendance/' + rec._id).then(r => r.json());
+          if (full.success) {
+            const byEin = {};
+            (full.record.records || []).forEach(r => { byEin[r.ein] = r; });
+            existingByEinMap[rec._id] = byEin;
+            const days = full.record.records[0] ? full.record.records[0].daysInMonth || 30 : 30;
+            if (days > currentDaysInMonth) currentDaysInMonth = days;
           }
+        } catch(ex) {}
+      }));
+
+      // -- Load all active employees by role --
+      if (currentUser.role === 'supervisor') {
+        const empData = await fetch('/api/attendance/template/employees?month=' +
+          encodeURIComponent(month) + '&year=' + year).then(r => r.json());
+        if (!empData.success || !empData.employees.length) {
+          emptyMsg.textContent = 'No employees mapped to you';
+          return;
         }
+        const days = empData.daysInMonth;
+        if (days > currentDaysInMonth) currentDaysInMonth = days;
+
+        empData.employees.forEach(emp => {
+          const sname = emp.section === 'State' ? 'Xaviers' : 'Global';
+          const gname = sname + ' ' + emp.location + ' ' + emp.profile;
+          const gkey  = emp.location + '|' + emp.section + '|' + emp.profile;
+          if (!viewGroupInfoMap[gkey]) viewGroupInfoMap[gkey] = { location: emp.location, section: emp.section, profile: emp.profile, groupName: gname };
+          const existing = existingByKey[gkey];
+          const byEin    = existing ? (existingByEinMap[existing.id] || {}) : {};
+          const empRec   = byEin[emp.ein];
+          viewAttendanceRecords.push(empRec
+            ? Object.assign({}, empRec, { _groupId: existing.id, _groupKey: gkey, daysInMonth: empRec.daysInMonth || days })
+            : { ein: emp.ein, employeeId: emp._id, employeeName: emp.employeeName, designation: emp.designation || '',
+                location: emp.location, section: emp.section, profile: emp.profile, groupName: gname, daysInMonth: days,
+                _groupId: existing ? existing.id : null, _groupKey: gkey,
+                days: Array.from({ length: days }, (_, i) => ({ day: i+1, status: '', otHours: 0 })),
+                presentDays:0, cl:0, sl:0, pl:0, spL:0, absent:0, halfDays:0, weekOff:0, holidays:0, otHours:0, lopDays:0, payableDays:0 });
+          employeeGroupMap[emp.ein] = { id: existing ? existing.id : null, status: existing ? existing.status : '', groupName: gname, location: emp.location, section: emp.section, profile: emp.profile, groupKey: gkey };
+        });
+
+      } else {
+        // Admin / Accountant / Management: loop all location×section×profile combos
+        const [locData, secData, proData] = await Promise.all([
+          fetch('/api/masters/location').then(r => r.json()),
+          fetch('/api/masters/section').then(r => r.json()),
+          fetch('/api/masters/profile').then(r => r.json())
+        ]);
+        const locs = locData.success ? locData.masters.map(m => m.value) : [];
+        const secs = secData.success ? secData.masters.map(m => m.value) : [];
+        const pros = proData.success ? proData.masters.map(m => m.value) : [];
+        const filteredLocs = (location ? [location] : locs).filter(l => hasAccessToLocation(l));
+
+        await Promise.all(filteredLocs.flatMap(loc => secs.flatMap(sec => pros.map(async pro => {
+          try {
+            const empData = await fetch('/api/attendance/template/employees?location=' +
+              encodeURIComponent(loc) + '&section=' + encodeURIComponent(sec) +
+              '&profile=' + encodeURIComponent(pro) + '&month=' + encodeURIComponent(month) +
+              '&year=' + year).then(r => r.json());
+            if (!empData.success || !empData.employees || !empData.employees.length) return;
+
+            const days  = empData.daysInMonth;
+            const sname = sec === 'State' ? 'Xaviers' : 'Global';
+            const gname = sname + ' ' + loc + ' ' + pro;
+            const gkey  = loc + '|' + sec + '|' + pro;
+            if (days > currentDaysInMonth) currentDaysInMonth = days;
+            if (!viewGroupInfoMap[gkey]) viewGroupInfoMap[gkey] = { location: loc, section: sec, profile: pro, groupName: gname };
+
+            const existing = existingByKey[gkey];
+            const byEin    = existing ? (existingByEinMap[existing.id] || {}) : {};
+
+            empData.employees.forEach(emp => {
+              const empRec = byEin[emp.ein];
+              viewAttendanceRecords.push(empRec
+                ? Object.assign({}, empRec, { _groupId: existing.id, _groupKey: gkey, daysInMonth: empRec.daysInMonth || days })
+                : { ein: emp.ein, employeeId: emp._id, employeeName: emp.employeeName, designation: emp.designation || '',
+                    location: loc, section: sec, profile: pro, groupName: gname, daysInMonth: days,
+                    _groupId: existing ? existing.id : null, _groupKey: gkey,
+                    days: Array.from({ length: days }, (_, i) => ({ day: i+1, status: '', otHours: 0 })),
+                    presentDays:0, cl:0, sl:0, pl:0, spL:0, absent:0, halfDays:0, weekOff:0, holidays:0, otHours:0, lopDays:0, payableDays:0 });
+              employeeGroupMap[emp.ein] = { id: existing ? existing.id : null, status: existing ? existing.status : '', groupName: gname, location: loc, section: sec, profile: pro, groupKey: gkey };
+            });
+          } catch(ex) { console.warn(ex); }
+        }))));
       }
 
-      if (!created) {
+      if (!viewAttendanceRecords.length) {
         emptyMsg.textContent = 'No active employees found for ' + month + ' ' + year;
         return;
       }
 
-      showAlert('listAlertSuccess', created + ' group(s) initialized for ' + month + ' ' + year);
-      await loadAttendanceList();
+      // Build viewGroupMeta from existing records
+      existingList.forEach(rec => {
+        const gkey  = rec.location + '|' + rec.section + '|' + rec.profile;
+        const gInfo = viewGroupInfoMap[gkey];
+        if (gInfo && !viewGroupMeta.find(m => m.groupKey === gkey)) {
+          viewGroupMeta.push({ id: rec._id, groupName: gInfo.groupName, status: rec.status || '', location: rec.location, groupKey: gkey });
+        }
+      });
+
+      currentMonth = month;
+      currentYear  = year;
+      viewAttendanceRecords.sort((a, b) => (a.ein || '').localeCompare(b.ein || ''));
+      viewDisplayRecords = viewAttendanceRecords;
+
+      refreshGroupDropdown();
+      const srch = document.getElementById('viewSearch');
+      if (srch) srch.value = '';
+      document.getElementById('listExcelBtn').style.display = 'inline-block';
+      emptyDiv.style.display = 'none';
+      gridCard.style.display = 'block';
+      applyGroupFilter();
+
     } catch(e) {
-      document.getElementById('viewEmptyMsg').textContent = 'Error: ' + e.message;
+      emptyMsg.textContent = 'Error: ' + e.message;
+      console.error(e);
     }
+  }
+
+  // Auto-create the attendance document for a group on first cell click.
+  // Returns the new record ID, or null on failure.
+  async function ensureAttendanceDoc(ein) {
+    const info = employeeGroupMap[ein];
+    if (!info || info.id) return info ? info.id : null;
+
+    const gkey  = info.groupKey;
+    const gInfo = viewGroupInfoMap[gkey];
+    if (!gInfo) return null;
+
+    const groupEmps = viewAttendanceRecords.filter(r => r._groupKey === gkey);
+    const cleanRecs = groupEmps.map(r => ({
+      ein: r.ein, employeeId: r.employeeId, employeeName: r.employeeName,
+      designation: r.designation || '', daysInMonth: r.daysInMonth,
+      days: (r.days || []).map(d => ({ day: d.day, status: d.status || '', otHours: d.otHours || 0 })),
+      presentDays: r.presentDays||0, cl: r.cl||0, sl: r.sl||0, pl: r.pl||0, spL: r.spL||0,
+      absent: r.absent||0, halfDays: r.halfDays||0, weekOff: r.weekOff||0,
+      holidays: r.holidays||0, otHours: r.otHours||0, lopDays: r.lopDays||0, payableDays: r.payableDays||0
+    }));
+
+    try {
+      const res = await fetch('/api/attendance', {
+        method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'include',
+        body: JSON.stringify({ month: currentMonth, year: parseInt(currentYear), location: gInfo.location, section: gInfo.section, profile: gInfo.profile, records: cleanRecs })
+      });
+      const data = await res.json();
+      if (!data.success) return null;
+
+      const newId = data.record._id;
+      Object.keys(employeeGroupMap).forEach(e => {
+        if (employeeGroupMap[e].groupKey === gkey) employeeGroupMap[e].id = newId;
+      });
+      viewAttendanceRecords.filter(r => r._groupKey === gkey).forEach(r => { r._groupId = newId; });
+      viewGroupMeta.push({ id: newId, groupName: gInfo.groupName, status: '', location: gInfo.location, groupKey: gkey });
+      refreshGroupDropdown();
+      return newId;
+    } catch(e) { console.error('ensureAttendanceDoc:', e); return null; }
+  }
+
+  function refreshGroupDropdown() {
+    const fg = document.getElementById('filterGroup');
+    if (!fg) return;
+    const prev = fg.value;
+    // All known groups (union of viewGroupInfoMap keys)
+    const allKeys = Object.keys(viewGroupInfoMap);
+    fg.innerHTML = '<option value="">All Groups</option>' + allKeys.map(gkey => {
+      const meta  = viewGroupMeta.find(m => m.groupKey === gkey);
+      const gInfo = viewGroupInfoMap[gkey];
+      const label = gInfo.groupName + ' (' + (meta ? (meta.status || 'Open') : 'New') + ')';
+      return '<option value="' + gkey + '">' + label + '</option>';
+    }).join('');
+    if (prev && allKeys.includes(prev)) fg.value = prev;
   }
 
   function statusBadge(st) {
@@ -937,45 +983,64 @@
 
   function isViewEmpLocked(ein) {
     const role = currentUser.role;
-    const isMgmt = role === 'admin' || role === 'management';
     const info = employeeGroupMap[ein];
     if (!info) return true;
     const st = info.status || '';
+
+    // Fully locked for everyone
     if (st === 'Locked') return true;
-    if (isMgmt)  return false;
+
+    if (role === 'supervisor') {
+      // Once accountant has submitted or management approved → supervisor read-only
+      if (st === 'Submitted' || st === 'Approved') return true;
+      // Time-based window: current month or previous month on days 1-3
+      const now = new Date();
+      const today = now.getDate();
+      const nowMonthIdx = now.getMonth();
+      const nowYear  = now.getFullYear();
+      const viewMonthIdx = MONTHS.indexOf(currentMonth);
+      const viewYear = parseInt(currentYear);
+      if (viewMonthIdx === nowMonthIdx && viewYear === nowYear) return false; // current month
+      let prevIdx = nowMonthIdx - 1, prevYear = nowYear;
+      if (prevIdx < 0) { prevIdx = 11; prevYear--; }
+      if (viewMonthIdx === prevIdx && viewYear === prevYear && today <= 3) return false; // grace
+      return true; // all other months locked
+    }
+
     if (role === 'accountant') return st === 'Approved';
-    // supervisor: can only edit open records they own — in list view read-only for simplicity
+    if (role === 'admin' || role === 'management') return false;
     return true;
   }
 
   function applyGroupFilter() {
-    const groupId = document.getElementById('filterGroup').value;
+    const gkey = document.getElementById('filterGroup').value;
     const q = (document.getElementById('viewSearch').value || '').trim().toLowerCase();
-    let base = groupId
-      ? viewAttendanceRecords.filter(r => r._groupId === groupId)
+    let base = gkey
+      ? viewAttendanceRecords.filter(r => r._groupKey === gkey)
       : viewAttendanceRecords;
     viewDisplayRecords = q ? base.filter(r =>
       (r.ein && r.ein.toLowerCase().includes(q)) ||
       (r.employeeName && r.employeeName.toLowerCase().includes(q))
     ) : base;
     renderViewGrid();
-    updateListActionBar(groupId);
+    updateListActionBar(gkey);
   }
 
-  function updateListActionBar(groupId) {
+  function updateListActionBar(gkey) {
     const bar = document.getElementById('gridActionBar');
-    if (!groupId) { bar.style.display = 'none'; return; }
-    const g = viewGroupMeta.find(x => x.id === groupId);
-    if (!g) { bar.style.display = 'none'; return; }
+    if (!gkey) { bar.style.display = 'none'; return; }
+    const g = viewGroupMeta.find(x => x.groupKey === gkey);
+    const gInfo = viewGroupInfoMap[gkey];
+    if (!gInfo) { bar.style.display = 'none'; return; }
     const role   = currentUser.role;
     const isMgmt = role === 'admin' || role === 'management';
     const isAcct = role === 'accountant';
-    const st     = g.status || '';
-    const isOpen = !st || st === '';
-    document.getElementById('gridGroupLabel').textContent = g.groupName;
+    const st     = g ? (g.status || '') : '';
+    document.getElementById('gridGroupLabel').textContent = gInfo.groupName;
     document.getElementById('gridStatusBadge').innerHTML = statusBadge(st);
     const show = (id, v) => { const el = document.getElementById(id); if (el) el.style.display = v ? 'inline-block' : 'none'; };
-    const canSubmit = st !== 'Locked' && st !== 'Approved' && st !== 'Submitted' && (isAcct || isMgmt);
+    // Only accountant/management can submit; need a saved record to do so
+    const canSubmit = g && st !== 'Locked' && st !== 'Approved' && st !== 'Submitted' && (isAcct || isMgmt);
     show('listSubmitBtn',   canSubmit);
     show('listApproveBtn',  isMgmt && st === 'Submitted');
     show('listSendBackBtn', isMgmt && (st === 'Submitted' || st === 'Approved'));
@@ -988,42 +1053,53 @@
 
   function renderViewGrid() {
     renderGrid('viewGridHead','viewGridBody','vSumTotal','vSumPresent','vSumCL','vSumSL','vSumAbsent','vSumOT','vSumDays', viewDisplayRecords, isViewEmpLocked);
+    const pending = viewDisplayRecords.reduce((acc, emp) =>
+      acc + (emp.days || []).filter(d => !d.status || d.status === '').length, 0);
+    const el = document.getElementById('vSumPending');
+    if (el) el.textContent = pending;
   }
 
   async function listSubmit() {
-    const groupId = document.getElementById('filterGroup').value;
-    if (!groupId) return;
+    const gkey = document.getElementById('filterGroup').value;
+    const meta = viewGroupMeta.find(m => m.groupKey === gkey);
+    if (!meta) { showAlert('listAlertError', 'Save attendance first before submitting'); return; }
     try {
-      const res = await fetch('/api/attendance/' + groupId + '/submit', { method: 'PATCH', credentials: 'include' });
+      const res = await fetch('/api/attendance/' + meta.id + '/submit', { method: 'PATCH', credentials: 'include' });
       const d = await res.json();
       if (d.success) {
         showAlert('listAlertSuccess', '✅ Submitted for approval');
-        await loadAttendanceList();
-        document.getElementById('filterGroup').value = groupId;
-        applyGroupFilter();
+        meta.status = 'Submitted';
+        employeeGroupMap && Object.keys(employeeGroupMap).forEach(e => { if (employeeGroupMap[e].groupKey === gkey) employeeGroupMap[e].status = 'Submitted'; });
+        refreshGroupDropdown();
+        document.getElementById('filterGroup').value = gkey;
+        updateListActionBar(gkey);
       } else { showAlert('listAlertError', d.message); }
     } catch(e) { showAlert('listAlertError', 'Error: ' + e.message); }
   }
 
   async function listApprove() {
-    const groupId = document.getElementById('filterGroup').value;
-    if (!groupId) return;
+    const gkey = document.getElementById('filterGroup').value;
+    const meta = viewGroupMeta.find(m => m.groupKey === gkey);
+    if (!meta) return;
     try {
-      const res = await fetch('/api/attendance/' + groupId + '/approve', { method: 'PATCH', credentials: 'include' });
+      const res = await fetch('/api/attendance/' + meta.id + '/approve', { method: 'PATCH', credentials: 'include' });
       const d = await res.json();
       if (d.success) {
         showAlert('listAlertSuccess', '✅ Approved');
-        await loadAttendanceList();
-        document.getElementById('filterGroup').value = groupId;
-        applyGroupFilter();
+        meta.status = 'Approved';
+        Object.keys(employeeGroupMap).forEach(e => { if (employeeGroupMap[e].groupKey === gkey) employeeGroupMap[e].status = 'Approved'; });
+        refreshGroupDropdown();
+        document.getElementById('filterGroup').value = gkey;
+        updateListActionBar(gkey);
       } else { showAlert('listAlertError', d.message); }
     } catch(e) { showAlert('listAlertError', 'Error: ' + e.message); }
   }
 
   function listSendBack() {
-    const groupId = document.getElementById('filterGroup').value;
-    if (!groupId) return;
-    sendBackTargetId = groupId;
+    const gkey = document.getElementById('filterGroup').value;
+    const meta = viewGroupMeta.find(m => m.groupKey === gkey);
+    if (!meta) return;
+    sendBackTargetId = meta.id;
     document.getElementById('sendBackNote').value = '';
     document.getElementById('sendBackModal').classList.add('open');
   }
@@ -1316,36 +1392,77 @@
 
   function setStatus(status) {
     if (!pickerEin || !pickerDay) return;
-    showUnsavedBanner();
-    const otH = 0;
-    // Update in main attendanceRecords
-    const empIdx = attendanceRecords.findIndex(r => r.ein === pickerEin);
+    document.getElementById('statusPicker').style.display = 'none';
+
+    const isViewMode = activeMode === 'view';
+    const records  = isViewMode ? viewAttendanceRecords : attendanceRecords;
+    const dispRecs = isViewMode ? viewDisplayRecords    : displayRecords;
+
+    // Update in-memory records
+    const empIdx = records.findIndex(r => r.ein === pickerEin);
     if (empIdx >= 0) {
-      const emp = attendanceRecords[empIdx];
+      const emp = records[empIdx];
       const di = emp.days ? emp.days.findIndex(d => d.day === pickerDay) : -1;
-      if (di >= 0) { emp.days[di].status = status; emp.days[di].otHours = otH; }
-      else { if (!emp.days) emp.days = []; emp.days.push({ day: pickerDay, status, otHours: otH }); }
-      recalcEmp(empIdx);
+      if (di >= 0) { emp.days[di].status = status; emp.days[di].otHours = 0; }
+      else { if (!emp.days) emp.days = []; emp.days.push({ day: pickerDay, status, otHours: 0 }); }
+      recalcEmp(empIdx, records);
     }
-    // Update display
-    const dispIdx = displayRecords.findIndex(r => r.ein === pickerEin);
+
+    // Update cell UI
     const cell = document.getElementById('cell-' + pickerEin + '-' + pickerDay);
     if (cell) { cell.className = 'day-cell ' + (STATUS_COLORS[status] || ''); cell.textContent = status || '·'; }
+
+    // Update row totals
+    const dispIdx = dispRecs.findIndex(r => r.ein === pickerEin);
     if (dispIdx >= 0) {
-      const emp = displayRecords[dispIdx];
-      const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-      set('tp-'+dispIdx, emp.presentDays||0); set('ta-'+dispIdx, emp.absent||0);
-      set('tcl-'+dispIdx, emp.cl||0); set('tsl-'+dispIdx, emp.sl||0);
-      set('tpl-'+dispIdx, emp.pl||0); set('tspl-'+dispIdx, emp.spL||0);
-      set('two-'+dispIdx, emp.weekOff||0); set('th-'+dispIdx, emp.holidays||0);
-      set('thd-'+dispIdx, emp.halfDays||0); set('tot-'+dispIdx, emp.otHours||0);
-      set('tlop-'+dispIdx, emp.lopDays||0); set('tpay-'+dispIdx, emp.payableDays||0);
+      const emp = dispRecs[dispIdx];
+      const setEl = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+      setEl('tp-'+dispIdx, emp.presentDays||0); setEl('ta-'+dispIdx, emp.absent||0);
+      setEl('tcl-'+dispIdx, emp.cl||0); setEl('tsl-'+dispIdx, emp.sl||0);
+      setEl('tpl-'+dispIdx, emp.pl||0); setEl('tspl-'+dispIdx, emp.spL||0);
+      setEl('two-'+dispIdx, emp.weekOff||0); setEl('th-'+dispIdx, emp.holidays||0);
+      setEl('thd-'+dispIdx, emp.halfDays||0); setEl('tot-'+dispIdx, emp.otHours||0);
+      setEl('tlop-'+dispIdx, emp.lopDays||0); setEl('tpay-'+dispIdx, emp.payableDays||0);
     }
-    updateSummary('sumTotal','sumPresent','sumCL','sumSL','sumAbsent','sumOT','sumDays', displayRecords);
-    document.getElementById('statusPicker').style.display = 'none';
-    // Auto-save single cell
-    const attId = activeMode === 'edit' ? currentAttendanceId
-                : (employeeGroupMap[pickerEin] ? employeeGroupMap[pickerEin].id : null);
+
+    // Update summary bar
+    if (isViewMode) {
+      updateSummary('vSumTotal','vSumPresent','vSumCL','vSumSL','vSumAbsent','vSumOT','vSumDays', dispRecs);
+      const pending = dispRecs.reduce((acc, emp) => acc + (emp.days||[]).filter(d => !d.status||d.status==='').length, 0);
+      const pel = document.getElementById('vSumPending'); if (pel) pel.textContent = pending;
+    } else if (activeMode === 'edit') {
+      updateSummary('sumTotal2','sumPresent2','sumCL2','sumSL2','sumAbsent2','sumOT2','sumDays2', dispRecs);
+    } else {
+      showUnsavedBanner();
+      updateSummary('sumTotal','sumPresent','sumCL','sumSL','sumAbsent','sumOT','sumDays', dispRecs);
+    }
+
+    // Auto-save
+    if (activeMode === 'edit') {
+      fetch('/api/attendance/' + currentAttendanceId + '/day', {
+        method: 'PATCH', credentials: 'include',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ ein: pickerEin, day: pickerDay, status, otHours: 0 })
+      }).catch(() => {});
+      return;
+    }
+
+    const grp = employeeGroupMap[pickerEin];
+    let attId = grp ? grp.id : null;
+
+    if (!attId && isViewMode) {
+      // First edit for this group — auto-create the attendance document, then patch
+      ensureAttendanceDoc(pickerEin).then(id => {
+        if (!id) return;
+        fetch('/api/attendance/' + id + '/day', {
+          method: 'PATCH', credentials: 'include',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ ein: pickerEin, day: pickerDay, status, otHours: 0 })
+        }).catch(() => {});
+      });
+      return;
+    }
+
     if (attId) {
       fetch('/api/attendance/' + attId + '/day', {
         method: 'PATCH', credentials: 'include',
@@ -1353,33 +1470,28 @@
         body: JSON.stringify({ ein: pickerEin, day: pickerDay, status, otHours: 0 })
       }).catch(() => {});
 
-      // If accountant edits a Submitted group, revert it to Open so management re-reviews
-      const grp = employeeGroupMap[pickerEin];
+      // If accountant/management edits a Submitted group → revert to Open for re-review
       const role = currentUser.role;
-      if (activeMode !== 'edit' && grp && grp.status === 'Submitted' &&
+      if (isViewMode && grp && grp.status === 'Submitted' &&
           (role === 'accountant' || role === 'admin' || role === 'management')) {
         fetch('/api/attendance/' + attId + '/reopen', { method: 'PATCH', credentials: 'include' })
           .then(r => r.json()).then(d => {
             if (d.success) {
-              // Update local state
               grp.status = '';
               const gMeta = viewGroupMeta.find(g => g.id === attId);
-              if (gMeta) gMeta.status = '';
-              // Refresh group dropdown label and action bar
+              if (gMeta) { gMeta.status = ''; refreshGroupDropdown(); }
               const fg = document.getElementById('filterGroup');
-              if (fg && fg.value === attId) {
-                const opt = fg.querySelector('option[value="' + attId + '"]');
-                if (opt) opt.textContent = opt.textContent.replace(/\(.*\)/, '(Open)');
-                updateListActionBar(attId);
-              }
+              if (fg && fg.value) updateListActionBar(fg.value);
             }
           }).catch(() => {});
       }
     }
   }
 
-  function recalcEmp(idx) {
-    const emp = attendanceRecords[idx];
+  function recalcEmp(idx, recs) {
+    const records = recs || attendanceRecords;
+    const emp = records[idx];
+    if (!emp) return;
     let p=0, a=0, cl=0, sl=0, pl=0, spL=0, hd=0, wo=0, h=0, otH=0;
     const codeMap = {};
     attendanceCodes.forEach(c => { codeMap[c.code] = c; });
