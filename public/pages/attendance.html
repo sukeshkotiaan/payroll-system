@@ -189,7 +189,6 @@
           </div>
           <div style="margin-left:auto;align-self:flex-end;display:flex;gap:8px;">
             <button id="listExcelBtn" onclick="downloadAttendanceExcel()" style="display:none;padding:9px 14px;border:1px solid #34a853;background:#fff;color:#34a853;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;">⬇ Excel</button>
-            <button class="btn-primary" onclick="showNewView()">+ New Attendance</button>
           </div>
         </div>
       </div>
@@ -778,7 +777,15 @@
       }
 
       if (!records.length) {
-        emptyMsg.textContent = 'No attendance records found for this period';
+        const role = currentUser.role;
+        const canInit = role === 'admin' || role === 'accountant' ||
+          (role === 'management' && currentUser.managementLevel === 1);
+        if (canInit) {
+          emptyMsg.innerHTML = 'No attendance for <strong>' + month + ' ' + year + '</strong>.<br>' +
+            '<button class="btn-primary" onclick="createAttendanceForMonth()" style="margin-top:12px;padding:9px 20px;">📋 Initialize Attendance</button>';
+        } else {
+          emptyMsg.textContent = 'No attendance records found for this period';
+        }
         return;
       }
 
@@ -825,6 +832,67 @@
       applyGroupFilter();
     } catch(e) {
       emptyMsg.textContent = 'Error: ' + e.message;
+    }
+  }
+
+  async function createAttendanceForMonth() {
+    const month = document.getElementById('filterMonth').value;
+    const year  = document.getElementById('filterYear').value;
+    if (!month || !year) return;
+
+    const emptyMsg = document.getElementById('viewEmptyMsg');
+    emptyMsg.innerHTML = 'Initializing attendance for <strong>' + month + ' ' + year + '</strong>…';
+
+    try {
+      const [locData, secData, proData] = await Promise.all([
+        fetch('/api/masters/location').then(r => r.json()),
+        fetch('/api/masters/section').then(r => r.json()),
+        fetch('/api/masters/profile').then(r => r.json())
+      ]);
+      const locs = locData.success ? locData.masters.map(m => m.value) : [];
+      const secs = secData.success ? secData.masters.map(m => m.value) : [];
+      const pros = proData.success ? proData.masters.map(m => m.value) : [];
+
+      let created = 0;
+      for (const loc of locs) {
+        for (const sec of secs) {
+          for (const pro of pros) {
+            try {
+              const empData = await fetch('/api/attendance/template/employees?location=' +
+                encodeURIComponent(loc) + '&section=' + encodeURIComponent(sec) +
+                '&profile=' + encodeURIComponent(pro) + '&month=' + encodeURIComponent(month) +
+                '&year=' + year).then(r => r.json());
+              if (!empData.success || !empData.employees || !empData.employees.length) continue;
+              const days = empData.daysInMonth;
+              const cleanRecs = empData.employees.map(emp => ({
+                ein: emp.ein, employeeId: emp._id, employeeName: emp.employeeName,
+                designation: emp.designation || '', daysInMonth: days,
+                days: Array.from({ length: days }, (_, i) => ({ day: i + 1, status: '', otHours: 0 })),
+                presentDays: 0, cl: 0, sl: 0, pl: 0, spL: 0,
+                absent: 0, halfDays: 0, weekOff: 0, holidays: 0, otHours: 0, lopDays: 0, payableDays: 0
+              }));
+              const res = await fetch('/api/attendance', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ month, year: parseInt(year), location: loc, section: sec, profile: pro, records: cleanRecs })
+              });
+              const data = await res.json();
+              if (data.success) created++;
+            } catch(ex) {}
+          }
+        }
+      }
+
+      if (!created) {
+        emptyMsg.textContent = 'No active employees found for ' + month + ' ' + year;
+        return;
+      }
+
+      showAlert('listAlertSuccess', created + ' group(s) initialized for ' + month + ' ' + year);
+      await loadAttendanceList();
+    } catch(e) {
+      document.getElementById('viewEmptyMsg').textContent = 'Error: ' + e.message;
     }
   }
 
