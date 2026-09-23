@@ -904,7 +904,7 @@
     const canSubmit = st !== 'Locked' && st !== 'Approved' && st !== 'Submitted' && (isAcct || isMgmt);
     show('listSubmitBtn',   canSubmit);
     show('listApproveBtn',  isMgmt && st === 'Submitted');
-    show('listSendBackBtn', isMgmt && st === 'Submitted');
+    show('listSendBackBtn', isMgmt && (st === 'Submitted' || st === 'Approved'));
     bar.style.display = 'flex';
   }
 
