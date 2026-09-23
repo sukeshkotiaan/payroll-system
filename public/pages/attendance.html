@@ -1261,6 +1261,29 @@
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify({ ein: pickerEin, day: pickerDay, status, otHours: 0 })
       }).catch(() => {});
+
+      // If accountant edits a Submitted group, revert it to Open so management re-reviews
+      const grp = employeeGroupMap[pickerEin];
+      const role = currentUser.role;
+      if (activeMode !== 'edit' && grp && grp.status === 'Submitted' &&
+          (role === 'accountant' || role === 'admin' || role === 'management')) {
+        fetch('/api/attendance/' + attId + '/reopen', { method: 'PATCH', credentials: 'include' })
+          .then(r => r.json()).then(d => {
+            if (d.success) {
+              // Update local state
+              grp.status = '';
+              const gMeta = viewGroupMeta.find(g => g.id === attId);
+              if (gMeta) gMeta.status = '';
+              // Refresh group dropdown label and action bar
+              const fg = document.getElementById('filterGroup');
+              if (fg && fg.value === attId) {
+                const opt = fg.querySelector('option[value="' + attId + '"]');
+                if (opt) opt.textContent = opt.textContent.replace(/\(.*\)/, '(Open)');
+                updateListActionBar(attId);
+              }
+            }
+          }).catch(() => {});
+      }
     }
   }
 

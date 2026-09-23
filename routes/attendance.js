@@ -245,6 +245,25 @@ router.patch('/:id/submit', isLoggedIn, async (req, res) => {
   }
 });
 
+// REOPEN — accountant reverts Submitted → Open after editing a cell
+router.patch('/:id/reopen', isLoggedIn, async (req, res) => {
+  try {
+    const user = req.session.user;
+    const attendance = await Attendance.findById(req.params.id);
+    if (!attendance) return res.status(404).json({ success: false, message: 'Not found' });
+    if (!canEditAttendance(user, attendance))
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    const st = normaliseStatus(attendance.status);
+    if (st !== 'Submitted') return res.json({ success: true }); // nothing to do
+    attendance.status = '';
+    attendance.updatedAt = new Date();
+    await attendance.save();
+    return res.json({ success: true, message: 'Reverted to Open' });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: safeError(err, 'attendance reopen') });
+  }
+});
+
 // APPROVE (Management/Admin only)
 router.patch('/:id/approve', isLoggedIn, isAdmin, async (req, res) => {
   try {
