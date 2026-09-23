@@ -208,10 +208,11 @@
       <div class="summary-bar">
         <div class="summary-item"><label>Employees</label><span id="vSumTotal">0</span></div>
         <div class="summary-item"><label>Avg Present</label><span id="vSumPresent">0</span></div>
+        <div class="summary-item"><label>Avg Payable</label><span id="vSumPayable" style="color:#34a853;">0</span></div>
+        <div class="summary-item"><label>Total LOP</label><span id="vSumAbsent" style="color:#ea4335;">0</span></div>
+        <div class="summary-item"><label>Total WO</label><span id="vSumWO">0</span></div>
         <div class="summary-item"><label>Total CL</label><span id="vSumCL">0</span></div>
         <div class="summary-item"><label>Total SL</label><span id="vSumSL">0</span></div>
-        <div class="summary-item"><label>Total Absent</label><span id="vSumAbsent" style="color:#ea4335;">0</span></div>
-        <div class="summary-item"><label>Total OT Hrs</label><span id="vSumOT">0</span></div>
         <div class="summary-item"><label>Days</label><span id="vSumDays">0</span></div>
       </div>
       <div class="attendance-grid-wrapper">
@@ -296,13 +297,13 @@
             </div>
           </div>
           <div class="summary-bar">
-            <div class="summary-item"><label>Showing</label><span id="sumTotal">0</span></div>
+            <div class="summary-item"><label>Employees</label><span id="sumTotal">0</span></div>
             <div class="summary-item"><label>Avg Present</label><span id="sumPresent">0</span></div>
+            <div class="summary-item"><label>Avg Payable</label><span id="sumPayable" style="color:#34a853;">0</span></div>
+            <div class="summary-item"><label>Total LOP</label><span id="sumAbsent" style="color:#ea4335;">0</span></div>
+            <div class="summary-item"><label>Total WO</label><span id="sumWO">0</span></div>
             <div class="summary-item"><label>Total CL</label><span id="sumCL">0</span></div>
             <div class="summary-item"><label>Total SL</label><span id="sumSL">0</span></div>
-            <div class="summary-item"><label>Total Absent</label><span id="sumAbsent" style="color:#ea4335;">0</span></div>
-            <div class="summary-item"><label>Total OT Hrs</label><span id="sumOT">0</span></div>
-            <div class="summary-item"><label>Days in Month</label><span id="sumDays">0</span></div>
             <div class="summary-item"><label>Status</label><span id="sumStatus" style="font-size:12px;">New</span></div>
           </div>
           <div class="attendance-grid-wrapper">
@@ -388,11 +389,11 @@
       <div class="summary-bar">
         <div class="summary-item"><label>Employees</label><span id="sumTotal2">0</span></div>
         <div class="summary-item"><label>Avg Present</label><span id="sumPresent2">0</span></div>
+        <div class="summary-item"><label>Avg Payable</label><span id="sumPayable2" style="color:#34a853;">0</span></div>
+        <div class="summary-item"><label>Total LOP</label><span id="sumAbsent2" style="color:#ea4335;">0</span></div>
+        <div class="summary-item"><label>Total WO</label><span id="sumWO2">0</span></div>
         <div class="summary-item"><label>Total CL</label><span id="sumCL2">0</span></div>
         <div class="summary-item"><label>Total SL</label><span id="sumSL2">0</span></div>
-        <div class="summary-item"><label>Total Absent</label><span id="sumAbsent2" style="color:#ea4335;">0</span></div>
-        <div class="summary-item"><label>Total OT Hrs</label><span id="sumOT2">0</span></div>
-        <div class="summary-item"><label>Days</label><span id="sumDays2">0</span></div>
         <div class="summary-item"><label>Status</label><span id="sumStatus2" style="font-size:12px;">—</span></div>
       </div>
       <div class="attendance-grid-wrapper">
@@ -1193,16 +1194,33 @@
     updateSummary(s1, s2, s3, s4, s5, s6, s7, records);
   }
 
+  // s1=total, s2=avgPresent, s3=cl, s4=sl, s5=absent/LOP, s6=wo, s7=days
+  // payable/WO tiles use derived IDs: s2→payable (replace 'Present'→'Payable'), s6→wo tile
   function updateSummary(s1, s2, s3, s4, s5, s6, s7, records) {
     if (!records) return;
     const total = records.length;
-    const avgP = total > 0 ? (records.reduce((s,e) => s+(e.presentDays||0), 0)/total).toFixed(1) : 0;
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-    set(s1, total); set(s2, avgP);
-    set(s3, records.reduce((s,e) => s+(e.cl||0), 0));
-    set(s4, records.reduce((s,e) => s+(e.sl||0), 0));
-    set(s5, records.reduce((s,e) => s+(e.absent||0), 0));
-    set(s6, records.reduce((s,e) => s+(e.otHours||0), 0));
+    const sum = f => records.reduce((acc, e) => acc + (f(e)||0), 0);
+
+    const totalPresent  = sum(e => e.presentDays);
+    const totalPayable  = sum(e => e.payableDays);
+    const totalLOP      = sum(e => e.lopDays || e.absent);
+    const totalWO       = sum(e => e.weekOff);
+    const totalCL       = sum(e => Math.round(e.cl));
+    const totalSL       = sum(e => Math.round(e.sl));
+
+    const avgPresent  = total > 0 ? (totalPresent  / total).toFixed(1) : 0;
+    const avgPayable  = total > 0 ? (totalPayable  / total).toFixed(1) : 0;
+
+    set(s1, total);
+    set(s2, avgPresent);
+    // Payable tile: same prefix as s2 but replace Present→Payable in id
+    set(s2.replace('Present','Payable').replace('sumPresent','sumPayable').replace('vSumPresent','vSumPayable'), avgPayable);
+    set(s3, totalCL);
+    set(s4, totalSL);
+    set(s5, totalLOP);
+    // WO tile: derived from s6 id pattern
+    set(s6.replace('OT','WO').replace('sumOT','sumWO').replace('vSumOT','vSumWO'), totalWO);
     set(s7, currentDaysInMonth);
   }
 
@@ -1313,7 +1331,7 @@
     });
     emp.presentDays=p; emp.absent=a; emp.cl=cl; emp.sl=sl; emp.pl=pl; emp.spL=spL;
     emp.halfDays=hd; emp.weekOff=wo; emp.holidays=h; emp.otHours=otH;
-    emp.lopDays=a; emp.payableDays=parseFloat(p.toFixed(1));
+    emp.lopDays=a; emp.payableDays=parseFloat((p + wo + h).toFixed(1));
   }
 
   function clearStatus() {
