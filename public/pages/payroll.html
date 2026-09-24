@@ -678,12 +678,14 @@
       await viewPayroll(params.get('view'));
     } else if (params.get('process')) {
       showProcessView();
-      if (params.get('month'))    document.getElementById('processMonth').value = params.get('month');
-      if (params.get('year'))     document.getElementById('processYear').value  = params.get('year');
+      if (params.get('month'))    document.getElementById('processMonth').value    = params.get('month');
+      if (params.get('year'))     document.getElementById('processYear').value     = params.get('year');
       if (params.get('location')) document.getElementById('processLocation').value = params.get('location');
       if (params.get('section'))  document.getElementById('processSection').value  = params.get('section');
       if (params.get('profile'))  document.getElementById('processProfile').value  = params.get('profile');
-      onPeriodChange();
+      const m2 = document.getElementById('processMonth').value;
+      const y2 = document.getElementById('processYear').value;
+      if (m2 && y2) loadAllTabs(m2, y2);
       if (params.get('location')) switchTab('run');
     }
   };
@@ -1342,13 +1344,11 @@
   function onPeriodChange() {
     const m = document.getElementById('processMonth').value;
     const y = document.getElementById('processYear').value;
-    if (m && y) {
-      const fy = getFY(m, y);
-      document.getElementById('periodFY').textContent = 'FY ' + fy;
-    }
+    if (!m || !y) return;
+    document.getElementById('periodFY').textContent = 'FY ' + getFY(m, y);
     _tabLoaded = {};
     _tabData = {};
-    loadActiveTab();
+    loadAllTabs(m, y);
   }
 
   function switchTab(name) {
@@ -1357,20 +1357,25 @@
     document.getElementById('tabBtn-' + name).classList.add('active');
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     document.getElementById('tab-' + name).classList.add('active');
-    loadActiveTab();
   }
 
-  function loadActiveTab() {
-    const m = document.getElementById('processMonth').value;
-    const y = document.getElementById('processYear').value;
-    if (!m || !y) return;
-    if (_tabLoaded[_activeTab]) return;
-    _tabLoaded[_activeTab] = true;
-    const loaders = {
-      att: loadAttTab, sal: loadSalTab, ot: loadOtTab,
-      arr: loadArrTab, loan: loadLoanTab, tds: loadTdsTab, run: loadRunTab
-    };
-    if (loaders[_activeTab]) loaders[_activeTab](m, y);
+  function loadAllTabs(m, y) {
+    // Fire all data fetches in parallel — no lazy loading
+    const isSalVisible = currentUser.role === 'admin' || currentUser.role === 'management';
+    const fetches = [
+      loadAttTab(m, y),
+      loadOtTab(m, y),
+      loadArrTab(m, y),
+      loadLoanTab(m, y),
+      loadTdsTab(m, y)
+    ];
+    if (isSalVisible) fetches.push(loadSalTab(m, y));
+
+    // Render the run tab after all data arrives
+    Promise.allSettled(fetches).then(() => {
+      _tabLoaded = { att:true, ot:true, arr:true, loan:true, tds:true, sal:isSalVisible, run:true };
+      renderRunTab(m, y);
+    });
   }
 
   // ---- ATTENDANCE TAB ----
@@ -1629,26 +1634,7 @@
   }
 
   // ---- PROCESS PAYROLL TAB ----
-  async function loadRunTab(month, year) {
-    // Ensure all other tabs are loaded so we have summary data
-    document.getElementById('readinessSummary').style.display = 'none';
-    document.getElementById('processGroupsList').innerHTML =
-      '<div class="empty-state" style="padding:30px;">Loading...</div>';
-
-    // Load all needed data in parallel (if not already loaded)
-    const loaders = [];
-    if (!_tabLoaded.att)  loaders.push(loadAttTab(month, year).then(() => { _tabLoaded.att = true; }));
-    if (!_tabLoaded.ot)   loaders.push(loadOtTab(month, year).then(() => { _tabLoaded.ot = true; }));
-    if (!_tabLoaded.arr)  loaders.push(loadArrTab(month, year).then(() => { _tabLoaded.arr = true; }));
-    if (!_tabLoaded.loan) loaders.push(loadLoanTab(month, year).then(() => { _tabLoaded.loan = true; }));
-    if (!_tabLoaded.tds)  loaders.push(loadTdsTab(month, year).then(() => { _tabLoaded.tds = true; }));
-    if (!_tabLoaded.sal && (currentUser.role === 'admin' || currentUser.role === 'management')) {
-      loaders.push(loadSalTab(month, year).then(() => { _tabLoaded.sal = true; }));
-    }
-
-    await Promise.allSettled(loaders);
-    renderRunTab(month, year);
-  }
+  // (loadRunTab is not called directly — renderRunTab is called from loadAllTabs after all data is ready)
 
   function renderRunTab(month, year) {
     const groups = _tabData.att || [];
@@ -1760,7 +1746,6 @@
 
   function showProcessView() {
     switchView('processView');
-    // Reset tab state
     _activeTab = 'att';
     _tabLoaded = {};
     _tabData = {};
@@ -1768,7 +1753,10 @@
     document.getElementById('tabBtn-att').classList.add('active');
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     document.getElementById('tab-att').classList.add('active');
-    loadActiveTab();
+    // Fire immediately if period already selected
+    const m = document.getElementById('processMonth').value;
+    const y = document.getElementById('processYear').value;
+    if (m && y) loadAllTabs(m, y);
   }
   function showListView() { switchView('listView'); loadPayrollList(); }
   function switchView(viewId) {
