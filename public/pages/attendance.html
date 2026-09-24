@@ -1171,6 +1171,20 @@
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(wsData);
     ws['!cols'] = [{ wch: 12 }, { wch: 28 }, { wch: 18 }].concat(Array(days).fill({ wch: 5 }));
+
+    // Add dropdown validation to all day columns for every employee row
+    const lastDayCol = XLSX.utils.encode_col(3 + days - 1); // e.g. "AH" for 31 days
+    const lastDataRow = wsData.length; // header + employee rows
+    ws['!datavalidation'] = {};
+    ws['!datavalidation']['D2:' + lastDayCol + lastDataRow] = {
+      type: 'list',
+      formula1: '"P,A,CL,SL,PL,SpL,WO,H,HD,OT"',
+      showDropDown: false,
+      showErrorMessage: true,
+      errorTitle: 'Invalid code',
+      error: 'Use: P, A, CL, SL, PL, SpL, WO, H, HD, OT or leave blank'
+    };
+
     XLSX.utils.book_append_sheet(wb, ws, currentMonth + ' ' + currentYear);
     XLSX.writeFile(wb, 'Attendance_' + currentMonth + '_' + currentYear + '.xlsx');
   }
