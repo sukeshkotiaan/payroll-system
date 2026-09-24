@@ -319,7 +319,7 @@
       } else if (status === 'link_sent') {
         actions = `
           <button class="btn-sm btn-wa"     onclick="sendLink('${e._id}','${safePhone(e)}','${esc(e.employeeName)}')">📲 Resend</button>
-          <button class="btn-sm btn-resend" onclick="copyLink('${e.activeToken ? e.activeToken.token : ''}')">📋 Copy Link</button>`;
+          <button class="btn-sm btn-resend" onclick="regenerateAndCopy('${e._id}')">📋 Copy Link</button>`;
       } else if (status === 'pending_review') {
         actions = `
           <button class="btn-sm btn-view"    onclick="openModal('${e._id}','${esc(e.employeeName)}','${e.photo}')">👁 Review</button>
@@ -392,11 +392,22 @@
     return digits;
   }
 
-  async function copyLink(token) {
-    if (!token) return;
-    const url = BASE + '/upload-photo/' + token;
-    await navigator.clipboard.writeText(url).catch(() => {});
-    alert('Upload link copied to clipboard:\n\n' + url);
+  async function regenerateAndCopy(empId) {
+    try {
+      const res  = await fetch('/api/photo-upload/generate-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ employeeId: empId })
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message);
+      const url = BASE + '/upload-photo/' + data.token;
+      await navigator.clipboard.writeText(url).catch(() => {});
+      alert('Upload link regenerated and copied to clipboard:\n\n' + url);
+      await loadData();
+    } catch(e) {
+      alert('Error: ' + e.message);
+    }
   }
 
   function openModal(empId, name, photoSrc, rejectMode) {

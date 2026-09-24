@@ -64,7 +64,7 @@ const payrollSchema = new mongoose.Schema({
     default: 'Draft'
   },
   records: { type: [payrollRecordSchema], default: [] },
-  // Keeps last 3 snapshots of records before reprocessing — for audit/dispute purposes
+  // Keeps last 12 snapshots of records before reprocessing — for audit/dispute purposes
   versionHistory: { type: [payrollVersionSchema], default: [] },
   employeeCount: { type: Number, default: 0 },
   totalGross: { type: Number, default: 0 },

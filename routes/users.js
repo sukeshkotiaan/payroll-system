@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
+const nodemailer = require('nodemailer');
 const User = require('../models/User');
 const { isLoggedIn, isAdmin } = require('../middleware/auth');
 const { safeError } = require('../middleware/security');
@@ -103,8 +104,40 @@ router.patch('/:id/reset-password', isLoggedIn, isAdmin, async (req, res) => {
         message: 'Password must be at least 8 characters'
       });
     }
+    const targetUser = await User.findById(req.params.id).select('username fullName email role');
+    if (!targetUser) return res.status(404).json({ success: false, message: 'User not found' });
+
     const hashedPassword = await bcrypt.hash(newPassword, 12);
     await User.findByIdAndUpdate(req.params.id, { password: hashedPassword });
+
+    // Notify the affected user if they have a registered email
+    if (targetUser.email) {
+      try {
+        const transporter = nodemailer.createTransport({
+          service: 'gmail',
+          auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS }
+        });
+        const resetBy = req.session.user.fullName + ' (' + req.session.user.username + ')';
+        await transporter.sendMail({
+          from: '"Payroll System Security" <' + process.env.GMAIL_USER + '>',
+          to: targetUser.email,
+          subject: 'Your Payroll System password was reset',
+          html: `
+            <div style="font-family:Arial,sans-serif;max-width:500px;">
+              <h2 style="color:#1a73e8;">Password Reset Notification</h2>
+              <p>Hi <strong>${targetUser.fullName}</strong>,</p>
+              <p>Your password for the Payroll System was reset on <strong>${new Date().toLocaleString('en-IN')}</strong> by <strong>${resetBy}</strong>.</p>
+              <p>If you requested this reset, no further action is needed.</p>
+              <p style="color:#c0392b;"><strong>If you did NOT request this reset, please contact your system administrator immediately.</strong></p>
+            </div>
+          `
+        });
+      } catch (mailErr) {
+        console.error('[reset-password notification]', mailErr.message);
+        // Email failure is non-fatal — password is already reset
+      }
+    }
+
     return res.json({ success: true, message: 'Password reset successfully' });
   } catch (err) {
     return res.status(500).json({ success: false, message: safeError(err, 'users reset-password') });

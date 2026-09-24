@@ -611,7 +611,7 @@ router.post('/process', isLoggedIn, isAdmin, async (req, res) => {
           employeeCount: payroll.records.length,
           records: payroll.records
         };
-        payroll.versionHistory = [...(payroll.versionHistory || []), snapshot].slice(-3);
+        payroll.versionHistory = [...(payroll.versionHistory || []), snapshot].slice(-12);
         payroll.records = records;
         payroll.attendanceId = attendance._id;
         payroll.employeeCount = records.length;

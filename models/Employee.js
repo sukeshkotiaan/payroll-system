@@ -8,7 +8,7 @@ const qualificationSchema = new mongoose.Schema({
 }, { _id: false });
 
 const employeeSchema = new mongoose.Schema({
-  ein: { type: String, unique: true, sparse: true },
+  ein: { type: String, required: true, unique: true, trim: true },
   title: { type: String, default: '' },
   location: { type: String, required: true },
   section: { type: String, required: true },

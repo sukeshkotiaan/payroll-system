@@ -10,6 +10,10 @@ const SchoolInfo = require('../models/SchoolInfo');
 const { isLoggedIn } = require('../middleware/auth');
 const { safeError } = require('../middleware/security');
 
+function hashToken(raw) {
+  return crypto.createHash('sha256').update(raw).digest('hex');
+}
+
 const uploadsDir = path.join(__dirname, '../public/uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
@@ -73,7 +77,7 @@ router.get('/status', isLoggedIn, async (req, res) => {
         photoLinkSentAt: e.photoLinkSentAt,
         supervisorName: e.supervisorName,
         phoneNumber: e.phoneNumber || '',
-        activeToken: tok ? { token: tok.token, expiresAt: tok.expiresAt, createdBy: tok.createdBy } : null
+        activeToken: tok ? { expiresAt: tok.expiresAt, createdBy: tok.createdBy } : null
       };
     });
 
@@ -115,7 +119,7 @@ router.post('/generate-link', isLoggedIn, async (req, res) => {
 
     const token = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
-    await Token.create({ employeeId, token, expiresAt, createdBy: user.username, createdById: user.id });
+    await Token.create({ employeeId, token: hashToken(token), expiresAt, createdBy: user.username, createdById: user.id });
 
     await Employee.findByIdAndUpdate(employeeId, { $set: { photoLinkSentAt: new Date() } });
 
@@ -128,7 +132,7 @@ router.post('/generate-link', isLoggedIn, async (req, res) => {
 // ── GET /api/photo-upload/validate/:token  (PUBLIC — no auth) ─────────────────
 router.get('/validate/:token', async (req, res) => {
   try {
-    const tok = await Token.findOne({ token: req.params.token });
+    const tok = await Token.findOne({ token: hashToken(req.params.token) });
     if (!tok) return res.status(404).json({ success: false, message: 'Link is invalid or has already been used.' });
     if (tok.expiresAt < new Date()) return res.status(410).json({ success: false, message: 'This link has expired. Please ask your supervisor for a new link.' });
 
@@ -159,7 +163,7 @@ router.get('/validate/:token', async (req, res) => {
 // ── POST /api/photo-upload/submit/:token  (PUBLIC — no auth) ──────────────────
 router.post('/submit/:token', upload.single('photo'), async (req, res) => {
   try {
-    const tok = await Token.findOne({ token: req.params.token });
+    const tok = await Token.findOne({ token: hashToken(req.params.token) });
     if (!tok)            return res.status(404).json({ success: false, message: 'Invalid link.' });
     if (tok.usedAt)      return res.status(409).json({ success: false, message: 'This link has already been used.' });
     if (tok.expiresAt < new Date()) return res.status(410).json({ success: false, message: 'Link has expired. Please contact your supervisor.' });
