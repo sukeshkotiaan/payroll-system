@@ -197,7 +197,7 @@
 </div>
 
 <!-- LIST VIEW -->
-<div id="listView" class="view active">
+<div id="listView" class="view">
   <div class="container">
     <div class="alert alert-success" id="listAlertSuccess"></div>
     <div class="alert alert-error" id="listAlertError"></div>
@@ -244,8 +244,8 @@
     <!-- LIST -->
     <div class="card list-table">
       <div class="card-header">
-        <h3>Payroll Records <span id="listCount" style="color:#666;font-weight:400;font-size:13px;"></span></h3>
-        <button class="btn-primary" onclick="showProcessView()">+ Process Payroll</button>
+        <h3>Past Payroll Records <span id="listCount" style="color:#666;font-weight:400;font-size:13px;"></span></h3>
+        <button class="btn-back-list" onclick="showProcessView()">← Back to Processing</button>
       </div>
       <table>
         <thead>
@@ -264,11 +264,11 @@
 </div>
 
 <!-- PROCESS VIEW (tabbed) -->
-<div id="processView" class="view">
+<div id="processView" class="view active">
 
   <!-- period bar (sticky below header) -->
   <div class="period-bar">
-    <button class="btn-back-list" onclick="showListView()" style="margin-right:5px;">← Back</button>
+    <button class="btn-back-list" onclick="showListView()" style="margin-right:5px;">📋 Past Records</button>
     <label>Month</label>
     <select id="processMonth" onchange="onPeriodChange()">
       <option value="">Select Month</option>
@@ -671,10 +671,10 @@
     await loadMasterData();
     populateYears();
     setDefaultMonthYear();
-    await loadPayrollList();
     // Handle deep-link from payroll-status page
     const params = new URLSearchParams(window.location.search);
     if (params.get('view')) {
+      await loadPayrollList();
       await viewPayroll(params.get('view'));
     } else if (params.get('process')) {
       showProcessView();
@@ -687,6 +687,11 @@
       const y2 = document.getElementById('processYear').value;
       if (m2 && y2) loadAllTabs(m2, y2);
       if (params.get('location')) switchTab('run');
+    } else {
+      // Default: show tabbed process view immediately
+      const m = document.getElementById('processMonth').value;
+      const y = document.getElementById('processYear').value;
+      if (m && y) loadAllTabs(m, y);
     }
   };
 
