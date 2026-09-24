@@ -1,7 +1,10 @@
 const express = require('express');
 const router = express.Router();
+const Employee = require('../models/Employee');
 const { isLoggedIn, isAccountantOrAdmin } = require('../middleware/auth');
 const { safeError } = require('../middleware/security');
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 async function getGmailAccessToken() {
   const controller = new AbortController();
@@ -66,8 +69,20 @@ async function sendGmailMessage(accessToken, { from, to, subject, html }) {
 // SEND PAYSLIP EMAIL — accountant/admin/management only
 router.post('/send-payslip', isLoggedIn, isAccountantOrAdmin, async (req, res) => {
   try {
-    const { to, subject, html, employeeName, month, year } = req.body;
-    if (!to || !html) return res.status(400).json({ success: false, message: 'Email and payslip content required' });
+    const { ein, to, subject, html, employeeName, month, year } = req.body;
+    if (!html) return res.status(400).json({ success: false, message: 'Payslip content required' });
+
+    // Determine the verified recipient email
+    let recipientEmail = to;
+    if (ein) {
+      const employee = await Employee.findOne({ ein: ein.toUpperCase(), isActive: true }).select('email ein');
+      if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
+      if (!employee.email) return res.status(400).json({ success: false, message: 'Employee has no email address on file' });
+      recipientEmail = employee.email;
+    }
+
+    if (!recipientEmail) return res.status(400).json({ success: false, message: 'Recipient email required' });
+    if (!EMAIL_RE.test(recipientEmail)) return res.status(400).json({ success: false, message: 'Invalid recipient email address' });
 
     const gmailUser      = process.env.GMAIL_USER;
     const clientId       = process.env.GMAIL_CLIENT_ID;
@@ -82,7 +97,7 @@ router.post('/send-payslip', isLoggedIn, isAccountantOrAdmin, async (req, res) =
 
     await sendGmailMessage(accessToken, {
       from: '"Pay Slip" <' + gmailUser + '>',
-      to,
+      to: recipientEmail,
       subject: subject || 'Salary Slip — ' + month + ' ' + year,
       html: `<div style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto;">
         <p>Dear ${employeeName},</p>
@@ -92,7 +107,7 @@ router.post('/send-payslip', isLoggedIn, isAccountantOrAdmin, async (req, res) =
       </div>`
     });
 
-    return res.json({ success: true, message: 'Payslip sent to ' + to });
+    return res.json({ success: true, message: 'Payslip sent to ' + recipientEmail });
   } catch (err) {
     console.error('[email send-payslip]', err.name, err.message);
     const msg = err.name === 'AbortError'

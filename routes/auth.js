@@ -15,7 +15,9 @@ const seedAdmin = async () => {
     const adminExists = await User.findOne({ role: 'admin' });
     if (!adminExists) {
       const crypto = require('crypto');
-      const rawPassword = crypto.randomBytes(10).toString('base64url'); // e.g. "a3Fk9mXqZp"
+      const fs = require('fs');
+      const nodePath = require('path');
+      const rawPassword = crypto.randomBytes(10).toString('base64url');
       const hashedPassword = await bcrypt.hash(rawPassword, 12);
       await User.create({
         username: 'admin',
@@ -24,13 +26,25 @@ const seedAdmin = async () => {
         role: 'admin',
         branch: 'all'
       });
-      console.log('');
-      console.log('═══════════════════════════════════════════════════════');
-      console.log('  DEFAULT ADMIN CREATED — CHANGE THIS PASSWORD NOW');
-      console.log('  Username : admin');
-      console.log(`  Password : ${rawPassword}`);
-      console.log('═══════════════════════════════════════════════════════');
-      console.log('');
+      // Write credentials to a local file; do NOT print plaintext to logs
+      try {
+        const setupFile = nodePath.join(__dirname, '..', 'admin_setup.txt');
+        fs.writeFileSync(setupFile,
+          `Username: admin\nPassword: ${rawPassword}\n\nDelete this file after logging in and changing your password.\n`,
+          { mode: 0o600 }
+        );
+        console.log('');
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('  DEFAULT ADMIN CREATED — CHANGE THIS PASSWORD NOW');
+        console.log('  Username : admin');
+        console.log('  Password : written to admin_setup.txt (delete after use)');
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('');
+      } catch (_) {
+        // Filesystem write failed (e.g. read-only container) — log masked password only
+        const masked = rawPassword.slice(0, 3) + '***' + rawPassword.slice(-2);
+        console.log('  DEFAULT ADMIN CREATED. Password (masked):', masked, '— check your secrets manager or reset via DB.');
+      }
     } else {
       console.log('✅ Admin already exists');
     }
@@ -66,7 +80,15 @@ router.post('/login', async (req, res) => {
     };
 
     // Link ALL roles to their employee record (gives location/section/profile/EIN)
-    const emp = await Employee.findOne({ employeeName: user.fullName, isActive: true });
+    // Prefer the stored employeeId for O(1) lookup; fall back to name-match only on first login
+    let emp = null;
+    if (user.employeeId) {
+      emp = await Employee.findById(user.employeeId);
+      if (!emp || !emp.isActive) emp = null;
+    }
+    if (!emp) {
+      emp = await Employee.findOne({ employeeName: user.fullName, isActive: true });
+    }
     if (emp) {
       sessionUser.employeeId = emp._id;
       sessionUser.ein = emp.ein;

@@ -150,8 +150,8 @@ router.get('/my-team-bank', isLoggedIn, async (req, res) => {
   }
 });
 
-// UPDATE bank details only (used by My Team Bank Details page)
-router.patch('/:id/bank-details', isLoggedIn, async (req, res) => {
+// UPDATE bank details only — admin/management only to prevent salary redirection
+router.patch('/:id/bank-details', isLoggedIn, isAdmin, async (req, res) => {
   try {
     const { bankName, accountNumber, ifscCode, accountHolderName } = req.body;
     const role = req.session.user.role;

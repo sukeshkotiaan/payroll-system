@@ -63,6 +63,15 @@ const attendanceLimiter = rateLimit({
   message: { success: false, message: 'Too many attendance submissions. Please slow down.' }
 });
 
+// Public employee form submissions: max 5 per IP per 10 minutes
+const submissionLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many form submissions. Please wait 10 minutes.' }
+});
+
 // Security headers on every response
 app.use(securityHeaders);
 
@@ -90,6 +99,7 @@ app.use('/api/auth/login', loginLimiter);
 app.use('/api/security/generate-otp', otpLimiter);
 app.use('/api/email/send-payslip', emailLimiter);
 app.use('/api/attendance', attendanceLimiter);
+app.use('/api/employee-submissions/submit', submissionLimiter);
 
 // Session
 app.use(session({

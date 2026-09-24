@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Attendance = require('../models/Attendance');
 const Employee = require('../models/Employee');
-const { isLoggedIn, isAdmin } = require('../middleware/auth');
+const { isLoggedIn, isAdmin, notSupervisor } = require('../middleware/auth');
 const { safeError } = require('../middleware/security');
 const { logAudit } = require('./security');
 
@@ -136,8 +136,8 @@ router.get('/template/employees', isLoggedIn, async (req, res) => {
   }
 });
 
-// GET supervisors list
-router.get('/supervisors/list', isLoggedIn, async (req, res) => {
+// GET supervisors list — not for supervisors themselves (information disclosure)
+router.get('/supervisors/list', isLoggedIn, notSupervisor, async (req, res) => {
   try {
     const User = require('../models/User');
     const supervisors = await User.find({ role: 'supervisor', isActive: true }, { password: 0 });

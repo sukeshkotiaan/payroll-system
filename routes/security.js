@@ -79,16 +79,19 @@ router.post('/generate-otp', isLoggedIn, async (req, res) => {
   }
 });
 
-// VERIFY OTP — called only during the accountant login OTP step.
-// This endpoint is intentionally unauthenticated because the user hasn't received
-// a session yet. It validates the OTP against the pending session stored by auth.js.
-// NOTE: The actual session binding is done by POST /api/auth/verify-otp, not here.
-// This route is kept for backward-compat but defers to the session-scoped flow.
+// VERIFY OTP — validates OTP during the accountant login flow.
+// Requires a pending OTP session established by POST /api/auth/login.
+// The userId in the request must match the session's pendingOTP.userId.
 router.post('/verify-otp', async (req, res) => {
   try {
     const { userId, code } = req.body;
     if (!userId || !code) {
       return res.status(400).json({ success: false, message: 'userId and code are required' });
+    }
+    // Require a valid pending OTP session; userId must match the session's record
+    const pending = req.session && req.session.pendingOTP;
+    if (!pending || String(pending.userId) !== String(userId)) {
+      return res.status(403).json({ success: false, message: 'No pending login session. Please login again.' });
     }
     const otp = await OTP.findOne({ userId, used: false });
 

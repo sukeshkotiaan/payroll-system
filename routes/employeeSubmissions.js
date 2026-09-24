@@ -4,10 +4,43 @@ const EmployeeSubmission = require('../models/EmployeeSubmission');
 const { isLoggedIn, isAdmin } = require('../middleware/auth');
 const { safeError } = require('../middleware/security');
 
+const ALLOWED_SUBMISSION_FIELDS = new Set([
+  'title','employeeName','gender','designation','department',
+  'location','section','profile','dateOfBirth','dateOfJoining',
+  'panNumber','aadhaarNumber','phoneNumber','email','address',
+  'uanNumber','qualifications','monthlySalary','ctcAnnual',
+  'pfApplicable','esicApplicable','ptApplicable','isRestricted'
+]);
+
+const VALID_LOCATIONS = ['Thane','Panvel'];
+const VALID_SECTIONS  = ['State','Global'];
+const VALID_PROFILES  = ['Teaching','Non-Teaching'];
+
 // PUBLIC - submit a new employee form (no login required)
 router.post('/submit', async (req, res) => {
   try {
-    const data = req.body;
+    const raw = req.body;
+
+    // Validate required fields
+    if (!raw.employeeName || typeof raw.employeeName !== 'string' || !raw.employeeName.trim()) {
+      return res.status(400).json({ success: false, message: 'Employee name is required' });
+    }
+    if (!VALID_LOCATIONS.includes(raw.location)) {
+      return res.status(400).json({ success: false, message: 'Invalid location' });
+    }
+    if (!VALID_SECTIONS.includes(raw.section)) {
+      return res.status(400).json({ success: false, message: 'Invalid section' });
+    }
+    if (!VALID_PROFILES.includes(raw.profile)) {
+      return res.status(400).json({ success: false, message: 'Invalid profile' });
+    }
+
+    // Whitelist fields to prevent mass-assignment
+    const data = {};
+    for (const key of ALLOWED_SUBMISSION_FIELDS) {
+      if (raw[key] !== undefined) data[key] = raw[key];
+    }
+
     if (typeof data.qualifications === 'string') {
       try { data.qualifications = JSON.parse(data.qualifications); }
       catch(e) { data.qualifications = []; }

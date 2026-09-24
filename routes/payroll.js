@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const Payroll = require('../models/Payroll');
 const Attendance = require('../models/Attendance');
 const Employee = require('../models/Employee');
@@ -596,74 +597,85 @@ router.post('/process', isLoggedIn, isAdmin, async (req, res) => {
 
     const groupName = getGroupName(section, location, profile);
 
-    if (payroll) {
-      // Snapshot the existing state before overwriting (keep last 3 versions)
-      const snapshot = {
-        snapshotAt: new Date(),
-        processedBy: payroll.processedBy || '',
-        status: payroll.status,
-        totalGross: payroll.totalGross,
-        totalNet: payroll.totalNet,
-        employeeCount: payroll.records.length,
-        records: payroll.records
-      };
-      payroll.versionHistory = [...(payroll.versionHistory || []), snapshot].slice(-3);
+    // Wrap core writes in a transaction so payroll, arrears and loan EMIs stay consistent
+    const txSession = await mongoose.startSession();
+    txSession.startTransaction();
+    try {
+      if (payroll) {
+        const snapshot = {
+          snapshotAt: new Date(),
+          processedBy: payroll.processedBy || '',
+          status: payroll.status,
+          totalGross: payroll.totalGross,
+          totalNet: payroll.totalNet,
+          employeeCount: payroll.records.length,
+          records: payroll.records
+        };
+        payroll.versionHistory = [...(payroll.versionHistory || []), snapshot].slice(-3);
+        payroll.records = records;
+        payroll.attendanceId = attendance._id;
+        payroll.employeeCount = records.length;
+        payroll.totalGross = parseFloat(totalGross.toFixed(2));
+        payroll.totalPF = parseFloat(totalPF.toFixed(2));
+        payroll.totalPT = parseFloat(totalPT.toFixed(2));
+        payroll.totalESIC = parseFloat(totalESIC.toFixed(2));
+        payroll.totalTDS = parseFloat(records.reduce((s,r) => s+(r.tdsDeduction||0), 0).toFixed(2));
+        payroll.totalNet = parseFloat(totalNet.toFixed(2));
+        payroll.status = 'Draft';
+        payroll.processedBy = req.session.user.username;
+        payroll.processedAt = new Date();
+        payroll.updatedAt = new Date();
+        payroll.markModified('records');
+        payroll.markModified('versionHistory');
+        await payroll.save({ session: txSession });
+      } else {
+        [payroll] = await Payroll.create([{
+          month, year: parseInt(year), location, section, profile,
+          groupName, attendanceId: attendance._id,
+          records, status: 'Draft',
+          employeeCount: records.length,
+          totalGross: parseFloat(totalGross.toFixed(2)),
+          totalPF: parseFloat(totalPF.toFixed(2)),
+          totalPT: parseFloat(totalPT.toFixed(2)),
+          totalESIC: parseFloat(totalESIC.toFixed(2)),
+          totalTDS: parseFloat(records.reduce((s,r) => s+(r.tdsDeduction||0), 0).toFixed(2)),
+          totalNet: parseFloat(totalNet.toFixed(2)),
+          processedBy: req.session.user.username,
+          processedAt: new Date()
+        }], { session: txSession });
+      }
 
-      payroll.records = records;
-      payroll.attendanceId = attendance._id;
-      payroll.employeeCount = records.length;
-      payroll.totalGross = parseFloat(totalGross.toFixed(2));
-      payroll.totalPF = parseFloat(totalPF.toFixed(2));
-      payroll.totalPT = parseFloat(totalPT.toFixed(2));
-      payroll.totalESIC = parseFloat(totalESIC.toFixed(2));
-      payroll.totalTDS = parseFloat(records.reduce((s,r) => s+(r.tdsDeduction||0), 0).toFixed(2));
-      payroll.totalNet = parseFloat(totalNet.toFixed(2));
-      payroll.status = 'Draft';
-      payroll.processedBy = req.session.user.username;
-      payroll.processedAt = new Date();
-      payroll.updatedAt = new Date();
-      payroll.markModified('records');
-      payroll.markModified('versionHistory');
-      await payroll.save();
-    } else {
-      payroll = await Payroll.create({
-        month, year: parseInt(year), location, section, profile,
-        groupName, attendanceId: attendance._id,
-        records, status: 'Draft',
-        employeeCount: records.length,
-        totalGross: parseFloat(totalGross.toFixed(2)),
-        totalPF: parseFloat(totalPF.toFixed(2)),
-        totalPT: parseFloat(totalPT.toFixed(2)),
-        totalESIC: parseFloat(totalESIC.toFixed(2)),
-        totalTDS: parseFloat(records.reduce((s,r) => s+(r.tdsDeduction||0), 0).toFixed(2)),
-        totalNet: parseFloat(totalNet.toFixed(2)),
-        processedBy: req.session.user.username,
-        processedAt: new Date()
-      });
-    }
+      // Mark arrears as pulled
+      await Arrear.updateMany(
+        { location, section, profile, month, year: parseInt(year), pulledToPayroll: false },
+        { pulledToPayroll: true, payrollId: payroll._id },
+        { session: txSession }
+      );
 
-    // Mark arrears as pulled
-    await Arrear.updateMany(
-      { location, section, profile, month, year: parseInt(year), pulledToPayroll: false },
-      { pulledToPayroll: true, payrollId: payroll._id }
-    );
+      // Mark loan EMIs as paid
+      for (const loan of activeLoans) {
+        const scheduleItem = loan.schedule ? loan.schedule.find(s =>
+          s.month === month && s.year === parseInt(year) && s.status === 'Pending'
+        ) : null;
+        if (!scheduleItem) continue;
+        const record = records.find(r => r.ein === loan.ein);
+        if (!record) continue;
+        scheduleItem.status = 'Paid';
+        scheduleItem.paidInPayrollId = payroll._id;
+        loan.totalPaid = parseFloat((loan.totalPaid + scheduleItem.emiAmount).toFixed(2));
+        loan.outstandingBalance = scheduleItem.balance;
+        if (scheduleItem.balance === 0) loan.status = 'Closed';
+        loan.updatedAt = new Date();
+        loan.markModified('schedule');
+        await loan.save({ session: txSession });
+      }
 
-    // Mark loan EMIs as paid
-    for (const loan of activeLoans) {
-      const scheduleItem = loan.schedule ? loan.schedule.find(s =>
-        s.month === month && s.year === parseInt(year) && s.status === 'Pending'
-      ) : null;
-      if (!scheduleItem) continue;
-      const record = records.find(r => r.ein === loan.ein);
-      if (!record) continue;
-      scheduleItem.status = 'Paid';
-      scheduleItem.paidInPayrollId = payroll._id;
-      loan.totalPaid = parseFloat((loan.totalPaid + scheduleItem.emiAmount).toFixed(2));
-      loan.outstandingBalance = scheduleItem.balance;
-      if (scheduleItem.balance === 0) loan.status = 'Closed';
-      loan.updatedAt = new Date();
-      loan.markModified('schedule');
-      await loan.save();
+      await txSession.commitTransaction();
+    } catch (txErr) {
+      await txSession.abortTransaction();
+      throw txErr;
+    } finally {
+      txSession.endSession();
     }
 
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
@@ -758,6 +770,10 @@ router.patch('/:id/approve', isLoggedIn, isAdmin, async (req, res) => {
     if (!payroll) return res.status(404).json({ success: false, message: 'Not found' });
     if (!['Draft', 'Pending Approval'].includes(payroll.status)) {
       return res.status(400).json({ success: false, message: `Cannot approve a payroll with status: ${payroll.status}` });
+    }
+    // Segregation of duties: the processor cannot also be the approver
+    if (payroll.processedBy && payroll.processedBy === req.session.user.username) {
+      return res.status(403).json({ success: false, message: 'The user who processed this payroll cannot approve it. A different authorised user must approve.' });
     }
     payroll.status = 'Approved';
     payroll.approvedBy = req.session.user.username;
@@ -1103,16 +1119,27 @@ router.patch('/batch-approve', isLoggedIn, isAdmin, async (req, res) => {
     if (payrolls.length === 0) return res.json({ success: true, message: 'No payrolls to approve', count: 0 });
     const now = new Date();
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+    const approver = req.session.user.username;
+    let approved = 0;
+    const skipped = [];
     for (const p of payrolls) {
+      // Segregation of duties: skip payrolls processed by the same user
+      if (p.processedBy && p.processedBy === approver) {
+        skipped.push(p.groupName);
+        continue;
+      }
       p.status = 'Approved';
-      p.approvedBy = req.session.user.username;
+      p.approvedBy = approver;
       p.approvedAt = now;
       p.updatedAt = now;
       await p.save();
-      await logAudit(req.session.user.id, req.session.user.username, req.session.user.fullName, req.session.user.role,
+      await logAudit(req.session.user.id, approver, req.session.user.fullName, req.session.user.role,
         'PAYROLL_APPROVED', `Batch approved: ${p.groupName} ${p.month} ${p.year}`, ip);
+      approved++;
     }
-    return res.json({ success: true, message: `Approved ${payrolls.length} payroll group(s)`, count: payrolls.length });
+    const msg = `Approved ${approved} payroll group(s)` +
+      (skipped.length ? `. Skipped ${skipped.length} (processed by same user): ${skipped.join(', ')}` : '');
+    return res.json({ success: true, message: msg, count: approved, skipped });
   } catch (err) {
     return res.status(500).json({ success: false, message: safeError(err, 'payroll batch-approve') });
   }

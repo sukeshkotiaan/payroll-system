@@ -118,7 +118,7 @@ router.delete('/:id', isLoggedIn, isAccountantOrAdmin, async (req, res) => {
 });
 
 // GET arrears for specific group and month (used by payroll engine)
-router.get('/for-payroll', isLoggedIn, async (req, res) => {
+router.get('/for-payroll', isLoggedIn, notSupervisor, async (req, res) => {
   try {
     const { location, section, profile, month, year } = req.query;
     const arrears = await Arrear.find({

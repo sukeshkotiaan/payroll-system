@@ -139,7 +139,19 @@ router.patch('/:id/reject', isLoggedIn, hasRole('admin', 'management', 'accounta
 
 router.put('/:id', isLoggedIn, isAdmin, async (req, res) => {
   try {
-    const exit = await Exit.findByIdAndUpdate(req.params.id, { $set: req.body }, { new: true });
+    const { resignationDate, lastWorkingDate, noticeType, reasonForLeaving,
+            noticePeriodDays, fnfSettlement, relievingLetter, eligibleForRehire, remarks } = req.body;
+    const allowed = {};
+    if (resignationDate  !== undefined) allowed.resignationDate  = resignationDate;
+    if (lastWorkingDate  !== undefined) allowed.lastWorkingDate  = lastWorkingDate;
+    if (noticeType       !== undefined) allowed.noticeType       = noticeType;
+    if (reasonForLeaving !== undefined) allowed.reasonForLeaving = reasonForLeaving;
+    if (noticePeriodDays !== undefined) allowed.noticePeriodDays = noticePeriodDays;
+    if (fnfSettlement    !== undefined) allowed.fnfSettlement    = fnfSettlement;
+    if (relievingLetter  !== undefined) allowed.relievingLetter  = relievingLetter;
+    if (eligibleForRehire !== undefined) allowed.eligibleForRehire = eligibleForRehire;
+    if (remarks          !== undefined) allowed.remarks          = remarks;
+    const exit = await Exit.findByIdAndUpdate(req.params.id, { $set: allowed }, { new: true });
     return res.json({ success: true, message: 'Updated successfully', exit });
   } catch (err) {
     return res.status(500).json({ success: false, message: safeError(err, 'exits put') });

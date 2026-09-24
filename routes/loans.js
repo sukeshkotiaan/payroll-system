@@ -109,7 +109,7 @@ router.post('/calculate-emi', isLoggedIn, async (req, res) => {
 });
 
 // GET active loans for payroll
-router.get('/for-payroll/active', isLoggedIn, async (req, res) => {
+router.get('/for-payroll/active', isLoggedIn, notSupervisor, async (req, res) => {
   try {
     const { location, section, profile, month, year } = req.query;
     const loans = await Loan.find({ location, section, profile, status: 'Active' });
