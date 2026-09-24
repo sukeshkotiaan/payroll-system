@@ -139,7 +139,8 @@ router.post('/login', async (req, res) => {
     if (user.role === 'accountant') {
       const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
       await logAudit(user._id, user.username, user.fullName, user.role, 'LOGIN_OTP_REQUESTED', 'OTP requested for accountant login', ip);
-      // Store temp data in a short-lived session key for OTP verification
+      // Regenerate session to prevent session fixation, then store pending OTP state
+      await new Promise((resolve, reject) => req.session.regenerate(e => e ? reject(e) : resolve()));
       req.session.pendingOTP = {
         userId: user._id.toString(),
         sessionUser,
@@ -171,6 +172,8 @@ router.post('/login', async (req, res) => {
       });
     }
 
+    // Regenerate session to prevent session fixation before elevating to authenticated state
+    await new Promise((resolve, reject) => req.session.regenerate(e => e ? reject(e) : resolve()));
     req.session.user = sessionUser;
 
     // Audit log successful login
@@ -229,9 +232,10 @@ router.post('/verify-otp', async (req, res) => {
     otp.used = true;
     await otp.save();
 
-    // Complete the login
-    req.session.user = pending.sessionUser;
-    delete req.session.pendingOTP;
+    // Complete the login — regenerate session to prevent fixation, then elevate
+    const completedSessionUser = pending.sessionUser;
+    await new Promise((resolve, reject) => req.session.regenerate(e => e ? reject(e) : resolve()));
+    req.session.user = completedSessionUser;
 
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
     await logAudit(pending.userId, pending.sessionUser.username, pending.sessionUser.fullName, 'accountant', 'LOGIN', 'Successful login via OTP', ip);

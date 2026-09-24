@@ -170,8 +170,13 @@ router.get('/audit-log', isLoggedIn, async (req, res) => {
     if (req.query.from) filter.timestamp = { $gte: new Date(req.query.from) };
     if (req.query.to) filter.timestamp = { ...filter.timestamp, $lte: new Date(req.query.to) };
 
-    const logs = await AuditLog.find(filter).sort({ timestamp: -1 }).limit(500);
-    return res.json({ success: true, logs });
+    const limit = Math.min(parseInt(req.query.limit) || 100, 500);
+    const skip  = Math.max(parseInt(req.query.skip)  || 0, 0);
+    const [logs, total] = await Promise.all([
+      AuditLog.find(filter).sort({ timestamp: -1 }).skip(skip).limit(limit),
+      AuditLog.countDocuments(filter)
+    ]);
+    return res.json({ success: true, logs, pagination: { skip, limit, total } });
   } catch (err) {
     console.error('[audit log]', err.message);
     return res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });

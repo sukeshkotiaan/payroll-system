@@ -85,8 +85,11 @@ router.post('/', isLoggedIn, async (req, res) => {
     const resignDate = new Date(data.resignationDate);
     const lwdDate    = new Date(data.lastWorkingDate);
     const noticeDays = Math.ceil((lwdDate - resignDate) / (1000 * 60 * 60 * 24));
+    const { employeeId, ein, employeeName, designation, location, section, profile,
+            resignationDate, lastWorkingDate, noticeType, reasonForLeaving } = data;
     const exit = await Exit.create({
-      ...data,
+      employeeId, ein, employeeName, designation, location, section, profile,
+      resignationDate, lastWorkingDate, noticeType, reasonForLeaving,
       noticePeriodDays: noticeDays,
       submittedBy: user.username,
       submittedAt: new Date()

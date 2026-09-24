@@ -17,7 +17,7 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 
 const app = express();
-const { securityHeaders, noSQLSanitizer } = require('./middleware/security');
+const { securityHeaders, noSQLSanitizer, csrfOriginCheck } = require('./middleware/security');
 
 // Trust Render.com / reverse-proxy so that req.ip resolves correctly
 app.set('trust proxy', 1);
@@ -93,6 +93,19 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // NoSQL injection prevention — sanitize req.query/body/params on every API call
 app.use('/api/', noSQLSanitizer);
+
+// CSRF origin check — applied to all authenticated API routes.
+// Public/pre-auth endpoints that legitimately receive cross-origin POSTs are exempted.
+const CSRF_EXEMPT = new Set([
+  '/api/auth/login',
+  '/api/auth/verify-otp',
+  '/api/security/verify-otp',
+  '/api/employee-submissions/submit'
+]);
+app.use('/api/', (req, res, next) => {
+  if (CSRF_EXEMPT.has(req.originalUrl.split('?')[0])) return next();
+  return csrfOriginCheck(req, res, next);
+});
 
 // Apply rate limiters early (before session middleware to save DB round-trips on blocked requests)
 app.use('/api/auth/login', loginLimiter);

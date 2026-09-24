@@ -79,6 +79,29 @@ function supervisorOwns(sessionUser, employee) {
     employee.supervisorId.toString() === sessionUser.id.toString();
 }
 
+// CSRF origin check — verifies the Origin or Referer header matches the request Host
+// on state-changing methods. sameSite:lax already blocks cross-site cookie delivery
+// for POST; this is defense-in-depth for any remaining same-site attack surface.
+// Apply to authenticated API routes; exempt public/pre-auth endpoints explicitly.
+const CSRF_SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+function csrfOriginCheck(req, res, next) {
+  if (CSRF_SAFE_METHODS.has(req.method)) return next();
+  const host = req.headers['host'];
+  if (!host) return next();
+  const origin  = req.headers['origin'];
+  const referer = req.headers['referer'];
+  const check = origin || referer;
+  if (!check) return next(); // no header — same-origin or server-to-server; allow
+  try {
+    if (new URL(check).host !== host) {
+      return res.status(403).json({ success: false, message: 'CSRF validation failed' });
+    }
+  } catch (_) {
+    return res.status(403).json({ success: false, message: 'CSRF validation failed' });
+  }
+  next();
+}
+
 // Generic safe error message — never expose internal details to clients
 function safeError(err, context) {
   console.error(`[${context}]`, err.message, err.stack ? '\n' + err.stack : '');
@@ -89,4 +112,4 @@ function safeError(err, context) {
   return err.message;
 }
 
-module.exports = { securityHeaders, sanitizeRegex, noSQLSanitizer, mgtFilter, supervisorOwns, safeError };
+module.exports = { securityHeaders, sanitizeRegex, noSQLSanitizer, mgtFilter, supervisorOwns, safeError, csrfOriginCheck };
