@@ -222,6 +222,32 @@ router.patch('/:id/day', isLoggedIn, async (req, res) => {
   }
 });
 
+// BULK UPDATE — upload all days for multiple employees at once
+router.patch('/:id/bulk', isLoggedIn, async (req, res) => {
+  try {
+    const user = req.session.user;
+    const { records } = req.body; // [{ein, days:[{day,status}]}]
+    if (!Array.isArray(records) || !records.length)
+      return res.status(400).json({ success: false, message: 'No records provided' });
+    const attendance = await Attendance.findById(req.params.id);
+    if (!attendance) return res.status(404).json({ success: false, message: 'Not found' });
+    if (!canEditAttendance(user, attendance))
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    for (const update of records) {
+      const record = attendance.records.find(r => r.ein === update.ein);
+      if (!record) continue;
+      record.days = update.days;
+      Object.assign(record, calculateTotals(record.days));
+    }
+    attendance.updatedAt = new Date();
+    attendance.markModified('records');
+    await attendance.save();
+    return res.json({ success: true, updated: records.length });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: safeError(err, 'bulk update') });
+  }
+});
+
 // SUBMIT (Supervisor or Accountant → Submitted)
 router.patch('/:id/submit', isLoggedIn, async (req, res) => {
   try {

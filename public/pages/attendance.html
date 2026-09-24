@@ -151,6 +151,32 @@
   </div>
 </div>
 
+<!-- List view Upload Excel modal -->
+<div class="modal-overlay" id="listUploadModal">
+  <div class="modal-box" style="width:680px;max-width:95vw;">
+    <h3>⬆ Upload Excel</h3>
+    <p style="margin-bottom:10px;font-size:12px;color:#555;">Download the sheet first using <strong>⬇ Excel</strong>, fill in the day columns (numbers 1–31), then upload it back. Only employees in the selected group will be updated.</p>
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;">
+      <input type="file" id="listUploadFile" accept=".xlsx,.xls,.csv" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px;">
+      <button class="btn-primary" onclick="listProcessUpload()" style="white-space:nowrap;">Preview</button>
+    </div>
+    <div id="listUploadPreview" style="display:none;">
+      <div style="font-size:13px;font-weight:600;color:#333;margin-bottom:6px;" id="listUploadPreviewTitle"></div>
+      <div style="overflow-x:auto;max-height:180px;overflow-y:auto;border:1px solid #eee;border-radius:6px;">
+        <table style="width:100%;border-collapse:collapse;font-size:11px;">
+          <thead id="listPreviewHead"></thead>
+          <tbody id="listPreviewBody"></tbody>
+        </table>
+      </div>
+      <div id="listUploadWarning" style="display:none;margin-top:8px;padding:8px 12px;background:#fff3cd;border:1px solid #ffc107;border-radius:6px;font-size:12px;color:#856404;"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeListUploadModal()">Cancel</button>
+      <button id="listApplyUploadBtn" class="btn-primary" style="display:none;" onclick="listApplyUpload()">✅ Apply &amp; Save</button>
+    </div>
+  </div>
+</div>
+
 <!-- LIST VIEW -->
 <div id="listView" class="view active">
   <div class="container">
@@ -203,11 +229,12 @@
         <button id="listSubmitBtn"   onclick="listSubmit()"   style="display:none;padding:7px 14px;border:none;border-radius:6px;background:#1a73e8;color:white;font-size:12px;font-weight:600;cursor:pointer;">▶ Submit</button>
         <button id="listApproveBtn"  onclick="listApprove()"  style="display:none;padding:7px 14px;border:none;border-radius:6px;background:#34a853;color:white;font-size:12px;font-weight:600;cursor:pointer;">✅ Approve</button>
         <button id="listSendBackBtn" onclick="listSendBack()" style="display:none;padding:7px 14px;border:none;border-radius:6px;background:#ea4335;color:white;font-size:12px;font-weight:600;cursor:pointer;">↩️ Send Back</button>
+        <button id="listUploadBtn" onclick="openListUpload()" style="display:none;padding:7px 14px;border:1px solid #1a73e8;border-radius:6px;background:#fff;color:#1a73e8;font-size:12px;font-weight:600;cursor:pointer;">⬆ Upload Excel</button>
       </div>
       <div class="summary-bar">
         <div class="summary-item"><label>Employees</label><span id="vSumTotal">0</span></div>
-        <div class="summary-item"><label>Avg Present</label><span id="vSumPresent">0</span></div>
-        <div class="summary-item"><label>Avg Payable</label><span id="vSumPayable" style="color:#34a853;">0</span></div>
+        <div class="summary-item"><label>Total Present</label><span id="vSumPresent">0</span></div>
+        <div class="summary-item"><label>Total Payable</label><span id="vSumPayable" style="color:#34a853;">0</span></div>
         <div class="summary-item"><label>Total LOP</label><span id="vSumAbsent" style="color:#ea4335;">0</span></div>
         <div class="summary-item"><label>Total WO</label><span id="vSumWO">0</span></div>
         <div class="summary-item"><label>Total CL</label><span id="vSumCL">0</span></div>
@@ -297,8 +324,8 @@
           </div>
           <div class="summary-bar">
             <div class="summary-item"><label>Employees</label><span id="sumTotal">0</span></div>
-            <div class="summary-item"><label>Avg Present</label><span id="sumPresent">0</span></div>
-            <div class="summary-item"><label>Avg Payable</label><span id="sumPayable" style="color:#34a853;">0</span></div>
+            <div class="summary-item"><label>Total Present</label><span id="sumPresent">0</span></div>
+            <div class="summary-item"><label>Total Payable</label><span id="sumPayable" style="color:#34a853;">0</span></div>
             <div class="summary-item"><label>Total LOP</label><span id="sumAbsent" style="color:#ea4335;">0</span></div>
             <div class="summary-item"><label>Total WO</label><span id="sumWO">0</span></div>
             <div class="summary-item"><label>Total CL</label><span id="sumCL">0</span></div>
@@ -387,8 +414,8 @@
       </div>
       <div class="summary-bar">
         <div class="summary-item"><label>Employees</label><span id="sumTotal2">0</span></div>
-        <div class="summary-item"><label>Avg Present</label><span id="sumPresent2">0</span></div>
-        <div class="summary-item"><label>Avg Payable</label><span id="sumPayable2" style="color:#34a853;">0</span></div>
+        <div class="summary-item"><label>Total Present</label><span id="sumPresent2">0</span></div>
+        <div class="summary-item"><label>Total Payable</label><span id="sumPayable2" style="color:#34a853;">0</span></div>
         <div class="summary-item"><label>Total LOP</label><span id="sumAbsent2" style="color:#ea4335;">0</span></div>
         <div class="summary-item"><label>Total WO</label><span id="sumWO2">0</span></div>
         <div class="summary-item"><label>Total CL</label><span id="sumCL2">0</span></div>
@@ -437,6 +464,7 @@
   let viewGroupMeta = [];
   let employeeGroupMap = {}; // ein -> { id, status, groupName, location, section, profile, groupKey }
   let viewGroupInfoMap = {}; // groupKey -> { location, section, profile, groupName }
+  let _listGeneration = 0; // concurrency guard for loadAttendanceList
 
   const MONTHS = ['January','February','March','April','May','June',
     'July','August','September','October','November','December'];
@@ -728,6 +756,7 @@
   }
 
   async function loadAttendanceList() {
+    const gen = ++_listGeneration;
     const month    = document.getElementById('filterMonth').value;
     const year     = document.getElementById('filterYear').value;
     const location = document.getElementById('filterLocation').value;
@@ -867,6 +896,17 @@
         if (gInfo && !viewGroupMeta.find(m => m.groupKey === gkey)) {
           viewGroupMeta.push({ id: rec._id, groupName: gInfo.groupName, status: rec.status || '', location: rec.location, groupKey: gkey });
         }
+      });
+
+      // If another load started after us, discard our results
+      if (gen !== _listGeneration) return;
+
+      // Deduplicate by EIN (safety net for any concurrent push edge case)
+      const _seenEins = new Set();
+      viewAttendanceRecords = viewAttendanceRecords.filter(r => {
+        if (_seenEins.has(r.ein)) return false;
+        _seenEins.add(r.ein);
+        return true;
       });
 
       currentMonth = month;
@@ -1041,9 +1081,11 @@
     const show = (id, v) => { const el = document.getElementById(id); if (el) el.style.display = v ? 'inline-block' : 'none'; };
     // Only accountant/management can submit; need a saved record to do so
     const canSubmit = g && st !== 'Locked' && st !== 'Approved' && st !== 'Submitted' && (isAcct || isMgmt);
+    const canUpload = (isAcct || isMgmt) && st !== 'Locked' && st !== 'Approved';
     show('listSubmitBtn',   canSubmit);
     show('listApproveBtn',  isMgmt && st === 'Submitted');
     show('listSendBackBtn', isMgmt && (st === 'Submitted' || st === 'Approved'));
+    show('listUploadBtn',   canUpload);
     bar.style.display = 'flex';
   }
 
@@ -1124,6 +1166,115 @@
     a.download = 'Attendance_' + currentMonth + '_' + currentYear + '.csv';
     a.click();
   }
+
+  // ── List-view Upload Excel ───────────────────────────────────────────────
+  let _listUploadData = [];
+
+  function openListUpload() {
+    const gkey = document.getElementById('filterGroup').value;
+    if (!gkey) { showAlert('listAlertError', 'Select a group before uploading'); return; }
+    const gInfo = viewGroupInfoMap[gkey];
+    document.getElementById('listUploadFile').value = '';
+    document.getElementById('listUploadPreview').style.display = 'none';
+    document.getElementById('listApplyUploadBtn').style.display = 'none';
+    document.getElementById('listUploadWarning').style.display = 'none';
+    _listUploadData = [];
+    document.getElementById('listUploadModal').classList.add('open');
+  }
+
+  function closeListUploadModal() {
+    document.getElementById('listUploadModal').classList.remove('open');
+  }
+
+  function listProcessUpload() {
+    const file = document.getElementById('listUploadFile').files[0];
+    if (!file) { alert('Please select a file'); return; }
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const wb = XLSX.read(ev.target.result, { type: 'binary' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(ws, { defval: '' });
+        if (!json.length) { alert('No data found in file'); return; }
+        _listUploadData = json;
+        const cols = Object.keys(json[0]);
+        const thStyle = 'padding:5px 7px;background:#f0f2f5;border:1px solid #ddd;font-size:10px;white-space:nowrap;';
+        const tdStyle = 'padding:5px 7px;border:1px solid #eee;font-size:10px;';
+        document.getElementById('listPreviewHead').innerHTML = '<tr>' + cols.map(c => '<th style="' + thStyle + '">' + c + '</th>').join('') + '</tr>';
+        document.getElementById('listPreviewBody').innerHTML = json.slice(0, 5).map(r =>
+          '<tr>' + cols.map(c => '<td style="' + tdStyle + '">' + r[c] + '</td>').join('') + '</tr>'
+        ).join('');
+        document.getElementById('listUploadPreviewTitle').textContent = 'Preview — ' + json.length + ' rows (showing first 5)';
+        document.getElementById('listUploadPreview').style.display = 'block';
+        document.getElementById('listApplyUploadBtn').style.display = 'inline-block';
+      } catch(e) { alert('Error reading file: ' + e.message); }
+    };
+    reader.readAsBinaryString(file);
+  }
+
+  async function listApplyUpload() {
+    if (!_listUploadData.length) return;
+    const gkey = document.getElementById('filterGroup').value;
+    if (!gkey) { showAlert('listAlertError', 'No group selected'); return; }
+
+    // Get employees in this group
+    const groupEmps = viewAttendanceRecords.filter(r => r._groupKey === gkey);
+    const einSet = new Set(groupEmps.map(r => r.ein));
+    const validStatuses = ['P','A','CL','SL','PL','SpL','H','WO','HD','OT'];
+    const days = currentDaysInMonth;
+
+    let matched = 0, skipped = 0;
+    _listUploadData.forEach(row => {
+      const ein = String(row['EIN'] || '').trim();
+      if (!einSet.has(ein)) { skipped++; return; }
+      const empIdx = viewAttendanceRecords.findIndex(r => r.ein === ein && r._groupKey === gkey);
+      if (empIdx < 0) return;
+      const emp = viewAttendanceRecords[empIdx];
+      // Accept numeric day columns (1, 2, 3 …) — same format as the download
+      emp.days = [];
+      for (let d = 1; d <= days; d++) {
+        const val = String(row[d] || row[String(d)] || '').trim();
+        emp.days.push({ day: d, status: validStatuses.includes(val) ? val : '', otHours: 0 });
+      }
+      recalcEmp(empIdx, viewAttendanceRecords);
+      matched++;
+    });
+
+    if (!matched) {
+      const warn = document.getElementById('listUploadWarning');
+      warn.textContent = 'No EINs from the file matched this group\'s employees. Check the EIN column.';
+      warn.style.display = 'block';
+      return;
+    }
+
+    // Ensure doc exists, then bulk-save
+    try {
+      const firstEin = groupEmps[0] && groupEmps[0].ein;
+      const attId = firstEin ? await ensureAttendanceDoc(firstEin) : null;
+      if (!attId) { showAlert('listAlertError', 'Could not save — group document not found'); closeListUploadModal(); return; }
+
+      const payload = groupEmps.map(emp => ({
+        ein: emp.ein,
+        days: emp.days || []
+      }));
+      const res = await fetch('/api/attendance/' + attId + '/bulk', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ records: payload })
+      });
+      const d = await res.json();
+      if (d.success) {
+        closeListUploadModal();
+        applyGroupFilter();
+        showAlert('listAlertSuccess', '✅ Uploaded ' + matched + ' employees' + (skipped ? ' (' + skipped + ' EINs skipped — not in this group)' : ''));
+      } else {
+        showAlert('listAlertError', d.message || 'Save failed');
+        closeListUploadModal();
+      }
+    } catch(e) { showAlert('listAlertError', 'Network error: ' + e.message); closeListUploadModal(); }
+  }
+  // ── End Upload Excel ─────────────────────────────────────────────────────
 
   async function initAttendance() {
     const month = document.getElementById('selMonth').value;
@@ -1348,18 +1499,15 @@
 
     const totalPresent  = sum(e => e.presentDays);
     const totalPayable  = sum(e => e.payableDays);
-    const totalLOP      = sum(e => e.lopDays || e.absent);
+    const totalLOP      = Math.round(sum(e => e.lopDays || e.absent));
     const totalWO       = sum(e => e.weekOff);
     const totalCL       = sum(e => Math.round(e.cl));
     const totalSL       = sum(e => Math.round(e.sl));
 
-    const avgPresent  = total > 0 ? (totalPresent  / total).toFixed(1) : 0;
-    const avgPayable  = total > 0 ? (totalPayable  / total).toFixed(1) : 0;
-
     set(s1, total);
-    set(s2, avgPresent);
+    set(s2, totalPresent);
     // Payable tile: same prefix as s2 but replace Present→Payable in id
-    set(s2.replace('Present','Payable').replace('sumPresent','sumPayable').replace('vSumPresent','vSumPayable'), avgPayable);
+    set(s2.replace('Present','Payable').replace('sumPresent','sumPayable').replace('vSumPresent','vSumPayable'), totalPayable);
     set(s3, totalCL);
     set(s4, totalSL);
     set(s5, totalLOP);
