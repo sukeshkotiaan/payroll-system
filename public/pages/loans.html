@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Loan Management — Payroll System</title>
-  <style>
+  <link rel="stylesheet" href="/style.css">
+<style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; }
     .header { background: #1a73e8; color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
@@ -42,18 +43,18 @@
     .badge-pre-closed { background: #fef3c7; color: #d97706; }
     .badge-pending { background: #fef3c7; color: #d97706; }
     .badge-paid { background: #e6f4ea; color: #34a853; }
-    .badge-skipped { background: #f0e6ff; color: #7c3aed; }
-    .skipped-row td { background: #faf5ff !important; color: #999; }
-    .btn-skip { background: #7c3aed; color: white; border: none; padding: 4px 10px; border-radius: 5px; cursor: pointer; font-size: 11px; font-weight: 600; }
+    .badge-skipped { background: #f1f5f9; color: #475569; }
+    .skipped-row td { background: #f8f9fa !important; color: #9aa0a6; }
+    .btn-skip { background: #475569; color: white; border: none; padding: 4px 10px; border-radius: 5px; cursor: pointer; font-size: 11px; font-weight: 600; }
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
     .modal-overlay.open { display: flex; }
     .modal-box { background: white; border-radius: 12px; padding: 24px; width: 420px; max-width: 95vw; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
     .modal-box h3 { font-size: 16px; margin-bottom: 6px; }
     .modal-box p { font-size: 13px; color: #666; margin-bottom: 18px; }
     .skip-option { border: 2px solid #e0e0e0; border-radius: 8px; padding: 14px; margin-bottom: 10px; cursor: pointer; transition: border-color 0.15s; }
-    .skip-option:hover { border-color: #7c3aed; }
-    .skip-option.selected { border-color: #7c3aed; background: #faf5ff; }
-    .skip-option input[type=radio] { margin-right: 8px; accent-color: #7c3aed; }
+    .skip-option:hover { border-color: #475569; }
+    .skip-option.selected { border-color: #475569; background: #f8f9fa; }
+    .skip-option input[type=radio] { margin-right: 8px; accent-color: #475569; }
     .skip-option strong { font-size: 13px; display: block; margin-bottom: 4px; }
     .skip-option span { font-size: 12px; color: #666; }
     .emp-info-bar { background: #e8f0fe; border-radius: 8px; padding: 12px 15px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 15px; }
@@ -772,5 +773,7 @@
 </div>
 
 <script src="/js/emp-search.js?v=2"></script>
+<script src="/toast.js"></script>
+<script src="/nav.js"></script>
 </body>
 </html>

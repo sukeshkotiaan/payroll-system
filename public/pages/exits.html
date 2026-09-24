@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Employee Exit — Payroll System</title>
-  <style>
+  <link rel="stylesheet" href="/style.css">
+<style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; }
     .header {
@@ -70,7 +71,7 @@
       flex: 1;
       max-width: 300px;
       padding: 10px 15px;
-      border: 2px solid #1a73e8;
+      border: 1px solid var(--border-default, #dde1e7);
       border-radius: 6px;
       font-size: 14px;
       outline: none;
@@ -895,5 +896,7 @@
   }
 </script>
 <script src="/js/emp-search.js?v=2"></script>
+<script src="/toast.js"></script>
+<script src="/nav.js"></script>
 </body>
 </html>

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audit Log — Payroll System</title>
+  <link rel="stylesheet" href="/style.css">
+<style>
+  .container { padding: 20px; max-width: 1300px; }
+  .header { background: #1a73e8; color: white; padding: 15px 30px; }
+  .header h1 { font-size: 20px; }
+  .log-action { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; background: var(--color-primary-light); color: var(--color-primary); white-space: nowrap; }
+  .log-action.LOGIN        { background: var(--color-success-bg); color: var(--color-success); }
+  .log-action.LOGOUT       { background: #f0f0f0; color: var(--text-muted); }
+  .log-action.LOGIN_OTP_REQUESTED { background: var(--color-warning-bg); color: var(--color-warning); }
+  .ts { font-size: 11px; color: var(--text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .pagination { display: flex; gap: 8px; align-items: center; justify-content: flex-end; padding: 12px 0 4px; }
+</style>
+</head>
+<body>
+<div class="header"><h1>Audit Log</h1></div>
+
+<div class="container">
+  <div class="top-bar">
+    <div class="filters">
+      <input type="text" id="filterUser" placeholder="Filter by username" onkeyup="debounceLoad()">
+      <select id="filterRole" onchange="loadLogs()">
+        <option value="">All roles</option>
+        <option value="admin">Admin</option>
+        <option value="management">Management</option>
+        <option value="accountant">Accountant</option>
+        <option value="supervisor">Supervisor</option>
+      </select>
+      <input type="date" id="filterFrom" onchange="loadLogs()">
+      <input type="date" id="filterTo" onchange="loadLogs()">
+      <button class="btn-secondary btn-sm" onclick="clearFilters()">Clear</button>
+    </div>
+    <div id="totalCount" style="font-size:12px;color:var(--text-muted);"></div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>User</th>
+            <th>Role</th>
+            <th>Action</th>
+            <th>Details</th>
+            <th>IP</th>
+          </tr>
+        </thead>
+        <tbody id="logBody">
+          <tr><td colspan="6" class="text-center text-muted" style="padding:32px;">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="pagination" id="paginationBar"></div>
+</div>
+
+<script>
+  let skip = 0;
+  const limit = 100;
+  let debounceTimer = null;
+
+  function debounceLoad() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => { skip = 0; loadLogs(); }, 400);
+  }
+
+  function clearFilters() {
+    document.getElementById('filterUser').value = '';
+    document.getElementById('filterRole').value = '';
+    document.getElementById('filterFrom').value = '';
+    document.getElementById('filterTo').value = '';
+    skip = 0;
+    loadLogs();
+  }
+
+  async function loadLogs() {
+    const params = new URLSearchParams({ skip, limit });
+    const user = document.getElementById('filterUser').value.trim();
+    const role = document.getElementById('filterRole').value;
+    const from = document.getElementById('filterFrom').value;
+    const to   = document.getElementById('filterTo').value;
+    if (user) params.set('username', user);
+    if (role) params.set('role', role);
+    if (from) params.set('from', from);
+    if (to)   params.set('to', to + 'T23:59:59');
+
+    const tbody = document.getElementById('logBody');
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted" style="padding:24px;">Loading…</td></tr>';
+
+    try {
+      const r = await fetch('/api/security/audit-log?' + params);
+      if (r.status === 403) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted" style="padding:24px;">Access denied.</td></tr>';
+        return;
+      }
+      const d = await r.json();
+      if (!d.success) throw new Error(d.message);
+
+      const logs = d.logs || [];
+      const total = d.pagination ? d.pagination.total : logs.length;
+      document.getElementById('totalCount').textContent = total + ' record' + (total === 1 ? '' : 's');
+
+      if (!logs.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted" style="padding:32px;">No records found.</td></tr>';
+        renderPagination(total);
+        return;
+      }
+
+      tbody.innerHTML = logs.map(l => {
+        const ts = new Date(l.timestamp);
+        const tsStr = ts.toLocaleDateString('en-IN') + ' ' + ts.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        return `<tr>
+          <td class="ts">${tsStr}</td>
+          <td><strong>${l.username || '—'}</strong><br><span style="font-size:11px;color:var(--text-muted);">${l.fullName || ''}</span></td>
+          <td>${l.role || '—'}</td>
+          <td><span class="log-action ${l.action || ''}">${(l.action || '—').replace(/_/g, ' ')}</span></td>
+          <td style="font-size:12px;color:var(--text-secondary);max-width:280px;">${l.details || '—'}</td>
+          <td class="ts">${l.ip || '—'}</td>
+        </tr>`;
+      }).join('');
+
+      renderPagination(total);
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="padding:24px;color:var(--color-danger);">Error: ${e.message}</td></tr>`;
+    }
+  }
+
+  function renderPagination(total) {
+    const bar = document.getElementById('paginationBar');
+    if (total <= limit) { bar.innerHTML = ''; return; }
+    const pages = Math.ceil(total / limit);
+    const current = Math.floor(skip / limit);
+    let html = `<span style="font-size:12px;color:var(--text-muted);">Page ${current + 1} / ${pages}</span>`;
+    if (current > 0) html += `<button class="btn-secondary btn-sm" onclick="gotoPage(${current - 1})">Previous</button>`;
+    if (current < pages - 1) html += `<button class="btn-secondary btn-sm" onclick="gotoPage(${current + 1})">Next</button>`;
+    bar.innerHTML = html;
+  }
+
+  function gotoPage(p) {
+    skip = p * limit;
+    loadLogs();
+  }
+
+  loadLogs();
+</script>
+<script src="/toast.js"></script>
+<script src="/nav.js"></script>
+</body>
+</html>
