@@ -156,9 +156,9 @@
   <div class="modal-box" style="width:680px;max-width:95vw;">
     <h3>⬆ Upload Excel</h3>
     <div style="background:#e8f0fe;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#1a73e8;line-height:1.6;">
-      <strong>Format:</strong> EIN · Name · Designation · <em>1 · 2 · 3 … 31</em> (day columns) · Present · Absent · CL …<br>
+      <strong>Format:</strong> EIN · Name · Designation · <em>1 · 2 · 3 … (days in month)</em><br>
       Fill in valid codes in the day columns: <strong>P, A, CL, SL, PL, SpL, WO, H, HD, OT</strong> — leave blank for no status.<br>
-      Only the day columns are used on upload; summary columns (Present, CL, etc.) are recalculated automatically.<br>
+      All totals (Present, LOP, Payable, etc.) are calculated automatically after upload.<br>
       <button onclick="downloadGroupTemplate()" style="margin-top:6px;padding:4px 10px;border:1px solid #1a73e8;background:#fff;color:#1a73e8;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;">⬇ Download this group's template</button>
     </div>
     <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;">
@@ -1157,7 +1157,6 @@
     const days = recs[0].daysInMonth || currentDaysInMonth;
     const headers = ['EIN', 'Name', 'Designation'];
     for (let d = 1; d <= days; d++) headers.push(d);
-    headers.push('Present','Absent','CL','SL','PL','SpL','WO','H','HD','OT','LOP','Payable');
     const wsData = [headers];
     recs.forEach(emp => {
       const row = [emp.ein||'', emp.employeeName||'', emp.designation||''];
@@ -1165,12 +1164,11 @@
         const dd = emp.days ? emp.days.find(x => x.day === d) : null;
         row.push(dd ? (dd.status || '') : '');
       }
-      row.push(emp.presentDays||0, emp.absent||0, emp.cl||0, emp.sl||0, emp.pl||0, emp.spL||0, emp.weekOff||0, emp.holidays||0, emp.halfDays||0, emp.otHours||0, emp.lopDays||0, emp.payableDays||0);
       wsData.push(row);
     });
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(wsData);
-    ws['!cols'] = [{ wch: 12 }, { wch: 28 }, { wch: 18 }].concat(Array(days).fill({ wch: 5 }));
+    ws['!cols'] = [{ wch: 12 }, { wch: 28 }, { wch: 16 }].concat(Array(days).fill({ wch: 5 }));
 
     // Add dropdown validation to all day columns for every employee row
     const lastDayCol = XLSX.utils.encode_col(3 + days - 1); // e.g. "AH" for 31 days
