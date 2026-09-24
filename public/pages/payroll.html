@@ -132,6 +132,58 @@
       cursor: pointer; text-align: center; font-size: 13px; font-weight: 600;
     }
     .tds-option.active { border-color: #1a73e8; background: #e8f0fe; color: #1a73e8; }
+    /* Tabs */
+    .period-bar {
+      background: white; border-bottom: 1px solid #eee;
+      padding: 12px 20px; display: flex; align-items: center; gap: 15px;
+      position: sticky; top: 57px; z-index: 50;
+    }
+    .period-bar label { font-size: 13px; font-weight: 600; color: #555; }
+    .period-bar select { padding: 7px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; outline: none; }
+    .period-bar select:focus { border-color: #1a73e8; }
+    .tab-nav {
+      display: flex; gap: 0; background: white;
+      border-bottom: 2px solid #eee;
+      position: sticky; top: 107px; z-index: 49;
+      overflow-x: auto;
+    }
+    .tab-btn {
+      padding: 12px 18px; background: none; border: none; cursor: pointer;
+      font-size: 13px; font-weight: 600; color: #666; white-space: nowrap;
+      border-bottom: 3px solid transparent; margin-bottom: -2px;
+    }
+    .tab-btn:hover { color: #1a73e8; background: #f8f9ff; }
+    .tab-btn.active { color: #1a73e8; border-bottom-color: #1a73e8; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .tab-table-wrap { overflow-x: auto; }
+    .tab-table-wrap table { font-size: 12px; white-space: nowrap; }
+    .status-chip {
+      display: inline-block; padding: 3px 9px; border-radius: 10px;
+      font-size: 11px; font-weight: 600;
+    }
+    .chip-approved { background: #e6f4ea; color: #34a853; }
+    .chip-locked   { background: #f3e8ff; color: #7b1fa2; }
+    .chip-submitted { background: #e8f0fe; color: #1a73e8; }
+    .chip-open     { background: #fef3c7; color: #d97706; }
+    .readiness-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 20px; }
+    .readiness-card {
+      background: white; border-radius: 10px; padding: 16px 18px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    }
+    .readiness-card .rc-label { font-size: 12px; color: #888; font-weight: 600; margin-bottom: 4px; }
+    .readiness-card .rc-value { font-size: 20px; font-weight: 700; color: #1a73e8; }
+    .readiness-card .rc-sub { font-size: 11px; color: #999; margin-top: 2px; }
+    .readiness-card.ok .rc-value { color: #34a853; }
+    .readiness-card.warn .rc-value { color: #d97706; }
+    .process-groups { margin-top: 8px; }
+    .process-group-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 14px; border-bottom: 1px solid #f0f0f0; font-size: 13px;
+    }
+    .process-group-row:last-child { border-bottom: none; }
+    .process-group-row .g-name { font-weight: 600; color: #333; }
+    .process-group-row .g-meta { font-size: 11px; color: #888; margin-top: 2px; }
   </style>
 </head>
 <body>
@@ -211,55 +263,266 @@
   </div>
 </div>
 
-<!-- PROCESS VIEW -->
+<!-- PROCESS VIEW (tabbed) -->
 <div id="processView" class="view">
-  <div class="container">
-    <div class="form-view-header">
-      <button class="btn-back-list" onclick="showListView()">← Back to List</button>
-      <h2>Process Payroll</h2>
-    </div>
+
+  <!-- period bar (sticky below header) -->
+  <div class="period-bar">
+    <button class="btn-back-list" onclick="showListView()" style="margin-right:5px;">← Back</button>
+    <label>Month</label>
+    <select id="processMonth" onchange="onPeriodChange()">
+      <option value="">Select Month</option>
+      <option>January</option><option>February</option><option>March</option>
+      <option>April</option><option>May</option><option>June</option>
+      <option>July</option><option>August</option><option>September</option>
+      <option>October</option><option>November</option><option>December</option>
+    </select>
+    <label>Year</label>
+    <select id="processYear" onchange="onPeriodChange()"></select>
+    <span id="periodFY" style="font-size:12px;color:#888;margin-left:5px;"></span>
+  </div>
+
+  <!-- Tab nav (sticky below period bar) -->
+  <div class="tab-nav">
+    <button class="tab-btn active" id="tabBtn-att" onclick="switchTab('att')">Attendance</button>
+    <button class="tab-btn" id="tabBtn-sal" onclick="switchTab('sal')">Salary</button>
+    <button class="tab-btn" id="tabBtn-ot"  onclick="switchTab('ot')">OT</button>
+    <button class="tab-btn" id="tabBtn-arr" onclick="switchTab('arr')">Arrears</button>
+    <button class="tab-btn" id="tabBtn-loan" onclick="switchTab('loan')">Loans</button>
+    <button class="tab-btn" id="tabBtn-tds" onclick="switchTab('tds')">TDS</button>
+    <button class="tab-btn" id="tabBtn-run" onclick="switchTab('run')" style="color:#1a73e8;">⚙️ Process Payroll</button>
+  </div>
+
+  <div class="container" style="padding-top:10px;">
     <div class="alert alert-success" id="processAlertSuccess"></div>
-    <div class="alert alert-error" id="processAlertError"></div>
+    <div class="alert alert-error"   id="processAlertError"></div>
     <div class="alert alert-warning" id="processAlertWarning"></div>
 
-    <div class="card">
-      <div class="card-header"><h3>Select Period & Group</h3></div>
-      <div class="card-body">
-        <div class="form-grid">
-          <div class="form-group">
-            <label>Month *</label>
-            <select id="processMonth">
-              <option value="">Select Month</option>
-              <option>January</option><option>February</option><option>March</option>
-              <option>April</option><option>May</option><option>June</option>
-              <option>July</option><option>August</option><option>September</option>
-              <option>October</option><option>November</option><option>December</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Year *</label>
-            <select id="processYear"></select>
-          </div>
-          <div class="form-group">
-            <label>Location *</label>
-            <select id="processLocation"><option value="">Select Location</option></select>
-          </div>
-          <div class="form-group">
-            <label>Section *</label>
-            <select id="processSection"><option value="">Select Section</option></select>
-          </div>
-          <div class="form-group">
-            <label>Profile *</label>
-            <select id="processProfile"><option value="">Select Profile</option></select>
-          </div>
+    <!-- ===== ATTENDANCE TAB ===== -->
+    <div class="tab-content active" id="tab-att">
+      <div class="card">
+        <div class="card-header">
+          <h3>Attendance Status</h3>
+          <span id="attSummaryChip" style="font-size:12px;color:#888;"></span>
         </div>
-        <div style="margin-top:15px;">
-          <button class="btn-primary" onclick="processPayroll()">⚙️ Calculate Payroll</button>
+        <div class="tab-table-wrap">
+          <table>
+            <thead><tr>
+              <th class="left">Group</th>
+              <th class="left">Location</th>
+              <th class="left">Status</th>
+              <th>Employees</th>
+              <th>Present</th>
+              <th>Absent</th>
+              <th>LOP</th>
+              <th>WO/H</th>
+            </tr></thead>
+            <tbody id="attTabBody">
+              <tr><td colspan="8"><div class="empty-state">Select month and year to load data</div></td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
-  </div>
-</div>
+
+    <!-- ===== SALARY TAB ===== -->
+    <div class="tab-content" id="tab-sal">
+      <div class="card">
+        <div class="card-header">
+          <h3>Salary (Appraisal)</h3>
+          <span id="salSummaryChip" style="font-size:12px;color:#888;"></span>
+        </div>
+        <div class="tab-table-wrap">
+          <table>
+            <thead><tr>
+              <th class="left">EIN</th>
+              <th class="left">Name</th>
+              <th class="left">Group</th>
+              <th>Financial Year</th>
+              <th>Monthly Salary</th>
+              <th>CTC Annual</th>
+            </tr></thead>
+            <tbody id="salTabBody">
+              <tr><td colspan="6"><div class="empty-state">Select month and year to load data</div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== OT TAB ===== -->
+    <div class="tab-content" id="tab-ot">
+      <div class="card">
+        <div class="card-header">
+          <h3>Overtime</h3>
+          <span id="otSummaryChip" style="font-size:12px;color:#888;"></span>
+        </div>
+        <div class="tab-table-wrap">
+          <table>
+            <thead><tr>
+              <th class="left">EIN</th>
+              <th class="left">Name</th>
+              <th class="left">Location</th>
+              <th>Hours</th>
+              <th>Rate (₹/hr)</th>
+              <th>OT Amount</th>
+              <th class="left">Remarks</th>
+            </tr></thead>
+            <tbody id="otTabBody">
+              <tr><td colspan="7"><div class="empty-state">Select month and year to load data</div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== ARREARS TAB ===== -->
+    <div class="tab-content" id="tab-arr">
+      <div class="card">
+        <div class="card-header">
+          <h3>Arrears / Advance</h3>
+          <span id="arrSummaryChip" style="font-size:12px;color:#888;"></span>
+        </div>
+        <div class="tab-table-wrap">
+          <table>
+            <thead><tr>
+              <th class="left">EIN</th>
+              <th class="left">Name</th>
+              <th class="left">Type</th>
+              <th>Amount</th>
+              <th class="left">Location</th>
+              <th class="left">Remarks</th>
+            </tr></thead>
+            <tbody id="arrTabBody">
+              <tr><td colspan="6"><div class="empty-state">Select month and year to load data</div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== LOANS TAB ===== -->
+    <div class="tab-content" id="tab-loan">
+      <div class="card">
+        <div class="card-header">
+          <h3>Loan EMIs</h3>
+          <span id="loanSummaryChip" style="font-size:12px;color:#888;"></span>
+        </div>
+        <div class="tab-table-wrap">
+          <table>
+            <thead><tr>
+              <th class="left">EIN</th>
+              <th class="left">Name</th>
+              <th class="left">Loan Type</th>
+              <th>EMI Amount</th>
+              <th>Outstanding Balance</th>
+            </tr></thead>
+            <tbody id="loanTabBody">
+              <tr><td colspan="5"><div class="empty-state">Select month and year to load data</div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== TDS TAB ===== -->
+    <div class="tab-content" id="tab-tds">
+      <div class="card">
+        <div class="card-header">
+          <h3>TDS / Income Tax</h3>
+          <span id="tdsSummaryChip" style="font-size:12px;color:#888;"></span>
+        </div>
+        <div class="tab-table-wrap">
+          <table>
+            <thead><tr>
+              <th class="left">EIN</th>
+              <th class="left">Name</th>
+              <th class="left">Location</th>
+              <th>Amount</th>
+              <th class="left">Remarks</th>
+            </tr></thead>
+            <tbody id="tdsTabBody">
+              <tr><td colspan="5"><div class="empty-state">Select month and year to load data</div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== PROCESS PAYROLL TAB ===== -->
+    <div class="tab-content" id="tab-run">
+      <!-- Readiness summary -->
+      <div class="readiness-grid" id="readinessSummary" style="display:none;">
+        <div class="readiness-card" id="rc-att">
+          <div class="rc-label">Attendance Groups Ready</div>
+          <div class="rc-value" id="rc-att-val">—</div>
+          <div class="rc-sub" id="rc-att-sub"></div>
+        </div>
+        <div class="readiness-card" id="rc-ot">
+          <div class="rc-label">OT Entries</div>
+          <div class="rc-value" id="rc-ot-val">—</div>
+          <div class="rc-sub" id="rc-ot-sub"></div>
+        </div>
+        <div class="readiness-card" id="rc-arr">
+          <div class="rc-label">Pending Arrears</div>
+          <div class="rc-value" id="rc-arr-val">—</div>
+          <div class="rc-sub" id="rc-arr-sub"></div>
+        </div>
+        <div class="readiness-card" id="rc-loan">
+          <div class="rc-label">Loan EMIs</div>
+          <div class="rc-value" id="rc-loan-val">—</div>
+          <div class="rc-sub" id="rc-loan-sub"></div>
+        </div>
+        <div class="readiness-card" id="rc-tds">
+          <div class="rc-label">TDS Entries</div>
+          <div class="rc-value" id="rc-tds-val">—</div>
+          <div class="rc-sub" id="rc-tds-sub"></div>
+        </div>
+        <div class="readiness-card" id="rc-sal">
+          <div class="rc-label">Salary Records</div>
+          <div class="rc-value" id="rc-sal-val">—</div>
+          <div class="rc-sub" id="rc-sal-sub"></div>
+        </div>
+      </div>
+
+      <!-- Groups with approved attendance -->
+      <div class="card" id="processGroupsCard">
+        <div class="card-header" style="justify-content:space-between;">
+          <h3>Groups Ready for Processing</h3>
+          <button class="btn-primary" id="btnProcessAll" onclick="runProcessAll()">⚙️ Process All Groups</button>
+        </div>
+        <div class="process-groups" id="processGroupsList">
+          <div class="empty-state" style="padding:30px;">Select month and year above to see groups</div>
+        </div>
+      </div>
+
+      <!-- Also include single-group option -->
+      <div class="card" style="margin-top:0;">
+        <div class="card-header"><h3>Process Specific Group</h3></div>
+        <div class="card-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Location *</label>
+              <select id="processLocation"><option value="">Select Location</option></select>
+            </div>
+            <div class="form-group">
+              <label>Section *</label>
+              <select id="processSection"><option value="">Select Section</option></select>
+            </div>
+            <div class="form-group">
+              <label>Profile *</label>
+              <select id="processProfile"><option value="">Select Profile</option></select>
+            </div>
+            <div class="form-group" style="align-self:end;">
+              <button class="btn-primary" onclick="processPayroll()">⚙️ Process This Group</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /.container -->
+</div><!-- /#processView -->
 
 <!-- PAYROLL DETAIL VIEW -->
 <div id="detailView" class="view">
@@ -393,7 +656,7 @@
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="/js/xlsx.full.min.js"></script>
 <script>
   let currentUser = {};
   let currentPayrollId = null;
@@ -415,11 +678,13 @@
       await viewPayroll(params.get('view'));
     } else if (params.get('process')) {
       showProcessView();
+      if (params.get('month'))    document.getElementById('processMonth').value = params.get('month');
+      if (params.get('year'))     document.getElementById('processYear').value  = params.get('year');
       if (params.get('location')) document.getElementById('processLocation').value = params.get('location');
       if (params.get('section'))  document.getElementById('processSection').value  = params.get('section');
       if (params.get('profile'))  document.getElementById('processProfile').value  = params.get('profile');
-      if (params.get('month'))    document.getElementById('processMonth').value     = params.get('month');
-      if (params.get('year'))     document.getElementById('processYear').value      = params.get('year');
+      onPeriodChange();
+      if (params.get('location')) switchTab('run');
     }
   };
 
@@ -480,6 +745,11 @@
     const fy = document.getElementById('filterYear');
     if (fm) fm.value = MONTHS[now.getMonth()];
     if (fy) fy.value = now.getFullYear();
+    // Update FY label
+    const periodFY = document.getElementById('periodFY');
+    if (periodFY && m && y) {
+      periodFY.textContent = 'FY ' + getFY(MONTHS[now.getMonth()], now.getFullYear());
+    }
   }
 
   async function loadPayrollList() {
@@ -1050,7 +1320,456 @@
     return parseFloat(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
-  function showProcessView() { switchView('processView'); }
+  // ============================================================
+  // TAB STATE
+  // ============================================================
+  let _activeTab = 'att';
+  let _tabLoaded = {};  // which tabs have been loaded for current period
+  let _tabData = {};    // cached data per tab
+
+  const MONTHS_IDX = {
+    January:0,February:1,March:2,April:3,May:4,June:5,
+    July:6,August:7,September:8,October:9,November:10,December:11
+  };
+
+  function getFY(month, year) {
+    const idx = MONTHS_IDX[month] || 0;
+    const y = parseInt(year);
+    const start = idx >= 5 ? y : y - 1;
+    return start + '-' + String(start + 1).slice(2);
+  }
+
+  function onPeriodChange() {
+    const m = document.getElementById('processMonth').value;
+    const y = document.getElementById('processYear').value;
+    if (m && y) {
+      const fy = getFY(m, y);
+      document.getElementById('periodFY').textContent = 'FY ' + fy;
+    }
+    _tabLoaded = {};
+    _tabData = {};
+    loadActiveTab();
+  }
+
+  function switchTab(name) {
+    _activeTab = name;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tabBtn-' + name).classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    loadActiveTab();
+  }
+
+  function loadActiveTab() {
+    const m = document.getElementById('processMonth').value;
+    const y = document.getElementById('processYear').value;
+    if (!m || !y) return;
+    if (_tabLoaded[_activeTab]) return;
+    _tabLoaded[_activeTab] = true;
+    const loaders = {
+      att: loadAttTab, sal: loadSalTab, ot: loadOtTab,
+      arr: loadArrTab, loan: loadLoanTab, tds: loadTdsTab, run: loadRunTab
+    };
+    if (loaders[_activeTab]) loaders[_activeTab](m, y);
+  }
+
+  // ---- ATTENDANCE TAB ----
+  async function loadAttTab(month, year) {
+    document.getElementById('attTabBody').innerHTML =
+      '<tr><td colspan="8"><div class="empty-state">Loading...</div></td></tr>';
+    try {
+      const res = await fetch('/api/attendance?month=' + encodeURIComponent(month) + '&year=' + year);
+      const data = await res.json();
+      if (!data.success) { attError('Failed to load'); return; }
+      const groups = data.records || [];
+      _tabData.att = groups;
+      renderAttTab(groups);
+    } catch(e) { attError('Error: ' + e.message); }
+  }
+
+  function renderAttTab(groups) {
+    const tbody = document.getElementById('attTabBody');
+    const chip = document.getElementById('attSummaryChip');
+    if (!groups.length) {
+      tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state">No attendance records for this period</div></td></tr>';
+      chip.textContent = '0 groups';
+      return;
+    }
+    const approvedCount = groups.filter(g => g.status === 'Approved' || g.status === 'Locked').length;
+    chip.textContent = approvedCount + ' of ' + groups.length + ' groups approved';
+    tbody.innerHTML = groups.map(g => {
+      const statusCls = g.status === 'Approved' ? 'chip-approved' :
+                        g.status === 'Locked'   ? 'chip-locked'   :
+                        g.status === 'Submitted' ? 'chip-submitted' : 'chip-open';
+      const totalPresent = (g.records || []).reduce((s,r) => s + (r.presentDays||0), 0);
+      const totalAbsent  = (g.records || []).reduce((s,r) => s + (r.absent||0), 0);
+      const totalLOP     = (g.records || []).reduce((s,r) => s + (r.lopDays||0), 0);
+      const totalWO      = (g.records || []).reduce((s,r) => s + (r.wo||0) + (r.halfDay||0), 0);
+      const gName = g.section === 'State' ? 'Xaviers ' + g.location + ' (' + g.profile + ')' :
+                    g.section + ' ' + g.profile;
+      return '<tr>' +
+        '<td class="left"><strong>' + gName + '</strong></td>' +
+        '<td class="left">' + g.location + '</td>' +
+        '<td class="left"><span class="status-chip ' + statusCls + '">' + g.status + '</span></td>' +
+        '<td>' + (g.records||[]).length + '</td>' +
+        '<td>' + totalPresent + '</td>' +
+        '<td>' + totalAbsent + '</td>' +
+        '<td style="color:#ea4335;">' + totalLOP + '</td>' +
+        '<td>' + totalWO + '</td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  function attError(msg) {
+    document.getElementById('attTabBody').innerHTML =
+      '<tr><td colspan="8"><div class="empty-state" style="color:#ea4335;">' + msg + '</div></td></tr>';
+  }
+
+  // ---- SALARY TAB ----
+  async function loadSalTab(month, year) {
+    document.getElementById('salTabBody').innerHTML =
+      '<tr><td colspan="6"><div class="empty-state">Loading...</div></td></tr>';
+    if (currentUser.role !== 'admin' && currentUser.role !== 'management') {
+      document.getElementById('salTabBody').innerHTML =
+        '<tr><td colspan="6"><div class="empty-state">Salary data is visible to Admin and Management only</div></td></tr>';
+      return;
+    }
+    const fy = getFY(month, year);
+    try {
+      const res = await fetch('/api/appraisals?financialYear=' + encodeURIComponent(fy));
+      const data = await res.json();
+      if (!data.success) { salError('Failed to load'); return; }
+      const records = data.records || [];
+      _tabData.sal = records;
+      renderSalTab(records, fy);
+    } catch(e) { salError('Error: ' + e.message); }
+  }
+
+  function renderSalTab(records, fy) {
+    const tbody = document.getElementById('salTabBody');
+    const chip = document.getElementById('salSummaryChip');
+    chip.textContent = records.length + ' employees — FY ' + fy;
+    if (!records.length) {
+      tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state">No appraisal records for FY ' + fy + '</div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = records.map(r => {
+      const grp = r.section === 'State' ? 'Xaviers ' + r.location + ' (' + r.profile + ')' :
+                  r.section + ' ' + r.profile;
+      return '<tr>' +
+        '<td class="left"><strong>' + r.ein + '</strong></td>' +
+        '<td class="left">' + r.employeeName + '</td>' +
+        '<td class="left">' + grp + '</td>' +
+        '<td>' + r.financialYear + '</td>' +
+        '<td><strong>₹' + formatNum(r.monthlySalary) + '</strong></td>' +
+        '<td>₹' + formatNum(r.ctcAnnual) + '</td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  function salError(msg) {
+    document.getElementById('salTabBody').innerHTML =
+      '<tr><td colspan="6"><div class="empty-state" style="color:#ea4335;">' + msg + '</div></td></tr>';
+  }
+
+  // ---- OT TAB ----
+  async function loadOtTab(month, year) {
+    document.getElementById('otTabBody').innerHTML =
+      '<tr><td colspan="7"><div class="empty-state">Loading...</div></td></tr>';
+    try {
+      const res = await fetch('/api/ot?month=' + encodeURIComponent(month) + '&year=' + year);
+      const data = await res.json();
+      if (!data.success) { otError('Failed to load'); return; }
+      const records = data.records || [];
+      _tabData.ot = records;
+      renderOtTab(records);
+    } catch(e) { otError('Error: ' + e.message); }
+  }
+
+  function renderOtTab(records) {
+    const tbody = document.getElementById('otTabBody');
+    const chip = document.getElementById('otSummaryChip');
+    if (!records.length) {
+      tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state">No OT entries for this period</div></td></tr>';
+      chip.textContent = '0 entries';
+      return;
+    }
+    const totalAmt = records.reduce((s,r) => s + (r.amount||0), 0);
+    chip.textContent = records.length + ' entries — Total ₹' + formatNum(totalAmt);
+    tbody.innerHTML = records.map(r => '<tr>' +
+      '<td class="left"><strong>' + r.ein + '</strong></td>' +
+      '<td class="left">' + r.employeeName + '</td>' +
+      '<td class="left">' + r.location + '</td>' +
+      '<td>' + (r.hours||0) + '</td>' +
+      '<td>₹' + formatNum(r.rate) + '</td>' +
+      '<td style="color:#34a853;"><strong>₹' + formatNum(r.amount) + '</strong></td>' +
+      '<td class="left" style="font-size:11px;">' + (r.remarks||'') + '</td>' +
+      '</tr>').join('');
+  }
+
+  function otError(msg) {
+    document.getElementById('otTabBody').innerHTML =
+      '<tr><td colspan="7"><div class="empty-state" style="color:#ea4335;">' + msg + '</div></td></tr>';
+  }
+
+  // ---- ARREARS TAB ----
+  async function loadArrTab(month, year) {
+    document.getElementById('arrTabBody').innerHTML =
+      '<tr><td colspan="6"><div class="empty-state">Loading...</div></td></tr>';
+    try {
+      const res = await fetch('/api/arrears/for-payroll?month=' + encodeURIComponent(month) + '&year=' + year);
+      const data = await res.json();
+      if (!data.success) { arrError('Failed to load'); return; }
+      const records = data.arrears || [];
+      _tabData.arr = records;
+      renderArrTab(records);
+    } catch(e) { arrError('Error: ' + e.message); }
+  }
+
+  function renderArrTab(records) {
+    const tbody = document.getElementById('arrTabBody');
+    const chip = document.getElementById('arrSummaryChip');
+    if (!records.length) {
+      tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state">No pending arrears for this period</div></td></tr>';
+      chip.textContent = '0 entries';
+      return;
+    }
+    const totalAmt = records.reduce((s,r) => s + (r.amount||0), 0);
+    chip.textContent = records.length + ' entries — Total ₹' + formatNum(totalAmt);
+    tbody.innerHTML = records.map(r => '<tr>' +
+      '<td class="left"><strong>' + r.ein + '</strong></td>' +
+      '<td class="left">' + r.employeeName + '</td>' +
+      '<td class="left">' + r.type + '</td>' +
+      '<td style="color:' + (r.type === 'Advance' ? '#ea4335' : '#34a853') + ';">' +
+        (r.type === 'Advance' ? '-' : '+') + '₹' + formatNum(r.amount) + '</td>' +
+      '<td class="left">' + r.location + '</td>' +
+      '<td class="left" style="font-size:11px;">' + (r.remarks||'') + '</td>' +
+      '</tr>').join('');
+  }
+
+  function arrError(msg) {
+    document.getElementById('arrTabBody').innerHTML =
+      '<tr><td colspan="6"><div class="empty-state" style="color:#ea4335;">' + msg + '</div></td></tr>';
+  }
+
+  // ---- LOANS TAB ----
+  async function loadLoanTab(month, year) {
+    document.getElementById('loanTabBody').innerHTML =
+      '<tr><td colspan="5"><div class="empty-state">Loading...</div></td></tr>';
+    try {
+      const res = await fetch('/api/loans/for-payroll/active?month=' + encodeURIComponent(month) + '&year=' + year);
+      const data = await res.json();
+      if (!data.success) { loanError('Failed to load'); return; }
+      const records = data.loans || [];
+      _tabData.loan = records;
+      renderLoanTab(records);
+    } catch(e) { loanError('Error: ' + e.message); }
+  }
+
+  function renderLoanTab(records) {
+    const tbody = document.getElementById('loanTabBody');
+    const chip = document.getElementById('loanSummaryChip');
+    if (!records.length) {
+      tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state">No active loan EMIs due for this period</div></td></tr>';
+      chip.textContent = '0 entries';
+      return;
+    }
+    const totalEMI = records.reduce((s,r) => s + (r.emiAmount||0), 0);
+    chip.textContent = records.length + ' EMIs — Total ₹' + formatNum(totalEMI);
+    tbody.innerHTML = records.map(r => '<tr>' +
+      '<td class="left"><strong>' + r.ein + '</strong></td>' +
+      '<td class="left">' + r.employeeName + '</td>' +
+      '<td class="left">' + r.loanType + '</td>' +
+      '<td style="color:#ea4335;"><strong>₹' + formatNum(r.emiAmount) + '</strong></td>' +
+      '<td>₹' + formatNum(r.balance) + '</td>' +
+      '</tr>').join('');
+  }
+
+  function loanError(msg) {
+    document.getElementById('loanTabBody').innerHTML =
+      '<tr><td colspan="5"><div class="empty-state" style="color:#ea4335;">' + msg + '</div></td></tr>';
+  }
+
+  // ---- TDS TAB ----
+  async function loadTdsTab(month, year) {
+    document.getElementById('tdsTabBody').innerHTML =
+      '<tr><td colspan="5"><div class="empty-state">Loading...</div></td></tr>';
+    try {
+      const res = await fetch('/api/tds/for-payroll?month=' + encodeURIComponent(month) + '&year=' + year);
+      const data = await res.json();
+      if (!data.success) { tdsTabError('Failed to load'); return; }
+      const records = data.records || [];
+      _tabData.tds = records;
+      renderTdsTab(records);
+    } catch(e) { tdsTabError('Error: ' + e.message); }
+  }
+
+  function renderTdsTab(records) {
+    const tbody = document.getElementById('tdsTabBody');
+    const chip = document.getElementById('tdsSummaryChip');
+    if (!records.length) {
+      tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state">No TDS entries for this period</div></td></tr>';
+      chip.textContent = '0 entries';
+      return;
+    }
+    const totalAmt = records.reduce((s,r) => s + (r.amount||0), 0);
+    chip.textContent = records.length + ' entries — Total ₹' + formatNum(totalAmt);
+    tbody.innerHTML = records.map(r => '<tr>' +
+      '<td class="left"><strong>' + r.ein + '</strong></td>' +
+      '<td class="left">' + r.employeeName + '</td>' +
+      '<td class="left">' + r.location + '</td>' +
+      '<td style="color:#ea4335;">₹' + formatNum(r.amount) + '</td>' +
+      '<td class="left" style="font-size:11px;">' + (r.remarks||'') + '</td>' +
+      '</tr>').join('');
+  }
+
+  function tdsTabError(msg) {
+    document.getElementById('tdsTabBody').innerHTML =
+      '<tr><td colspan="5"><div class="empty-state" style="color:#ea4335;">' + msg + '</div></td></tr>';
+  }
+
+  // ---- PROCESS PAYROLL TAB ----
+  async function loadRunTab(month, year) {
+    // Ensure all other tabs are loaded so we have summary data
+    document.getElementById('readinessSummary').style.display = 'none';
+    document.getElementById('processGroupsList').innerHTML =
+      '<div class="empty-state" style="padding:30px;">Loading...</div>';
+
+    // Load all needed data in parallel (if not already loaded)
+    const loaders = [];
+    if (!_tabLoaded.att)  loaders.push(loadAttTab(month, year).then(() => { _tabLoaded.att = true; }));
+    if (!_tabLoaded.ot)   loaders.push(loadOtTab(month, year).then(() => { _tabLoaded.ot = true; }));
+    if (!_tabLoaded.arr)  loaders.push(loadArrTab(month, year).then(() => { _tabLoaded.arr = true; }));
+    if (!_tabLoaded.loan) loaders.push(loadLoanTab(month, year).then(() => { _tabLoaded.loan = true; }));
+    if (!_tabLoaded.tds)  loaders.push(loadTdsTab(month, year).then(() => { _tabLoaded.tds = true; }));
+    if (!_tabLoaded.sal && (currentUser.role === 'admin' || currentUser.role === 'management')) {
+      loaders.push(loadSalTab(month, year).then(() => { _tabLoaded.sal = true; }));
+    }
+
+    await Promise.allSettled(loaders);
+    renderRunTab(month, year);
+  }
+
+  function renderRunTab(month, year) {
+    const groups = _tabData.att || [];
+    const otRecs = _tabData.ot || [];
+    const arrRecs = _tabData.arr || [];
+    const loanRecs = _tabData.loan || [];
+    const tdsRecs = _tabData.tds || [];
+    const salRecs = _tabData.sal || [];
+
+    const approvedGroups = groups.filter(g => g.status === 'Approved' || g.status === 'Locked');
+    const notReadyGroups  = groups.filter(g => g.status !== 'Approved' && g.status !== 'Locked');
+
+    // Readiness cards
+    document.getElementById('readinessSummary').style.display = 'grid';
+
+    const attCard = document.getElementById('rc-att');
+    attCard.className = 'readiness-card' + (notReadyGroups.length === 0 && groups.length > 0 ? ' ok' : ' warn');
+    document.getElementById('rc-att-val').textContent = approvedGroups.length + ' / ' + groups.length;
+    document.getElementById('rc-att-sub').textContent = notReadyGroups.length
+      ? notReadyGroups.length + ' group(s) not yet approved'
+      : 'All groups approved ✓';
+
+    document.getElementById('rc-ot-val').textContent = otRecs.length;
+    document.getElementById('rc-ot-sub').textContent = otRecs.length
+      ? '₹' + formatNum(otRecs.reduce((s,r)=>s+(r.amount||0),0)) + ' total'
+      : 'No OT entries';
+
+    document.getElementById('rc-arr-val').textContent = arrRecs.length;
+    document.getElementById('rc-arr-sub').textContent = arrRecs.length
+      ? '₹' + formatNum(arrRecs.reduce((s,r)=>s+(r.amount||0),0)) + ' total'
+      : 'No pending arrears';
+
+    document.getElementById('rc-loan-val').textContent = loanRecs.length;
+    document.getElementById('rc-loan-sub').textContent = loanRecs.length
+      ? '₹' + formatNum(loanRecs.reduce((s,r)=>s+(r.emiAmount||0),0)) + ' total EMI'
+      : 'No loan EMIs due';
+
+    document.getElementById('rc-tds-val').textContent = tdsRecs.length;
+    document.getElementById('rc-tds-sub').textContent = tdsRecs.length
+      ? '₹' + formatNum(tdsRecs.reduce((s,r)=>s+(r.amount||0),0)) + ' total'
+      : 'No TDS entries';
+
+    const salCard = document.getElementById('rc-sal');
+    salCard.className = 'readiness-card' + (salRecs.length > 0 ? ' ok' : '');
+    document.getElementById('rc-sal-val').textContent = salRecs.length || '—';
+    document.getElementById('rc-sal-sub').textContent = salRecs.length
+      ? 'Salary data loaded'
+      : 'Admin/management only';
+
+    // Groups list
+    const list = document.getElementById('processGroupsList');
+    if (!groups.length) {
+      list.innerHTML = '<div class="empty-state" style="padding:30px;">No attendance groups found for this period</div>';
+      return;
+    }
+
+    list.innerHTML = groups.map(g => {
+      const isReady = g.status === 'Approved' || g.status === 'Locked';
+      const statusCls = isReady ? 'chip-approved' : 'chip-open';
+      const gName = g.section === 'State' ? 'Xaviers ' + g.location + ' (' + g.profile + ')' :
+                    g.section + ' ' + g.profile;
+      const processBtn = isReady
+        ? '<button class="btn-primary" style="font-size:11px;padding:5px 10px;" onclick="runSingleGroup(\'' +
+            g.location + '\',\'' + g.section + '\',\'' + g.profile + '\')">Process</button>'
+        : '<span style="font-size:11px;color:#d97706;">Attendance ' + g.status + '</span>';
+      return '<div class="process-group-row">' +
+        '<div>' +
+          '<div class="g-name">' + gName + '</div>' +
+          '<div class="g-meta">' + (g.records||[]).length + ' employees &bull; ' + g.location + '</div>' +
+        '</div>' +
+        '<div style="display:flex;align-items:center;gap:10px;">' +
+          '<span class="status-chip ' + statusCls + '">' + g.status + '</span>' +
+          processBtn +
+        '</div>' +
+        '</div>';
+    }).join('');
+  }
+
+  async function runProcessAll() {
+    const month = document.getElementById('processMonth').value;
+    const year  = document.getElementById('processYear').value;
+    if (!month || !year) { showAlert('processAlertError', 'Select month and year first'); return; }
+    await processAllGroups(month, year);
+  }
+
+  async function runSingleGroup(location, section, profile) {
+    const month = document.getElementById('processMonth').value;
+    const year  = document.getElementById('processYear').value;
+    if (!month || !year) { showAlert('processAlertError', 'Select month and year first'); return; }
+    showAlert('processAlertWarning', '⏳ Processing ' + section + ' ' + location + '...');
+    try {
+      const res = await fetch('/api/payroll/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ month, year: parseInt(year), location, section, profile })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showAlert('processAlertSuccess', '✅ ' + data.message);
+        setTimeout(() => { viewPayroll(data.payroll._id); }, 1200);
+      } else if (data.appraisalMissing) {
+        showMissingAppraisalPrompt(data.missingList, data.financialYear);
+      } else {
+        showAlert('processAlertError', data.message);
+      }
+    } catch(e) { showAlert('processAlertError', 'Error: ' + e.message); }
+  }
+
+  function showProcessView() {
+    switchView('processView');
+    // Reset tab state
+    _activeTab = 'att';
+    _tabLoaded = {};
+    _tabData = {};
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tabBtn-att').classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.getElementById('tab-att').classList.add('active');
+    loadActiveTab();
+  }
   function showListView() { switchView('listView'); loadPayrollList(); }
   function switchView(viewId) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
