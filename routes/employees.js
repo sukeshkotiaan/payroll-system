@@ -372,6 +372,8 @@ router.post('/', isLoggedIn, isAdmin, (req, res, next) => {
       pfApplicable: data.pfApplicable === true || data.pfApplicable === 'true',
       esicApplicable: data.esicApplicable === true || data.esicApplicable === 'true',
       ptApplicable: data.ptApplicable === true || data.ptApplicable === 'true',
+      tdsApplicable: data.tdsApplicable === true || data.tdsApplicable === 'true',
+      tdsLabel: data.tdsLabel || 'Income Tax',
       isRestricted: data.isRestricted === true || data.isRestricted === 'true',
       paymentMode: data.paymentMode || 'Bank Transfer',
       bankName: data.bankName || '',
@@ -436,7 +438,7 @@ router.put('/:id', isLoggedIn, isAccountantOrAdmin, (req, res, next) => {
       catch(e) { data.qualifications = []; }
     }
     // Coerce string booleans from FormData to real booleans
-    ['pfApplicable','esicApplicable','ptApplicable','isRestricted'].forEach(k => {
+    ['pfApplicable','esicApplicable','ptApplicable','tdsApplicable','isRestricted'].forEach(k => {
       if (typeof data[k] === 'string') data[k] = data[k] === 'true';
     });
     if (data.monthlySalary) data.ctcAnnual = parseFloat(data.monthlySalary) * 12;

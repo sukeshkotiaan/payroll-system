@@ -491,6 +491,7 @@ router.post('/process', isLoggedIn, isAdmin, async (req, res) => {
         pfApplicable: emp.pfApplicable,
         esicApplicable: emp.esicApplicable,
         ptApplicable: emp.ptApplicable,
+        tdsLabel: emp.tdsLabel || 'Income Tax',
         remarks: (emp.fullAttendance ? '[Full attendance exception]' : '')
           + (carriedForwardEINs.has(emp.ein) ? ' [Salary carried fwd from FY ' + ap._fromFY + ']' : '')
           + midTermNote,
@@ -956,6 +957,7 @@ router.post('/process-all', isLoggedIn, isAdmin, async (req, res) => {
             gender: emp.gender || '', department: emp.department || '',
             pfApplicable: emp.pfApplicable, esicApplicable: emp.esicApplicable,
             ptApplicable: emp.ptApplicable,
+            tdsLabel: emp.tdsLabel || 'Income Tax',
             remarks: emp.fullAttendance
               ? '[Full attendance exception]' + (groupCarriedEINs.has(emp.ein) ? ' [Salary carried fwd from FY ' + ap._fromFY + ']' : '')
               : (groupCarriedEINs.has(emp.ein) ? '[Salary carried fwd from FY ' + ap._fromFY + ']' : ''),

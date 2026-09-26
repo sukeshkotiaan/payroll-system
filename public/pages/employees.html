@@ -428,7 +428,14 @@
         <div class="flag-item"><input type="checkbox" id="pfApplicable" onchange="calculateSalary()"><label for="pfApplicable">PF Applicable</label></div>
         <div class="flag-item"><input type="checkbox" id="esicApplicable" onchange="calculateSalary()"><label for="esicApplicable">ESIC Applicable</label></div>
         <div class="flag-item"><input type="checkbox" id="ptApplicable" onchange="calculateSalary()"><label for="ptApplicable">PT Applicable</label></div>
-        <div class="flag-item"><input type="checkbox" id="tdsApplicable"><label for="tdsApplicable">TDS Applicable</label></div>
+        <div class="flag-item"><input type="checkbox" id="tdsApplicable" onchange="document.getElementById('tdsLabelGroup').style.display=this.checked?'flex':'none'"><label for="tdsApplicable">TDS Applicable</label></div>
+        <div class="flag-item" id="tdsLabelGroup" style="display:none;flex-direction:column;gap:4px;align-items:flex-start;">
+          <label style="font-size:11px;color:#666;font-weight:600;">Payslip label</label>
+          <select id="tdsLabel" style="font-size:12px;padding:4px 6px;border:1px solid #dde1e7;border-radius:4px;">
+            <option value="Income Tax">Income Tax</option>
+            <option value="TDS">TDS</option>
+          </select>
+        </div>
         <div class="flag-item" id="restrictedFlag"><input type="checkbox" id="isRestricted"><label for="isRestricted">🔒 Restricted</label></div>
         <div class="flag-item"><input type="checkbox" id="fullAttendance"><label for="fullAttendance">📅 Full Attendance Always</label></div>
       </div>
@@ -1004,6 +1011,8 @@
     document.getElementById('esicApplicable').checked = false;
     document.getElementById('ptApplicable').checked = false;
     document.getElementById('tdsApplicable').checked = false;
+    document.getElementById('tdsLabel').value = 'Income Tax';
+    document.getElementById('tdsLabelGroup').style.display = 'none';
     document.getElementById('isRestricted').checked = false;
     document.getElementById('fullAttendance').checked = false;
     document.getElementById('einBox').style.display = 'none';
@@ -1062,6 +1071,8 @@
       document.getElementById('esicApplicable').checked = emp.esicApplicable || false;
       document.getElementById('ptApplicable').checked = emp.ptApplicable || false;
       document.getElementById('tdsApplicable').checked = emp.tdsApplicable || false;
+      document.getElementById('tdsLabel').value = emp.tdsLabel || 'Income Tax';
+      document.getElementById('tdsLabelGroup').style.display = emp.tdsApplicable ? 'flex' : 'none';
       document.getElementById('isRestricted').checked = emp.isRestricted || false;
       document.getElementById('fullAttendance').checked = emp.fullAttendance || false;
       document.getElementById('einValue').textContent = emp.ein || '—';
@@ -1241,6 +1252,7 @@
     payload.esicApplicable = document.getElementById('esicApplicable').checked;
     payload.ptApplicable   = document.getElementById('ptApplicable').checked;
     payload.tdsApplicable  = document.getElementById('tdsApplicable').checked;
+    payload.tdsLabel       = document.getElementById('tdsLabel').value || 'Income Tax';
     payload.isRestricted   = document.getElementById('isRestricted').checked;
     payload.fullAttendance = document.getElementById('fullAttendance').checked;
     payload.qualifications = getQualifications();

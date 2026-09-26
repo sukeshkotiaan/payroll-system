@@ -28,6 +28,7 @@ const payrollRecordSchema = new mongoose.Schema({
   ptApplicable: { type: Boolean, default: false },
   ptDeduction: { type: Number, default: 0 },
   tdsType: { type: String, enum: ['manual', 'percent', 'none'], default: 'none' },
+  tdsLabel: { type: String, default: 'Income Tax' },
   tdsPercent: { type: Number, default: 0 },
   tdsDeduction: { type: Number, default: 0 },
   arrear: { type: Number, default: 0 },
