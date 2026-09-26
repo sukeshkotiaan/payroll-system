@@ -9,6 +9,7 @@ const tdsSchema = new mongoose.Schema({
   profile: { type: String, default: '' },
   month: { type: String, required: true },
   year: { type: Number, required: true },
+  tdsPercent: { type: Number, default: 0 },
   amount: { type: Number, required: true, default: 0 },
   remarks: { type: String, default: '' },
   addedBy: { type: String, default: '' },

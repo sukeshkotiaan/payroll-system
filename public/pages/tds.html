@@ -204,9 +204,10 @@
               <th style="min-width:90px;">EIN</th>
               <th style="min-width:180px;">Name</th>
               <th style="min-width:80px;">Location</th>
+              <th style="min-width:80px;">Type</th>
               <th style="min-width:100px;text-align:right;">Salary</th>
               <th style="min-width:110px;text-align:right;">Last Month</th>
-              <th style="min-width:140px;">This Month (₹)</th>
+              <th style="min-width:160px;">This Month</th>
               <th style="min-width:160px;">Remarks</th>
             </tr>
           </thead>
@@ -464,7 +465,9 @@
         ein: emp.ein,
         name: emp.employeeName,
         location: emp.location,
+        tdsLabel: emp.tdsLabel || 'Income Tax',
         salary: emp.monthlySalary || 0,
+        tdsPercent: existing[emp.ein] ? (existing[emp.ein].tdsPercent || '') : '',
         amount: existing[emp.ein] ? existing[emp.ein].amount : '',
         remarks: existing[emp.ein] ? (existing[emp.ein].remarks || '') : ''
       }));
@@ -489,19 +492,43 @@
       const lastAmt = lastMonthTDSMap[r.ein];
       const lastText = lastAmt ? '₹' + lastAmt.toLocaleString('en-IN') : '—';
       const hasValue = r.amount !== '' && r.amount !== null && r.amount !== undefined;
+      const isTDS = r.tdsLabel === 'TDS';
+      const typeBadge = isTDS
+        ? '<span style="background:#e8f0fe;color:#1a73e8;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;">TDS %</span>'
+        : '<span style="background:#fce8e6;color:#c0392b;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;">Income Tax</span>';
+
+      let inputCell;
+      if (isTDS) {
+        const calcAmt = r.tdsPercent ? parseFloat((r.salary * r.tdsPercent / 100).toFixed(2)) : (hasValue ? r.amount : '');
+        inputCell =
+          '<div style="display:flex;align-items:center;gap:6px;">' +
+          '<input type="number" min="0" max="100" step="0.1" placeholder="%" value="' + (r.tdsPercent || '') + '" ' +
+            'id="pct-' + r.ein + '" oninput="onBulkPctChange(\'' + r.ein + '\',' + r.salary + ')" ' +
+            'style="width:60px;padding:6px 8px;border:1px solid #ddd;border-radius:5px;font-size:13px;text-align:right;outline:none;" ' +
+            'onfocus="this.style.borderColor=\'#1a73e8\'" onblur="this.style.borderColor=\'#ddd\'">' +
+          '<span style="color:#888;font-size:11px;">%</span>' +
+          '<span id="amt-' + r.ein + '" style="font-size:12px;color:#333;min-width:60px;text-align:right;">' +
+            (calcAmt ? '₹' + parseFloat(calcAmt).toLocaleString('en-IN') : '—') + '</span>' +
+          '</div>';
+      } else {
+        inputCell =
+          '<input type="number" min="0" step="1" placeholder="0" value="' + (hasValue ? r.amount : '') + '" ' +
+            'id="amt-' + r.ein + '" oninput="onBulkAmtChange(\'' + r.ein + '\')" ' +
+            'style="width:120px;padding:6px 8px;border:1px solid #ddd;border-radius:5px;font-size:13px;text-align:right;outline:none;" ' +
+            'onfocus="this.style.borderColor=\'#1a73e8\'" onblur="this.style.borderColor=\'#ddd\'">';
+      }
+
       return '<tr id="brow-' + r.ein + '" style="' + (hasValue ? 'background:#f0fdf4;' : '') + '">' +
         '<td style="font-weight:700;font-size:11px;">' + r.ein + '</td>' +
         '<td>' + r.name + '</td>' +
         '<td style="color:#666;">' + r.location + '</td>' +
+        '<td>' + typeBadge + '</td>' +
         '<td style="text-align:right;color:#555;">₹' + (r.salary||0).toLocaleString('en-IN') + '</td>' +
         '<td style="text-align:right;color:#888;font-size:11px;">' + lastText + '</td>' +
-        '<td><input type="number" min="0" step="1" placeholder="0" value="' + (hasValue ? r.amount : '') + '" ' +
-          'id="amt-' + r.ein + '" oninput="onBulkAmtChange(\'' + r.ein + '\')" ' +
-          'style="width:120px;padding:6px 8px;border:1px solid #ddd;border-radius:5px;font-size:13px;text-align:right;outline:none;" ' +
-          'onfocus="this.style.borderColor=\'#1a73e8\'" onblur="this.style.borderColor=\'#ddd\'"></td>' +
+        '<td>' + inputCell + '</td>' +
         '<td><input type="text" placeholder="Remarks" value="' + (r.remarks||'').replace(/"/g,'&quot;') + '" ' +
           'id="rem-' + r.ein + '" ' +
-          'style="width:150px;padding:6px 8px;border:1px solid #ddd;border-radius:5px;font-size:12px;outline:none;" ' +
+          'style="width:140px;padding:6px 8px;border:1px solid #ddd;border-radius:5px;font-size:12px;outline:none;" ' +
           'onfocus="this.style.borderColor=\'#1a73e8\'" onblur="this.style.borderColor=\'#ddd\'"></td>' +
         '</tr>';
     }).join('');
@@ -515,6 +542,17 @@
     updateBulkTotal();
   }
 
+  function onBulkPctChange(ein, salary) {
+    const pctEl = document.getElementById('pct-' + ein);
+    const dispEl = document.getElementById('amt-' + ein);
+    const pct = parseFloat(pctEl.value) || 0;
+    const amt = pct > 0 ? parseFloat((salary * pct / 100).toFixed(2)) : 0;
+    if (dispEl) dispEl.textContent = amt > 0 ? '₹' + amt.toLocaleString('en-IN') : '—';
+    const row = document.getElementById('brow-' + ein);
+    if (row) row.style.background = pct > 0 ? '#f0fdf4' : '';
+    updateBulkTotal();
+  }
+
   function filterBulkTable() {
     const q = document.getElementById('bulkSearch').value.toLowerCase();
     if (!q) { renderBulkTable(bulkAllRows); return; }
@@ -524,11 +562,21 @@
     renderBulkTable(filtered);
   }
 
+  function getEffectiveAmount(r) {
+    if (r.tdsLabel === 'TDS') {
+      const pctEl = document.getElementById('pct-' + r.ein);
+      const pct = pctEl ? parseFloat(pctEl.value) : (r.tdsPercent ? parseFloat(r.tdsPercent) : 0);
+      return pct > 0 ? parseFloat((r.salary * pct / 100).toFixed(2)) : 0;
+    } else {
+      const el = document.getElementById('amt-' + r.ein);
+      return el ? parseFloat(el.value) || 0 : (r.amount ? parseFloat(r.amount) : 0);
+    }
+  }
+
   function updateBulkTotal() {
     let total = 0, count = 0;
     bulkAllRows.forEach(r => {
-      const el = document.getElementById('amt-' + r.ein);
-      const v = el ? parseFloat(el.value) : (r.amount ? parseFloat(r.amount) : 0);
+      const v = getEffectiveAmount(r);
       if (v > 0) { total += v; count++; }
     });
     document.getElementById('bulkTotalBar').textContent =
@@ -556,11 +604,20 @@
   async function saveBulkTDS() {
     const entries = [];
     bulkAllRows.forEach(r => {
-      const amtEl = document.getElementById('amt-' + r.ein);
       const remEl = document.getElementById('rem-' + r.ein);
-      const amt = amtEl ? parseFloat(amtEl.value) : 0;
-      if (amt > 0) {
-        entries.push({ ein: r.ein, amount: amt, remarks: remEl ? remEl.value : '' });
+      if (r.tdsLabel === 'TDS') {
+        const pctEl = document.getElementById('pct-' + r.ein);
+        const pct = pctEl ? parseFloat(pctEl.value) : 0;
+        if (pct > 0) {
+          const amt = parseFloat((r.salary * pct / 100).toFixed(2));
+          entries.push({ ein: r.ein, tdsPercent: pct, amount: amt, remarks: remEl ? remEl.value : '' });
+        }
+      } else {
+        const amtEl = document.getElementById('amt-' + r.ein);
+        const amt = amtEl ? parseFloat(amtEl.value) : 0;
+        if (amt > 0) {
+          entries.push({ ein: r.ein, tdsPercent: 0, amount: amt, remarks: remEl ? remEl.value : '' });
+        }
       }
     });
     if (!entries.length) { showAlert('alertError', 'No amounts entered'); return; }

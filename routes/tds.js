@@ -55,7 +55,7 @@ router.get('/for-payroll', isLoggedIn, notSupervisor, async (req, res) => {
 // ADD or UPDATE TDS (accountant/admin/management only)
 router.post('/', isLoggedIn, isAccountantOrAdmin, async (req, res) => {
   try {
-    const { ein, month, year, amount, remarks } = req.body;
+    const { ein, month, year, amount, tdsPercent, remarks } = req.body;
     if (!ein || !month || !year || amount === undefined) {
       return res.status(400).json({ success: false, message: 'All fields required' });
     }
@@ -72,6 +72,7 @@ router.post('/', isLoggedIn, isAccountantOrAdmin, async (req, res) => {
         section: employee.section,
         profile: employee.profile,
         month, year: parseInt(year),
+        tdsPercent: parseFloat(tdsPercent) || 0,
         amount: parseFloat(amount),
         remarks: remarks || '',
         addedBy: req.session.user.username,
@@ -112,6 +113,7 @@ router.post('/bulk', isLoggedIn, isAccountantOrAdmin, async (req, res) => {
               section: emp.section,
               profile: emp.profile,
               month, year: parseInt(year),
+              tdsPercent: parseFloat(entry.tdsPercent) || 0,
               amount: parseFloat(entry.amount) || 0,
               remarks: entry.remarks || '',
               addedBy: req.session.user.username,
