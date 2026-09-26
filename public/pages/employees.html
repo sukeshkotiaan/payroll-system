@@ -430,11 +430,15 @@
         <div class="flag-item"><input type="checkbox" id="ptApplicable" onchange="calculateSalary()"><label for="ptApplicable">PT Applicable</label></div>
         <div class="flag-item"><input type="checkbox" id="tdsApplicable" onchange="document.getElementById('tdsLabelGroup').style.display=this.checked?'flex':'none'"><label for="tdsApplicable">TDS Applicable</label></div>
         <div class="flag-item" id="tdsLabelGroup" style="display:none;flex-direction:column;gap:4px;align-items:flex-start;">
-          <label style="font-size:11px;color:#666;font-weight:600;">Payslip label</label>
-          <select id="tdsLabel" style="font-size:12px;padding:4px 6px;border:1px solid #dde1e7;border-radius:4px;">
-            <option value="Income Tax">Income Tax</option>
-            <option value="TDS">TDS</option>
+          <label style="font-size:11px;color:#666;font-weight:600;">Deduction type</label>
+          <select id="tdsLabel" onchange="onTdsLabelChange()" style="font-size:12px;padding:4px 6px;border:1px solid #dde1e7;border-radius:4px;">
+            <option value="Income Tax">Income Tax (CA manual)</option>
+            <option value="TDS">TDS (% of salary)</option>
           </select>
+        </div>
+        <div class="flag-item" id="tdsPercentGroup" style="display:none;flex-direction:column;gap:4px;align-items:flex-start;">
+          <label for="tdsPercent" style="font-size:11px;color:#666;font-weight:600;">TDS %</label>
+          <input type="number" id="tdsPercent" min="0" max="100" step="0.1" placeholder="e.g. 10" style="width:80px;font-size:12px;padding:4px 6px;border:1px solid #dde1e7;border-radius:4px;">
         </div>
         <div class="flag-item" id="restrictedFlag"><input type="checkbox" id="isRestricted"><label for="isRestricted">🔒 Restricted</label></div>
         <div class="flag-item"><input type="checkbox" id="fullAttendance"><label for="fullAttendance">📅 Full Attendance Always</label></div>
@@ -946,6 +950,12 @@
     if (!editMode) { document.getElementById('einBox').style.display = 'none'; document.getElementById('ein').value = ''; }
   }
 
+  function onTdsLabelChange() {
+    const isTds = document.getElementById('tdsLabel').value === 'TDS';
+    document.getElementById('tdsPercentGroup').style.display = isTds ? 'flex' : 'none';
+    if (!isTds) document.getElementById('tdsPercent').value = '';
+  }
+
   async function generateEIN() {
     const location = document.getElementById('location').value;
     const section = document.getElementById('section').value;
@@ -1012,7 +1022,9 @@
     document.getElementById('ptApplicable').checked = false;
     document.getElementById('tdsApplicable').checked = false;
     document.getElementById('tdsLabel').value = 'Income Tax';
+    document.getElementById('tdsPercent').value = '';
     document.getElementById('tdsLabelGroup').style.display = 'none';
+    document.getElementById('tdsPercentGroup').style.display = 'none';
     document.getElementById('isRestricted').checked = false;
     document.getElementById('fullAttendance').checked = false;
     document.getElementById('einBox').style.display = 'none';
@@ -1072,7 +1084,9 @@
       document.getElementById('ptApplicable').checked = emp.ptApplicable || false;
       document.getElementById('tdsApplicable').checked = emp.tdsApplicable || false;
       document.getElementById('tdsLabel').value = emp.tdsLabel || 'Income Tax';
+      document.getElementById('tdsPercent').value = emp.tdsPercent || '';
       document.getElementById('tdsLabelGroup').style.display = emp.tdsApplicable ? 'flex' : 'none';
+      document.getElementById('tdsPercentGroup').style.display = (emp.tdsApplicable && emp.tdsLabel === 'TDS') ? 'flex' : 'none';
       document.getElementById('isRestricted').checked = emp.isRestricted || false;
       document.getElementById('fullAttendance').checked = emp.fullAttendance || false;
       document.getElementById('einValue').textContent = emp.ein || '—';
@@ -1253,6 +1267,7 @@
     payload.ptApplicable   = document.getElementById('ptApplicable').checked;
     payload.tdsApplicable  = document.getElementById('tdsApplicable').checked;
     payload.tdsLabel       = document.getElementById('tdsLabel').value || 'Income Tax';
+    payload.tdsPercent     = parseFloat(document.getElementById('tdsPercent').value) || 0;
     payload.isRestricted   = document.getElementById('isRestricted').checked;
     payload.fullAttendance = document.getElementById('fullAttendance').checked;
     payload.qualifications = getQualifications();

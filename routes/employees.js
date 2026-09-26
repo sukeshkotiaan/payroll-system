@@ -374,6 +374,7 @@ router.post('/', isLoggedIn, isAdmin, (req, res, next) => {
       ptApplicable: data.ptApplicable === true || data.ptApplicable === 'true',
       tdsApplicable: data.tdsApplicable === true || data.tdsApplicable === 'true',
       tdsLabel: data.tdsLabel || 'Income Tax',
+      tdsPercent: parseFloat(data.tdsPercent) || 0,
       isRestricted: data.isRestricted === true || data.isRestricted === 'true',
       paymentMode: data.paymentMode || 'Bank Transfer',
       bankName: data.bankName || '',

@@ -532,7 +532,17 @@ router.post('/process', isLoggedIn, isAdmin, async (req, res) => {
       }
     }
 
-    // Pull TDS for this group and month
+    // Auto-apply TDS % for employees where tdsLabel === 'TDS'
+    for (const record of records) {
+      const emp = employees.find(e => e.ein === record.ein);
+      if (emp && emp.tdsApplicable && emp.tdsLabel === 'TDS' && emp.tdsPercent > 0) {
+        record.tdsDeduction = parseFloat((record.grossSalary * emp.tdsPercent / 100).toFixed(2));
+        record.tdsType = 'percent';
+        record.tdsPercent = emp.tdsPercent;
+      }
+    }
+
+    // Pull TDS (Income Tax) for this group and month — manual CA amounts only
     const tdsRecords = await TDS.find({
       location, section, profile,
       month, year: parseInt(year)
@@ -540,15 +550,15 @@ router.post('/process', isLoggedIn, isAdmin, async (req, res) => {
     for (const tds of tdsRecords) {
       const record = records.find(r => r.ein === tds.ein);
       if (record) {
-        // Only apply TDS if employee has tdsApplicable flag set
         const emp = employees.find(e => e.ein === tds.ein);
-        if (!emp || !emp.tdsApplicable) continue;
+        // Skip if not applicable, or if auto-TDS (% based) already applied
+        if (!emp || !emp.tdsApplicable || emp.tdsLabel === 'TDS') continue;
         record.tdsDeduction = parseFloat(tds.amount) || 0;
         record.tdsType = 'manual';
         if (record.remarks) {
-          record.remarks += ', TDS: ' + tds.amount;
+          record.remarks += ', Income Tax: ' + tds.amount;
         } else {
-          record.remarks = 'TDS: ' + tds.amount;
+          record.remarks = 'Income Tax: ' + tds.amount;
         }
       }
     }
@@ -991,16 +1001,26 @@ router.post('/process-all', isLoggedIn, isAdmin, async (req, res) => {
           }
         }
 
-        // Pull TDS
+        // Auto-apply TDS % for employees where tdsLabel === 'TDS'
+        for (const record of records) {
+          const emp = employees.find(e => e.ein === record.ein);
+          if (emp && emp.tdsApplicable && emp.tdsLabel === 'TDS' && emp.tdsPercent > 0) {
+            record.tdsDeduction = parseFloat((record.grossSalary * emp.tdsPercent / 100).toFixed(2));
+            record.tdsType = 'percent';
+            record.tdsPercent = emp.tdsPercent;
+          }
+        }
+
+        // Pull TDS (Income Tax) — manual CA amounts only
         const tdsRecs = await TDS.find({ location, section, profile, month, year: parseInt(year) });
         for (const tds of tdsRecs) {
           const record = records.find(r => r.ein === tds.ein);
           if (record) {
             const emp = employees.find(e => e.ein === tds.ein);
-            if (!emp || !emp.tdsApplicable) continue;
+            if (!emp || !emp.tdsApplicable || emp.tdsLabel === 'TDS') continue;
             record.tdsDeduction = parseFloat(tds.amount) || 0;
             record.tdsType = 'manual';
-            record.remarks = record.remarks ? record.remarks + ', TDS: ' + tds.amount : 'TDS: ' + tds.amount;
+            record.remarks = record.remarks ? record.remarks + ', Income Tax: ' + tds.amount : 'Income Tax: ' + tds.amount;
           }
         }
 
