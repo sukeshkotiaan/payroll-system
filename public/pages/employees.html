@@ -1035,6 +1035,16 @@
       document.getElementById('gender').value = emp.gender || '';
       document.getElementById('designation').value = emp.designation || '';
       document.getElementById('designationSelect').value = emp.designation || '';
+      // If the designation value isn't in the dropdown, fall back to custom mode
+      if (emp.designation && document.getElementById('designationSelect').value !== emp.designation) {
+        customDesignationMode = true;
+        const _cust = document.getElementById('designationCustom');
+        const _sel  = document.getElementById('designationSelect');
+        _cust.style.display = 'block';
+        _sel.style.display  = 'none';
+        _cust.value = emp.designation;
+        _cust.oninput = () => { document.getElementById('designation').value = _cust.value; };
+      }
       document.getElementById('employeeName').value = emp.employeeName || '';
       document.getElementById('dateOfBirth').value = emp.dateOfBirth ? emp.dateOfBirth.split('T')[0] : '';
       document.getElementById('dateOfJoining').value = emp.dateOfJoining ? emp.dateOfJoining.split('T')[0] : '';
