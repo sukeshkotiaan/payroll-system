@@ -437,6 +437,7 @@
           </select>
         </div>
         <div class="flag-item" id="restrictedFlag"><input type="checkbox" id="isRestricted"><label for="isRestricted">🔒 Restricted</label></div>
+        <div class="flag-item" id="managementFlag" style="display:none;"><input type="checkbox" id="isManagement" onchange="onManagementChange()"><label for="isManagement">🏢 Management Employee</label></div>
         <div class="flag-item"><input type="checkbox" id="fullAttendance"><label for="fullAttendance">📅 Full Attendance Always</label></div>
       </div>
 
@@ -539,6 +540,9 @@
     document.getElementById('headerUser').textContent = data.user.fullName;
     if (currentUser.role === 'accountant') {
       document.getElementById('restrictedFlag').style.display = 'none';
+    }
+    if (currentUser.role === 'admin' || currentUser.role === 'management') {
+      document.getElementById('managementFlag').style.display = 'flex';
     }
   }
 
@@ -942,16 +946,30 @@
     const loc = document.getElementById('location').value;
     const sec = document.getElementById('section').value;
     const pro = document.getElementById('profile').value;
-    document.getElementById('generateEINBtn').disabled = !(loc && sec && pro && !editMode);
+    const isMgt = document.getElementById('isManagement') && document.getElementById('isManagement').checked;
+    document.getElementById('generateEINBtn').disabled = !(!editMode && (isMgt || (loc && sec && pro)));
     if (!editMode) { document.getElementById('einBox').style.display = 'none'; document.getElementById('ein').value = ''; }
   }
 
+  function onManagementChange() {
+    // When management is ticked, EIN can be generated without location/section/profile
+    updateEINPreview();
+    // Clear any previously generated non-MGT EIN
+    if (!editMode) {
+      document.getElementById('einBox').style.display = 'none';
+      document.getElementById('ein').value = '';
+      document.getElementById('einValue').textContent = '';
+    }
+  }
+
   async function generateEIN() {
+    const isMgt = document.getElementById('isManagement') && document.getElementById('isManagement').checked;
     const location = document.getElementById('location').value;
     const section = document.getElementById('section').value;
     const profile = document.getElementById('profile').value;
     try {
-      const res = await fetch('/api/employees/generate-ein', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location, section, profile }) });
+      const body = isMgt ? { management: true } : { location, section, profile };
+      const res = await fetch('/api/employees/generate-ein', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const data = await res.json();
       if (data.success) { document.getElementById('einValue').textContent = data.ein; document.getElementById('ein').value = data.ein; document.getElementById('einBox').style.display = 'flex'; }
       else { showAlert('alertError', data.message); }
@@ -1014,6 +1032,7 @@
     document.getElementById('tdsLabel').value = 'Income Tax';
     document.getElementById('tdsLabelGroup').style.display = 'none';
     document.getElementById('isRestricted').checked = false;
+    if (document.getElementById('isManagement')) document.getElementById('isManagement').checked = false;
     document.getElementById('fullAttendance').checked = false;
     document.getElementById('einBox').style.display = 'none';
     document.getElementById('salaryPreview').style.display = 'none';
@@ -1074,6 +1093,7 @@
       document.getElementById('tdsLabel').value = emp.tdsLabel || 'Income Tax';
       document.getElementById('tdsLabelGroup').style.display = emp.tdsApplicable ? 'flex' : 'none';
       document.getElementById('isRestricted').checked = emp.isRestricted || false;
+      if (document.getElementById('isManagement')) document.getElementById('isManagement').checked = emp.isManagement || false;
       document.getElementById('fullAttendance').checked = emp.fullAttendance || false;
       document.getElementById('einValue').textContent = emp.ein || '—';
       const einHidden = document.getElementById('ein');
@@ -1254,6 +1274,7 @@
     payload.tdsApplicable  = document.getElementById('tdsApplicable').checked;
     payload.tdsLabel       = document.getElementById('tdsLabel').value || 'Income Tax';
     payload.isRestricted   = document.getElementById('isRestricted').checked;
+    payload.isManagement   = document.getElementById('isManagement') ? document.getElementById('isManagement').checked : false;
     payload.fullAttendance = document.getElementById('fullAttendance').checked;
     payload.qualifications = getQualifications();
 

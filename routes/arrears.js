@@ -23,14 +23,11 @@ router.get('/', isLoggedIn, notSupervisor, async (req, res) => {
   }
 });
 
-// GET employee by EIN — management blocked for non-admin
+// GET employee by EIN — management hidden from non-admin via mgtFilter
 router.get('/find-employee/:ein', isLoggedIn, notSupervisor, async (req, res) => {
   try {
     const role = req.session.user.role;
     const ein = req.params.ein.toUpperCase();
-    if (/^MGT-/i.test(ein) && role !== 'admin' && role !== 'management') {
-      return res.status(403).json({ success: false, message: 'Access denied' });
-    }
     const employee = await Employee.findOne({ ein, isActive: true, ...mgtFilter(role) });
     if (!employee) return res.status(404).json({ success: false, message: 'Active employee not found' });
     return res.json({ success: true, employee });

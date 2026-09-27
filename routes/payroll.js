@@ -6,6 +6,7 @@ const Attendance = require('../models/Attendance');
 const Employee = require('../models/Employee');
 const Settings = require('../models/Settings');
 const { isLoggedIn, isAdmin, notSupervisor } = require('../middleware/auth');
+const { getMgtEins } = require('../middleware/security');
 const { logAudit } = require('./security');
 const { getSettings } = require('../lib/settingsCache');
 const Arrear = require('../models/Arrear');
@@ -215,11 +216,12 @@ router.get('/', isLoggedIn, notSupervisor, async (req, res) => {
     const isAccountant = user.role === 'accountant';
 
     if (isAccountant) {
-      // For accountants: fetch with records to strip MGT rows, then recalculate totals
+      // For accountants: fetch with records to strip management rows, then recalculate totals
+      const mgtEins = await getMgtEins();
       const docs = await Payroll.find(filter).sort({ year: -1, month: -1 });
       const records = docs.map(p => {
         const obj = p.toObject();
-        const nonMgt = obj.records.filter(r => !/^MGT-/i.test(r.ein));
+        const nonMgt = obj.records.filter(r => !mgtEins.has(r.ein));
         return {
           _id: obj._id, groupName: obj.groupName, month: obj.month, year: obj.year,
           location: obj.location, section: obj.section, profile: obj.profile,
@@ -248,9 +250,9 @@ router.get('/month-overview', isLoggedIn, notSupervisor, async (req, res) => {
     if (!month || !year) return res.status(400).json({ success: false, message: 'month and year required' });
     const yr = parseInt(year);
 
-    // Derive valid groups from active non-MGT employees
+    // Derive valid groups from active non-management employees
     const groups = await Employee.aggregate([
-      { $match: { isActive: true, ein: { $not: /^MGT-/i } } },
+      { $match: { isActive: true, isManagement: { $ne: true } } },
       { $group: { _id: { location: '$location', section: '$section', profile: '$profile' }, empCount: { $sum: 1 } } },
       { $sort: { '_id.section': 1, '_id.location': 1, '_id.profile': 1 } }
     ]);
@@ -320,7 +322,8 @@ router.get('/:id', isLoggedIn, notSupervisor, async (req, res) => {
     }
 
     if (isAccountant) {
-      obj.records = obj.records.filter(r => !/^MGT-/i.test(r.ein));
+      const mgtEins = await getMgtEins();
+      obj.records = obj.records.filter(r => !mgtEins.has(r.ein));
       obj.totalGross    = parseFloat(obj.records.reduce((s, r) => s + (r.grossSalary  || 0), 0).toFixed(2));
       obj.totalNet      = parseFloat(obj.records.reduce((s, r) => s + (r.netSalary    || 0), 0).toFixed(2));
       obj.employeeCount = obj.records.length;

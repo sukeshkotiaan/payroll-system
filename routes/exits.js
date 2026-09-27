@@ -3,7 +3,7 @@ const router = express.Router();
 const Exit = require('../models/Exit');
 const Employee = require('../models/Employee');
 const { isLoggedIn, isAdmin, hasRole } = require('../middleware/auth');
-const { mgtFilter, safeError } = require('../middleware/security');
+const { mgtFilter, getMgtEins, safeError } = require('../middleware/security');
 
 // FIND employee by EIN for exit form
 // Supervisors: only their team; accountants: no management employees
@@ -12,13 +12,11 @@ router.get('/find-employee/:ein', isLoggedIn, async (req, res) => {
     const user = req.session.user;
     const ein = req.params.ein.toUpperCase();
 
-    // Block management lookup for accountants/supervisors
-    if (/^MGT-/i.test(ein) && user.role !== 'admin' && user.role !== 'management') {
+    const employee = await Employee.findOne({ ein, isActive: true })
+      .select('_id ein employeeName designation supervisorId isActive isManagement');
+    if (employee && employee.isManagement && user.role !== 'admin' && user.role !== 'management') {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
-
-    const employee = await Employee.findOne({ ein, isActive: true })
-      .select('_id ein employeeName designation supervisorId isActive');
     if (!employee) return res.status(404).json({ success: false, message: 'Active employee not found with this EIN' });
 
     if (user.role === 'supervisor') {
@@ -47,7 +45,8 @@ router.get('/', isLoggedIn, async (req, res) => {
 
     // Non-admin/management must not see management employee exits
     if (user.role !== 'admin' && user.role !== 'management') {
-      filter.ein = { $not: /^MGT-/i };
+      const mgtEins = await getMgtEins();
+      if (mgtEins.size > 0) filter.ein = { $nin: [...mgtEins] };
     }
 
     if (req.query.status) filter.status = req.query.status;
@@ -65,11 +64,11 @@ router.post('/', isLoggedIn, async (req, res) => {
   try {
     const data = req.body;
     const user = req.session.user;
-    const employee = await Employee.findById(data.employeeId).select('_id ein supervisorId');
+    const employee = await Employee.findById(data.employeeId).select('_id ein supervisorId isManagement');
     if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
 
     // Block management exits from non-admin
-    if (employee.ein && /^MGT-/i.test(employee.ein) && user.role !== 'admin' && user.role !== 'management') {
+    if (employee.isManagement && user.role !== 'admin' && user.role !== 'management') {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
@@ -105,8 +104,11 @@ router.patch('/:id/approve', isLoggedIn, hasRole('admin', 'management', 'account
     const exit = await Exit.findById(req.params.id);
     if (!exit) return res.status(404).json({ success: false, message: 'Exit not found' });
     // Accountants cannot approve management exits
-    if (exit.ein && /^MGT-/i.test(exit.ein) && req.session.user.role === 'accountant') {
-      return res.status(403).json({ success: false, message: 'Access denied' });
+    if (req.session.user.role === 'accountant') {
+      const mgtEins = await getMgtEins();
+      if (exit.ein && mgtEins.has(exit.ein)) {
+        return res.status(403).json({ success: false, message: 'Access denied' });
+      }
     }
     exit.status = 'Approved';
     exit.approvedBy = req.session.user.username;
@@ -126,8 +128,11 @@ router.patch('/:id/reject', isLoggedIn, hasRole('admin', 'management', 'accounta
   try {
     const exit = await Exit.findById(req.params.id);
     if (!exit) return res.status(404).json({ success: false, message: 'Exit not found' });
-    if (exit.ein && /^MGT-/i.test(exit.ein) && req.session.user.role === 'accountant') {
-      return res.status(403).json({ success: false, message: 'Access denied' });
+    if (req.session.user.role === 'accountant') {
+      const mgtEins = await getMgtEins();
+      if (exit.ein && mgtEins.has(exit.ein)) {
+        return res.status(403).json({ success: false, message: 'Access denied' });
+      }
     }
     exit.status = 'Rejected';
     exit.rejectedBy  = req.session.user.username;

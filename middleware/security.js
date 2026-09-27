@@ -64,12 +64,20 @@ function noSQLSanitizer(req, res, next) {
   next();
 }
 
-// Management EIN filter — call this in any route where accountants
-// must not see management employee data
-// Returns a Mongoose filter fragment to add: { ein: { $not: /^MGT-/i } }
+// Management filter — call this in any route where accountants
+// must not see management employee data.
+// Returns a Mongoose filter fragment based on the isManagement flag.
 function mgtFilter(role) {
   if (role === 'admin' || role === 'management') return {};
-  return { ein: { $not: /^MGT-/i } };
+  return { isManagement: { $ne: true } };
+}
+
+// Returns a Set of management EINs — used to filter embedded EIN strings
+// in collections (Exits, Loans, TDS, Arrears) that don't carry isManagement.
+async function getMgtEins() {
+  const Employee = require('../models/Employee');
+  const emps = await Employee.find({ isManagement: true }, { ein: 1 }).lean();
+  return new Set(emps.map(e => e.ein));
 }
 
 // Assert the requesting supervisor owns this employee — returns false if not
@@ -112,4 +120,4 @@ function safeError(err, context) {
   return err.message;
 }
 
-module.exports = { securityHeaders, sanitizeRegex, noSQLSanitizer, mgtFilter, supervisorOwns, safeError, csrfOriginCheck };
+module.exports = { securityHeaders, sanitizeRegex, noSQLSanitizer, mgtFilter, getMgtEins, supervisorOwns, safeError, csrfOriginCheck };

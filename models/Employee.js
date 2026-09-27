@@ -43,6 +43,7 @@ const employeeSchema = new mongoose.Schema({
   ptApplicable: { type: Boolean, default: false },
   tdsApplicable: { type: Boolean, default: false },
   tdsLabel: { type: String, enum: ['Income Tax', 'TDS'], default: 'Income Tax' },
+  isManagement: { type: Boolean, default: false },
   isRestricted: { type: Boolean, default: false },
   isActive: { type: Boolean, default: true },
   bankName: { type: String, default: '' },

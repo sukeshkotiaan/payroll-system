@@ -38,14 +38,11 @@ router.get('/default-rate', isLoggedIn, async (req, res) => {
   }
 });
 
-// FIND employee by EIN or Name — management blocked for non-admin
+// FIND employee by EIN or Name — management hidden from non-admin via mgtFilter
 router.get('/find-employee/:search', isLoggedIn, notSupervisor, async (req, res) => {
   try {
     const role = req.session.user.role;
     const search = req.params.search.trim();
-    if (/^MGT-/i.test(search) && role !== 'admin' && role !== 'management') {
-      return res.status(403).json({ success: false, message: 'Access denied' });
-    }
     const safe = sanitizeRegex(search);
     let employee = await Employee.findOne({ ein: search.toUpperCase(), isActive: true, ...mgtFilter(role) });
     if (!employee) {

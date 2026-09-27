@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { sanitizeRegex, mgtFilter, supervisorOwns, safeError } = require('../middleware/security');
+const { sanitizeRegex, mgtFilter, getMgtEins, supervisorOwns, safeError } = require('../middleware/security');
 const Employee    = require('../models/Employee');
 const ReservedEIN = require('../models/ReservedEIN');
 const { isLoggedIn, isAdmin, isSystemAdmin, isAccountantOrAdmin } = require('../middleware/auth');
@@ -86,7 +86,17 @@ async function getNextReservedEIN() {
 
 router.post('/generate-ein', isLoggedIn, isAccountantOrAdmin, async (req, res) => {
   try {
-    const { location, section, profile } = req.body;
+    const { location, section, profile, management } = req.body;
+
+    // Management employees get the next available MGT EIN from the reserved pool
+    if (management) {
+      const reserved = await ReservedEIN.findOne({ status: 'available' }).sort({ ein: 1 });
+      if (!reserved) {
+        return res.status(404).json({ success: false, message: 'No MGT EINs available in the pool. Please seed more via the reserved EINs admin page.' });
+      }
+      return res.json({ success: true, ein: reserved.ein });
+    }
+
     if (!location || !section || !profile) {
       return res.status(400).json({ success: false, message: 'Location, section and profile required' });
     }
@@ -210,7 +220,7 @@ router.get('/', isLoggedIn, async (req, res) => {
     }
     // Management employees are only visible to admin and management roles
     if (user.role !== 'admin' && user.role !== 'management') {
-      filter.ein = { $not: /^MGT-/i };
+      filter.isManagement = { $ne: true };
     }
 
     // Standard filters
@@ -315,7 +325,7 @@ router.get('/:id', isLoggedIn, async (req, res) => {
     if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
 
     // Management employees — only visible to admin and management roles
-    if (employee.ein && /^MGT-/i.test(employee.ein) && user.role !== 'admin' && user.role !== 'management') {
+    if (employee.isManagement && user.role !== 'admin' && user.role !== 'management') {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
     // Supervisors may only fetch employees in their own team
@@ -375,6 +385,7 @@ router.post('/', isLoggedIn, isAdmin, (req, res, next) => {
       tdsApplicable: data.tdsApplicable === true || data.tdsApplicable === 'true',
       tdsLabel: data.tdsLabel || 'Income Tax',
       tdsPercent: parseFloat(data.tdsPercent) || 0,
+      isManagement: data.isManagement === true || data.isManagement === 'true',
       isRestricted: data.isRestricted === true || data.isRestricted === 'true',
       paymentMode: data.paymentMode || 'Bank Transfer',
       bankName: data.bankName || '',
@@ -418,7 +429,7 @@ router.put('/:id', isLoggedIn, isAccountantOrAdmin, (req, res, next) => {
     if (!existing) return res.status(404).json({ success: false, message: 'Employee not found. Please refresh the page and try again.' });
 
     // Block accountants and other non-admin roles from updating management employees
-    if (existing.ein && /^MGT-/i.test(existing.ein) && role !== 'admin' && role !== 'management') {
+    if (existing.isManagement && role !== 'admin' && role !== 'management') {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
@@ -439,7 +450,7 @@ router.put('/:id', isLoggedIn, isAccountantOrAdmin, (req, res, next) => {
       catch(e) { data.qualifications = []; }
     }
     // Coerce string booleans from FormData to real booleans
-    ['pfApplicable','esicApplicable','ptApplicable','tdsApplicable','isRestricted'].forEach(k => {
+    ['pfApplicable','esicApplicable','ptApplicable','tdsApplicable','isManagement','isRestricted'].forEach(k => {
       if (typeof data[k] === 'string') data[k] = data[k] === 'true';
     });
     if (data.monthlySalary) data.ctcAnnual = parseFloat(data.monthlySalary) * 12;
