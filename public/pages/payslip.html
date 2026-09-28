@@ -356,6 +356,12 @@
         }, 300);
       }
     } else {
+      // Deep-link by payroll ID (used by management payslips)
+      const payrollId = urlParams.get('payrollId');
+      if (payrollId) {
+        setTimeout(() => viewGroupPayslips(payrollId), 300);
+        return;
+      }
       // Pre-fill group tab from payroll detail deep-link
       const grpMonth    = urlParams.get('grpMonth');
       const grpYear     = urlParams.get('grpYear');

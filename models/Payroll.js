@@ -79,6 +79,7 @@ const payrollSchema = new mongoose.Schema({
   approvedBy: { type: String, default: '' },
   approvedAt: { type: Date, default: null },
   remarks: { type: String, default: '' },
+  isManagementPayroll: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });

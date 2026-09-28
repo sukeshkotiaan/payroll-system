@@ -216,9 +216,9 @@ router.get('/', isLoggedIn, notSupervisor, async (req, res) => {
     const isAccountant = user.role === 'accountant';
 
     if (isAccountant) {
-      // For accountants: fetch with records to strip management rows, then recalculate totals
+      // For accountants: exclude management payroll docs entirely, then strip any remaining mgt rows
       const mgtEins = await getMgtEins();
-      const docs = await Payroll.find(filter).sort({ year: -1, month: -1 });
+      const docs = await Payroll.find({ ...filter, isManagementPayroll: { $ne: true } }).sort({ year: -1, month: -1 });
       const records = docs.map(p => {
         const obj = p.toObject();
         const nonMgt = obj.records.filter(r => !mgtEins.has(r.ein));
@@ -234,7 +234,7 @@ router.get('/', isLoggedIn, notSupervisor, async (req, res) => {
       return res.json({ success: true, records });
     }
 
-    const records = await Payroll.find(filter)
+    const records = await Payroll.find({ ...filter, isManagementPayroll: { $ne: true } })
       .select('-records')
       .sort({ year: -1, month: -1 });
     return res.json({ success: true, records });
@@ -359,9 +359,9 @@ router.post('/process', isLoggedIn, isAdmin, async (req, res) => {
     const settings = await getSettings();
     const rules = getRules(settings, location);
 
-    // Get employees
+    // Get employees — management employees handled separately via process-management
     const employees = await Employee.find({
-      location, section, profile, isActive: true
+      location, section, profile, isActive: true, isManagement: { $ne: true }
     });
 
     // Check if payroll already exists
@@ -881,7 +881,7 @@ router.post('/process-all', isLoggedIn, isAdmin, async (req, res) => {
         const rules = getRules(settings, location);
 
         const employees = await Employee.find({
-          location, section, profile, isActive: true
+          location, section, profile, isActive: true, isManagement: { $ne: true }
         });
 
         let existingPayroll = await Payroll.findOne({
@@ -1186,6 +1186,167 @@ router.patch('/batch-lock', isLoggedIn, isAdmin, async (req, res) => {
     return res.json({ success: true, message: `Locked ${payrolls.length} payroll group(s) and updated loan EMIs`, count: payrolls.length });
   } catch (err) {
     return res.status(500).json({ success: false, message: safeError(err, 'payroll batch-lock') });
+  }
+});
+
+// GET management payroll list — admin/management only
+router.get('/management-list', isLoggedIn, isAdmin, async (req, res) => {
+  try {
+    const { month, year } = req.query;
+    const filter = { isManagementPayroll: true };
+    if (month) filter.month = month;
+    if (year)  filter.year  = parseInt(year);
+    const records = await Payroll.find(filter).select('-records').sort({ year: -1, month: -1 });
+    return res.json({ success: true, records });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: safeError(err, 'mgmt-list') });
+  }
+});
+
+// PROCESS management payroll — admin/management only
+// Full attendance assumed (LOP = 0); appraisal salary used as-is
+router.post('/process-management', isLoggedIn, isAdmin, async (req, res) => {
+  try {
+    const { month, year } = req.body;
+    if (!month || !year) {
+      return res.status(400).json({ success: false, message: 'Month and year required' });
+    }
+
+    const mgtEmployees = await Employee.find({ isManagement: true, isActive: true });
+    if (mgtEmployees.length === 0) {
+      return res.status(404).json({ success: false, message: 'No active management employees found' });
+    }
+
+    const settings = await getSettings();
+    const currentFY = getFYForMonth(month, year);
+
+    // Fetch appraisals for management employees
+    const mgtEINs = mgtEmployees.map(e => e.ein);
+    const appraisals = await Appraisal.find({ ein: { $in: mgtEINs }, financialYear: currentFY });
+    const appraisalMap = {};
+    appraisals.forEach(a => { appraisalMap[a.ein] = a.toObject ? a.toObject() : a; });
+
+    // Carry forward from previous FY if missing
+    const prevFY = getPrevFY(currentFY);
+    const needCarry = mgtEmployees.filter(e => !appraisalMap[e.ein] || !(appraisalMap[e.ein].monthlySalary > 0));
+    if (needCarry.length > 0) {
+      const prevAp = await Appraisal.find({ ein: { $in: needCarry.map(e => e.ein) }, financialYear: prevFY });
+      prevAp.forEach(a => {
+        const obj = a.toObject ? a.toObject() : a;
+        if (obj.monthlySalary > 0) appraisalMap[obj.ein] = { ...obj, _carriedForward: true, _fromFY: prevFY };
+      });
+    }
+
+    const missingAppraisal = mgtEmployees.filter(e => !appraisalMap[e.ein] || !(appraisalMap[e.ein].monthlySalary > 0));
+    if (missingAppraisal.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot process: ' + missingAppraisal.map(e => e.employeeName).join(', ') + ' have no appraisal for FY ' + currentFY,
+        missingList: missingAppraisal.map(e => ({ ein: e.ein, employeeName: e.employeeName }))
+      });
+    }
+
+    // Use first management employee's location for rules (management typically Thane)
+    const rulesLocation = mgtEmployees[0].location || 'Thane';
+    const rules = getRules(settings, rulesLocation);
+
+    // Calculate — full attendance, no LOP
+    const daysInMonth = new Date(parseInt(year), MONTHS.indexOf(month) + 1, 0).getDate();
+    const records = [];
+    let totalGross = 0, totalPF = 0, totalPT = 0, totalESIC = 0, totalNet = 0;
+
+    for (const emp of mgtEmployees) {
+      const ap = appraisalMap[emp.ein];
+      const empForCalc = { ...emp.toObject(), monthlySalary: ap.monthlySalary };
+      const fakeAttendance = {
+        daysInMonth, lopDays: 0, presentDays: daysInMonth, payableDays: daysInMonth, otHours: 0
+      };
+      const calc = calculatePayroll(empForCalc, fakeAttendance, rules, month);
+
+      records.push({
+        ein: emp.ein,
+        employeeId: emp._id,
+        employeeName: emp.employeeName,
+        designation: emp.designation,
+        gender: emp.gender || '',
+        section: emp.section || '',
+        department: emp.department || '',
+        panNumber: emp.panNumber || '',
+        uanNumber: emp.uanNumber || '',
+        bankName: emp.bankName || '',
+        accountNumber: emp.accountNumber || '',
+        pfApplicable: emp.pfApplicable,
+        esicApplicable: emp.esicApplicable,
+        ptApplicable: emp.ptApplicable,
+        tdsLabel: emp.tdsLabel || 'Income Tax',
+        remarks: ap._carriedForward ? '[Salary carried fwd from FY ' + ap._fromFY + ']' : '',
+        ...calc
+      });
+
+      totalGross += calc.grossSalary;
+      totalPF    += calc.pfDeduction;
+      totalPT    += calc.ptDeduction;
+      totalESIC  += calc.esicDeduction;
+      totalNet   += calc.netSalary;
+    }
+
+    // Pull TDS for management employees for this month
+    const tdsRecords = await TDS.find({ ein: { $in: mgtEINs }, month, year: parseInt(year) });
+    for (const tds of tdsRecords) {
+      const record = records.find(r => r.ein === tds.ein);
+      if (record) {
+        const emp = mgtEmployees.find(e => e.ein === tds.ein);
+        if (!emp || !emp.tdsApplicable) continue;
+        record.tdsDeduction = parseFloat(tds.amount) || 0;
+        record.tdsType = tds.tdsPercent > 0 ? 'percent' : 'manual';
+        record.tdsPercent = tds.tdsPercent || 0;
+        record.totalDeductions = parseFloat((record.pfDeduction + record.ptDeduction + record.esicDeduction + record.tdsDeduction + record.advance).toFixed(2));
+        record.netSalary = Math.max(0, parseFloat((record.grossSalary - record.totalDeductions + record.otAmount + record.arrear).toFixed(2)));
+        record.remarks = record.remarks ? record.remarks + ', ' + (emp.tdsLabel || 'Income Tax') + ': ' + tds.amount : (emp.tdsLabel || 'Income Tax') + ': ' + tds.amount;
+      }
+    }
+    totalNet = records.reduce((s, r) => s + (r.netSalary || 0), 0);
+
+    // Upsert management payroll doc (special marker values for group fields)
+    let mgtPayroll = await Payroll.findOne({ month, year: parseInt(year), isManagementPayroll: true });
+
+    if (mgtPayroll && mgtPayroll.status === 'Locked') {
+      return res.status(400).json({ success: false, message: 'Management payroll is locked for this month' });
+    }
+
+    const payrollData = {
+      month, year: parseInt(year),
+      location: 'Management', section: 'Management', profile: 'Management',
+      groupName: 'Management',
+      isManagementPayroll: true,
+      records, status: 'Draft',
+      employeeCount: records.length,
+      totalGross: parseFloat(totalGross.toFixed(2)),
+      totalPF:    parseFloat(totalPF.toFixed(2)),
+      totalPT:    parseFloat(totalPT.toFixed(2)),
+      totalESIC:  parseFloat(totalESIC.toFixed(2)),
+      totalTDS:   parseFloat(records.reduce((s, r) => s + (r.tdsDeduction || 0), 0).toFixed(2)),
+      totalNet:   parseFloat(totalNet.toFixed(2)),
+      processedBy: req.session.user.username,
+      processedAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    if (mgtPayroll) {
+      Object.assign(mgtPayroll, payrollData);
+      mgtPayroll.markModified('records');
+      await mgtPayroll.save();
+    } else {
+      mgtPayroll = await Payroll.create(payrollData);
+    }
+
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+    await logAudit(req.session.user.id, req.session.user.username, req.session.user.fullName, req.session.user.role,
+      'PAYROLL_PROCESSED', `Processed management payroll for ${month} ${year} (${records.length} employees)`, ip);
+
+    return res.json({ success: true, message: 'Management payroll processed for ' + records.length + ' employee(s)', payroll: mgtPayroll });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: safeError(err, 'mgmt-process') });
   }
 });
 

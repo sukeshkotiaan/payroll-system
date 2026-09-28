@@ -227,6 +227,7 @@
     <button class="tab-btn" id="tabBtn-loan" onclick="switchTab('loan')">Loans</button>
     <button class="tab-btn" id="tabBtn-tds" onclick="switchTab('tds')">TDS</button>
     <button class="tab-btn" id="tabBtn-run" onclick="switchTab('run')" style="color:#1a73e8;">⚙️ Process Payroll</button>
+    <button class="tab-btn" id="tabBtn-mgt" onclick="switchTab('mgt')" style="display:none;color:#7b1fa2;">🔒 Management</button>
   </div>
 
   <div class="container" style="padding-top:10px;">
@@ -457,6 +458,23 @@
       </div>
     </div>
 
+    <!-- ===== MANAGEMENT TAB ===== -->
+    <div class="tab-content" id="tab-mgt">
+      <div class="alert alert-success" id="mgtAlertSuccess" style="display:none;"></div>
+      <div class="alert alert-error"   id="mgtAlertError"   style="display:none;"></div>
+
+      <!-- Past management payrolls for this month -->
+      <div class="card" id="mgtPayrollCard">
+        <div class="card-header" style="justify-content:space-between;">
+          <h3>🔒 Management Payroll</h3>
+          <button class="btn-primary" style="background:#7b1fa2;" onclick="processMgtPayroll()">⚙️ Process Management Payroll</button>
+        </div>
+        <div id="mgtPayrollBody" style="padding:20px;">
+          <div class="empty-state">Select month and year above, then click Process.</div>
+        </div>
+      </div>
+    </div>
+
   </div><!-- /.container -->
 </div><!-- /#processView -->
 
@@ -637,6 +655,10 @@
     if (!data.success) { window.location.href = '/'; return; }
     currentUser = data.user;
     document.getElementById('headerUser').textContent = data.user.fullName;
+    // Management tab visible to admin and management roles only
+    if (data.user.role === 'admin' || data.user.role === 'management') {
+      document.getElementById('tabBtn-mgt').style.display = 'inline-block';
+    }
   }
 
   async function loadMasterData() {
@@ -1231,7 +1253,7 @@
 
   function loadAllTabs(m, y) {
     // Fire all data fetches in parallel — no lazy loading
-    const isSalVisible = currentUser.role === 'admin' || currentUser.role === 'management';
+    const isMgtVisible = currentUser.role === 'admin' || currentUser.role === 'management';
     const fetches = [
       loadAttTab(m, y),
       loadOtTab(m, y),
@@ -1239,11 +1261,14 @@
       loadLoanTab(m, y),
       loadTdsTab(m, y)
     ];
-    if (isSalVisible) fetches.push(loadSalTab(m, y));
+    if (isMgtVisible) {
+      fetches.push(loadSalTab(m, y));
+      fetches.push(loadMgtTab(m, y));
+    }
 
     // Render the run tab after all data arrives
     Promise.allSettled(fetches).then(() => {
-      _tabLoaded = { att:true, ot:true, arr:true, loan:true, tds:true, sal:isSalVisible, run:true };
+      _tabLoaded = { att:true, ot:true, arr:true, loan:true, tds:true, sal:isMgtVisible, run:true, mgt:isMgtVisible };
       renderRunTab(m, y);
     });
   }
@@ -1635,6 +1660,171 @@
     const el = document.getElementById(id);
     el.textContent = msg; el.style.display = 'block';
     setTimeout(() => el.style.display = 'none', 5000);
+  }
+
+  // ============================================================
+  // MANAGEMENT TAB
+  // ============================================================
+  let _mgtPayroll = null;
+
+  async function loadMgtTab(month, year) {
+    const body = document.getElementById('mgtPayrollBody');
+    if (!body) return;
+    body.innerHTML = '<div class="empty-state">Loading...</div>';
+    try {
+      const res = await fetch('/api/payroll/management-list?month=' + encodeURIComponent(month) + '&year=' + year);
+      const data = await res.json();
+      if (!data.success) { body.innerHTML = '<div class="empty-state">Failed to load</div>'; return; }
+      if (!data.records || data.records.length === 0) {
+        body.innerHTML = '<div class="empty-state">No management payroll processed yet for ' + month + ' ' + year + '. Click Process to generate.</div>';
+        _mgtPayroll = null;
+        return;
+      }
+      _mgtPayroll = data.records[0];
+      renderMgtSummary(_mgtPayroll);
+    } catch(e) {
+      body.innerHTML = '<div class="empty-state">Error: ' + e.message + '</div>';
+    }
+  }
+
+  function renderMgtSummary(p) {
+    const body = document.getElementById('mgtPayrollBody');
+    const isLocked = p.status === 'Locked';
+    const statusColor = { Draft:'#d97706', Approved:'#34a853', Locked:'#7b1fa2', 'Pending Approval':'#1a73e8' };
+
+    let rows = (p.records || []).map((r, i) => `
+      <tr>
+        <td class="left">${i+1}</td>
+        <td class="left"><strong>${r.ein}</strong></td>
+        <td class="left">${r.employeeName}</td>
+        <td class="left" style="font-size:11px;">${r.designation || ''}</td>
+        <td>₹${formatNum(r.monthlySalary)}</td>
+        <td>₹${formatNum(r.grossSalary)}</td>
+        <td style="color:#ea4335;">₹${formatNum(r.pfDeduction)}</td>
+        <td style="color:#ea4335;">₹${formatNum(r.ptDeduction)}</td>
+        <td style="color:#ea4335;">₹${formatNum(r.tdsDeduction)}</td>
+        <td style="color:#34a853;"><strong>₹${formatNum(r.netSalary)}</strong></td>
+        <td class="left" style="font-size:11px;">${r.remarks || ''}</td>
+      </tr>`).join('');
+
+    rows += `<tr class="total-row">
+      <td class="left" colspan="4">TOTAL</td>
+      <td></td>
+      <td>₹${formatNum(p.totalGross)}</td>
+      <td>₹${formatNum(p.totalPF)}</td>
+      <td>₹${formatNum(p.totalPT)}</td>
+      <td>₹${formatNum(p.totalTDS)}</td>
+      <td>₹${formatNum(p.totalNet)}</td>
+      <td></td>
+    </tr>`;
+
+    body.innerHTML = `
+      <div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:15px;padding:12px 0;border-bottom:1px solid #eee;align-items:center;">
+        <span style="font-size:13px;color:#666;">Status: <strong style="color:${statusColor[p.status] || '#333'}">${p.status}</strong></span>
+        <span style="font-size:13px;color:#666;">Employees: <strong>${p.employeeCount}</strong></span>
+        <span style="font-size:13px;color:#666;">Total Net: <strong style="color:#34a853;">₹${formatNum(p.totalNet)}</strong></span>
+        <span style="font-size:13px;color:#666;">By: <strong>${p.processedBy || '—'}</strong></span>
+        <div style="margin-left:auto;display:flex;gap:8px;">
+          ${!isLocked ? '<button class="btn-warning" onclick="approveMgtPayroll()">✅ Approve</button>' : ''}
+          ${p.status === 'Approved' ? '<button class="btn-danger" onclick="lockMgtPayroll()">🔒 Lock</button>' : ''}
+          <button class="btn-secondary" onclick="openMgtPayslips()">🧾 Salary Slips</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table style="font-size:12px;white-space:nowrap;">
+          <thead><tr>
+            <th class="left">#</th>
+            <th class="left">EIN</th>
+            <th class="left">Name</th>
+            <th class="left">Designation</th>
+            <th>Monthly Salary</th>
+            <th>Gross</th>
+            <th>PF</th>
+            <th>PT</th>
+            <th>Income Tax</th>
+            <th>Net Salary</th>
+            <th class="left">Remarks</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  }
+
+  async function processMgtPayroll() {
+    const month = document.getElementById('processMonth').value;
+    const year  = document.getElementById('processYear').value;
+    if (!month || !year) { showMgtAlert('error', 'Please select Month and Year'); return; }
+
+    showMgtAlert('success', '⏳ Processing management payroll...');
+    try {
+      const res = await fetch('/api/payroll/process-management', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ month, year: parseInt(year) })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showMgtAlert('success', '✅ ' + data.message);
+        _mgtPayroll = data.payroll;
+        renderMgtSummary(_mgtPayroll);
+      } else {
+        showMgtAlert('error', data.message);
+      }
+    } catch(e) { showMgtAlert('error', 'Error: ' + e.message); }
+  }
+
+  async function approveMgtPayroll() {
+    if (!_mgtPayroll) return;
+    if (!confirm('Approve management payroll?')) return;
+    try {
+      const res = await fetch('/api/payroll/' + _mgtPayroll._id + '/approve', {
+        method: 'PATCH', credentials: 'include'
+      });
+      const data = await res.json();
+      if (data.success) {
+        showMgtAlert('success', data.message);
+        const month = document.getElementById('processMonth').value;
+        const year  = document.getElementById('processYear').value;
+        await loadMgtTab(month, year);
+      } else { showMgtAlert('error', data.message); }
+    } catch(e) { showMgtAlert('error', 'Error: ' + e.message); }
+  }
+
+  async function lockMgtPayroll() {
+    if (!_mgtPayroll) return;
+    if (!confirm('Lock management payroll? It cannot be edited after locking.')) return;
+    try {
+      const res = await fetch('/api/payroll/' + _mgtPayroll._id + '/lock', {
+        method: 'PATCH', credentials: 'include'
+      });
+      const data = await res.json();
+      if (data.success) {
+        showMgtAlert('success', data.message);
+        const month = document.getElementById('processMonth').value;
+        const year  = document.getElementById('processYear').value;
+        await loadMgtTab(month, year);
+      } else { showMgtAlert('error', data.message); }
+    } catch(e) { showMgtAlert('error', 'Error: ' + e.message); }
+  }
+
+  function openMgtPayslips() {
+    if (!_mgtPayroll) return;
+    window.open('/payslip?payrollId=' + _mgtPayroll._id, '_blank');
+  }
+
+  function showMgtAlert(type, msg) {
+    const successEl = document.getElementById('mgtAlertSuccess');
+    const errorEl   = document.getElementById('mgtAlertError');
+    if (type === 'success') {
+      successEl.textContent = msg; successEl.style.display = 'block';
+      errorEl.style.display = 'none';
+      setTimeout(() => { successEl.style.display = 'none'; }, 6000);
+    } else {
+      errorEl.textContent = msg; errorEl.style.display = 'block';
+      successEl.style.display = 'none';
+      setTimeout(() => { errorEl.style.display = 'none'; }, 8000);
+    }
   }
 </script>
 <script src="/toast.js"></script>
