@@ -425,7 +425,7 @@
 
       <div class="section-title">⚙️ System Flags</div>
       <div class="flags-grid">
-        <div class="flag-item"><input type="checkbox" id="pfApplicable" onchange="calculateSalary()"><label for="pfApplicable">PF Applicable</label></div>
+        <div class="flag-item"><input type="checkbox" id="pfApplicable" onchange="calculateSalary()"><label for="pfApplicable">PF Applicable</label><span id="pfCeilingHint" style="display:none;margin-left:6px;font-size:11px;background:#e8f5e9;color:#2e7d32;padding:2px 6px;border-radius:4px;font-weight:600;">Mandatory ≤ ₹25,000</span></div>
         <div class="flag-item"><input type="checkbox" id="esicApplicable" onchange="calculateSalary()"><label for="esicApplicable">ESIC Applicable</label></div>
         <div class="flag-item"><input type="checkbox" id="ptApplicable" onchange="calculateSalary()"><label for="ptApplicable">PT Applicable</label></div>
         <div class="flag-item"><input type="checkbox" id="tdsApplicable" onchange="document.getElementById('tdsLabelGroup').style.display=this.checked?'flex':'none'"><label for="tdsApplicable">TDS Applicable</label></div>
@@ -571,7 +571,7 @@
   }
 
   function getDefaultRules() {
-    return { basicPercent: 76.923, hraPercent: 23.077, pfRate: 12, pfCap: 1800, esicRate: 0.75, esicLimit: 21000, ptSlabs: [{ min: 0, max: 7500, amount: 0 }, { min: 7501, max: 10000, amount: 175 }, { min: 10001, max: 999999, amount: 200 }] };
+    return { basicPercent: 76.923, hraPercent: 23.077, pfRate: 12, pfCap: 3000, esicRate: 0.75, esicLimit: 21000, ptSlabs: [{ min: 0, max: 7500, amount: 0 }, { min: 7501, max: 10000, amount: 175 }, { min: 10001, max: 999999, amount: 200 }] };
   }
 
   async function loadMasterDropdowns() {
@@ -905,10 +905,20 @@
     const basicPct = calcRules.basicPercent || 76.923;
     const hraPct = calcRules.hraPercent || 23.077;
     const pfRate = calcRules.pfRate || 12;
-    const pfCap = calcRules.pfCap || 1800;
+    const pfCap = calcRules.pfCap || 3000;
     const basic = parseFloat((monthly * basicPct / 100).toFixed(2));
     const hra = parseFloat((monthly * hraPct / 100).toFixed(2));
-    const pf = document.getElementById('pfApplicable').checked ? Math.min(Math.round(basic * pfRate / 100), pfCap) : 0;
+    // Auto-enable PF when basic ≤ wage ceiling (EPFO Sep 2026: ₹25,000)
+    const pfWageCeiling = Math.round(pfCap / (pfRate / 100));
+    const pfChk = document.getElementById('pfApplicable');
+    const pfHint = document.getElementById('pfCeilingHint');
+    if (basic <= pfWageCeiling) {
+      if (!pfChk.checked) { pfChk.checked = true; }
+      if (pfHint) pfHint.style.display = 'inline';
+    } else {
+      if (pfHint) pfHint.style.display = 'none';
+    }
+    const pf = pfChk.checked ? Math.min(Math.round(basic * pfRate / 100), pfCap) : 0;
     const pt = document.getElementById('ptApplicable').checked ? getPT(monthly) : 0;
     document.getElementById('ctcMonthly').value = Math.round(monthly);
     document.getElementById('basic').value = basic;
@@ -921,7 +931,7 @@
   function recalcDeductions() {
     const basic = parseFloat(document.getElementById('basic').value) || 0;
     const pfRate = calcRules.pfRate || 12;
-    const pfCap = calcRules.pfCap || 1800;
+    const pfCap = calcRules.pfCap || 3000;
     document.getElementById('pf').value = document.getElementById('pfApplicable').checked ? Math.min(Math.round(basic * pfRate / 100), pfCap) : 0;
   }
 
