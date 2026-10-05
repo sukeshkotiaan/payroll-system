@@ -40,8 +40,13 @@ router.get('/', isLoggedIn, async (req, res) => {
       filter.submittedBy = user.username;
     }
 
-    // Accountants scoped to their branch
-    if (user.role === 'accountant') filter.location = user.branch;
+    // Accountants scoped to their branch(es)
+    if (user.role === 'accountant') {
+      const branches = user.branches || (user.branch ? [user.branch] : []);
+      if (branches.length > 0 && !branches.includes('all')) {
+        filter.location = { $in: branches };
+      }
+    }
 
     // Non-admin/management must not see management employee exits
     if (user.role !== 'admin' && user.role !== 'management') {

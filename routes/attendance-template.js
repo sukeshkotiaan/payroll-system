@@ -38,8 +38,12 @@ router.get('/download', isLoggedIn, async (req, res) => {
     const daysInMonth = new Date(yr, monthIdx + 1, 0).getDate();
     const shortMonth = month.substring(0, 3);
 
-    // Get employees
+    // Get employees — management hidden from non-admin/non-management roles
+    const user = req.session.user;
     let filter = { isActive: true };
+    if (user.role !== 'admin' && user.role !== 'management') {
+      filter.isManagement = { $ne: true };
+    }
     if (location) filter.location = location;
     if (section) filter.section = section;
     if (profile) filter.profile = profile;
