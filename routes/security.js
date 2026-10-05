@@ -22,6 +22,9 @@ async function sendOTPToL1(username, fullName, code) {
     console.log('No L1 users with email found');
     return;
   }
+  if (!process.env.GMAIL_USER || !process.env.GMAIL_PASS) {
+    throw new Error('Email not configured on server (GMAIL_USER / GMAIL_PASS missing). Please contact your system administrator.');
+  }
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS }

@@ -164,7 +164,11 @@ router.post('/login', async (req, res) => {
       await OTP.deleteMany({ userId: user._id, used: false });
       await OTP.create({ userId: user._id, username: user.username, code, expiresAt });
       const { sendOTPToL1 } = require('./security');
-      await sendOTPToL1(user.username, user.fullName, code);
+      try {
+        await sendOTPToL1(user.username, user.fullName, code);
+      } catch (emailErr) {
+        return res.status(503).json({ success: false, message: emailErr.message || 'Could not send OTP email. Please contact your system administrator.' });
+      }
       return res.json({
         success: false,
         otpRequired: true,
