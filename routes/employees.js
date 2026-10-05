@@ -142,6 +142,10 @@ router.get('/my-team-bank', isLoggedIn, async (req, res) => {
     if (role === 'supervisor') {
       filter.supervisorId = req.session.user.id;
     }
+    // Management employees hidden from non-admin/management roles
+    if (role !== 'admin' && role !== 'management') {
+      filter.isManagement = { $ne: true };
+    }
     const employees = await Employee.find(filter)
       .select('ein employeeName designation location bankName accountNumber ifscCode accountHolderName bankVerificationStatus bankVerifiedBy bankVerifiedAt')
       .sort({ ein: 1 });
