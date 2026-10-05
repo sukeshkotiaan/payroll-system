@@ -136,7 +136,8 @@ router.post('/login', async (req, res) => {
     }
 
     // SECURITY CHECK 2: Accountant OTP — don't set session yet, return pending
-    if (user.role === 'accountant') {
+    // Set DISABLE_ACCOUNTANT_OTP=true in env to bypass OTP (testing only)
+    if (user.role === 'accountant' && process.env.DISABLE_ACCOUNTANT_OTP !== 'true') {
       const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
       await logAudit(user._id, user.username, user.fullName, user.role, 'LOGIN_OTP_REQUESTED', 'OTP requested for accountant login', ip);
       // Regenerate session to prevent session fixation, then store pending OTP state
