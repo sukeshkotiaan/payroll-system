@@ -7,9 +7,22 @@ const { isLoggedIn, isAdmin } = require('../middleware/auth');
 const { safeError } = require('../middleware/security');
 
 // GET all users
-router.get('/', isLoggedIn, isAdmin, async (req, res) => {
+// Accountants may list only supervisor accounts within their branches
+router.get('/', isLoggedIn, async (req, res) => {
   try {
-    const users = await User.find({}, { password: 0 }).sort({ createdAt: -1 });
+    const requester = req.session.user;
+    if (requester.role !== 'admin' && requester.role !== 'management' && requester.role !== 'accountant') {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+    let filter = {};
+    if (requester.role === 'accountant') {
+      filter.role = 'supervisor';
+      const branches = requester.branches || (requester.branch ? [requester.branch] : []);
+      if (branches.length > 0 && !branches.includes('all')) {
+        filter.branches = { $elemMatch: { $in: branches } };
+      }
+    }
+    const users = await User.find(filter, { password: 0 }).sort({ createdAt: -1 });
     return res.json({ success: true, users });
   } catch (err) {
     return res.status(500).json({ success: false, message: safeError(err, 'users list') });
@@ -28,9 +41,18 @@ router.get('/:id', isLoggedIn, isAdmin, async (req, res) => {
 });
 
 // CREATE user
-router.post('/', isLoggedIn, isAdmin, async (req, res) => {
+// Accountants may only create supervisor accounts
+router.post('/', isLoggedIn, async (req, res) => {
   try {
+    const requester = req.session.user;
+    if (requester.role !== 'admin' && requester.role !== 'management' && requester.role !== 'accountant') {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
     const { username, password, fullName, role, branches, managementLevel, linkedEmployeeId, ein } = req.body;
+    // Accountants are strictly limited to creating supervisor accounts
+    if (requester.role === 'accountant' && role !== 'supervisor') {
+      return res.status(403).json({ success: false, message: 'Accountants can only create Supervisor accounts' });
+    }
     if (!username || !password || !fullName || !role) {
       return res.status(400).json({ success: false, message: 'All fields required' });
     }
@@ -145,17 +167,22 @@ router.patch('/:id/reset-password', isLoggedIn, isAdmin, async (req, res) => {
 });
 
 // TOGGLE active status
-router.patch('/:id/toggle', isLoggedIn, isAdmin, async (req, res) => {
+// Accountants may activate/deactivate supervisor accounts only
+router.patch('/:id/toggle', isLoggedIn, async (req, res) => {
   try {
-    const currentUser = req.session.user;
-    if (req.params.id === currentUser.id) {
-      return res.status(400).json({
-        success: false,
-        message: 'You cannot deactivate your own account'
-      });
+    const requester = req.session.user;
+    if (requester.role !== 'admin' && requester.role !== 'management' && requester.role !== 'accountant') {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+    if (req.params.id === requester.id) {
+      return res.status(400).json({ success: false, message: 'You cannot deactivate your own account' });
     }
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    // Accountants may only toggle supervisor accounts
+    if (requester.role === 'accountant' && user.role !== 'supervisor') {
+      return res.status(403).json({ success: false, message: 'Accountants can only manage Supervisor accounts' });
+    }
     user.isActive = !user.isActive;
     await user.save();
     return res.json({

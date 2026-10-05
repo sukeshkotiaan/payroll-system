@@ -54,7 +54,7 @@
     { label: 'Photo Task',     href: '/photo-task',   icon: 'photo',       show: isAdmin || isMgt },
     { label: 'Audit Log',      href: '/audit-log',    icon: 'audit',       show: isAdminOrL1 },
     { label: 'Settings',       href: '/settings',     icon: 'settings',    show: isAdminOrL1 },
-    { label: 'Users',          href: '/users',        icon: 'users',       show: isAdmin },
+    { label: 'Users',          href: '/users',        icon: 'users',       show: isAdmin || isAcct },
   ];
 
   const currentPath = window.location.pathname.replace(/\/$/, '') || '/';

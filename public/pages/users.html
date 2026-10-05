@@ -421,8 +421,14 @@
     const data = await res.json();
     if (!data.success) { window.location.href = '/'; return; }
     currentUser = data.user;
-    if (currentUser.role !== 'admin' && currentUser.role !== 'management') {
+    const allowed = ['admin', 'management', 'accountant'];
+    if (!allowed.includes(currentUser.role)) {
       window.location.href = '/dashboard';
+    }
+    if (currentUser.role === 'accountant') {
+      // Accountants only see supervisors — update heading
+      document.querySelector('.header h1').textContent = '👤 Supervisor Management';
+      document.querySelector('#listView h2').textContent = 'Supervisor Accounts';
     }
   }
 
@@ -432,6 +438,11 @@
       const data = await res.json();
       if (data.success) {
         locations = data.masters.map(m => m.value);
+        // Accountants only see their own branches, not 'all'
+        if (currentUser.role === 'accountant') {
+          const acctBranches = (currentUser.branches || []).filter(b => b !== 'all');
+          locations = acctBranches.length > 0 ? acctBranches : locations;
+        }
         renderBranchOptions(['all']);
       }
     } catch(e) {
@@ -595,9 +606,10 @@
 
   function renderUsers(users) {
     const tbody = document.getElementById('usersTable');
-    document.getElementById('userCount').textContent = '(' + users.length + ' users)';
+    const isAccountant = currentUser.role === 'accountant';
+    document.getElementById('userCount').textContent = '(' + users.length + (isAccountant ? ' supervisors)' : ' users)');
     if (users.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state">No users found</div></td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state">No ' + (isAccountant ? 'supervisor accounts' : 'users') + ' found</div></td></tr>';
       return;
     }
     tbody.innerHTML = users.map(u => `
@@ -613,14 +625,14 @@
         <td><span class="badge ${u.isActive ? 'badge-active' : 'badge-inactive'}">${u.isActive ? 'Active' : 'Inactive'}</span></td>
         <td>${u.lastLogin ? new Date(u.lastLogin).toLocaleDateString('en-IN') : 'Never'}</td>
         <td>
-          <button class="btn-warning" onclick="editUser('${u._id}')">Edit</button>
-          <button class="btn-primary" style="margin-left:4px;padding:6px 12px;font-size:12px;"
+          ${!isAccountant ? `<button class="btn-warning" onclick="editUser('${u._id}')">Edit</button>` : ''}
+          ${!isAccountant ? `<button class="btn-primary" style="margin-left:4px;padding:6px 12px;font-size:12px;"
             onclick="openResetModal('${u._id}', '${u.fullName}')">
             🔒 Reset Password
-          </button>
+          </button>` : ''}
           ${u.username !== currentUser.username ? `
           <button class="${u.isActive ? 'btn-danger' : 'btn-success'}"
-            style="margin-left:4px;"
+            style="margin-left:${isAccountant ? '0' : '4px'};"
             onclick="toggleUser('${u._id}', '${u.fullName}', ${u.isActive})">
             ${u.isActive ? 'Deactivate' : 'Activate'}
           </button>` : ''}
@@ -631,13 +643,13 @@
 
   function showAddForm() {
     editMode = false;
-    document.getElementById('formTitle').textContent = 'Add New User';
+    const isAccountant = currentUser.role === 'accountant';
+    document.getElementById('formTitle').textContent = isAccountant ? 'Add Supervisor Account' : 'Add New User';
     document.getElementById('userId').value = '';
     document.getElementById('fullName').value = '';
     document.getElementById('userEmail').value = '';
     document.getElementById('username').value = '';
     document.getElementById('username').disabled = false;
-    document.getElementById('role').value = '';
     document.getElementById('password').value = '';
     document.getElementById('confirmPassword').value = '';
     document.getElementById('alertSuccess').style.display = 'none';
@@ -645,7 +657,17 @@
     document.getElementById('passwordSection').style.display = 'block';
     document.getElementById('passwordFields').style.display = 'grid';
     document.getElementById('passwordLabel').innerHTML = 'Password <span class="req">*</span>';
-    renderBranchOptions(['all']);
+    if (isAccountant) {
+      // Lock role to Supervisor for accountants
+      document.getElementById('role').value = 'supervisor';
+      document.getElementById('role').disabled = true;
+      renderBranchOptions([]);
+    } else {
+      document.getElementById('role').value = '';
+      document.getElementById('role').disabled = false;
+      renderBranchOptions(['all']);
+    }
+    onRoleChange();
     switchView('formView');
   }
 
@@ -678,7 +700,10 @@
     const id = document.getElementById('userId').value;
     const fullName = document.getElementById('fullName').value.trim();
     const username = document.getElementById('username').value.trim().toLowerCase();
-    const role = document.getElementById('role').value;
+    // Re-enable role select in case it was locked (disabled selects have no .value in some browsers)
+    const roleEl = document.getElementById('role');
+    roleEl.disabled = false;
+    const role = roleEl.value;
     const password = document.getElementById('password').value;
     const confirmPassword = document.getElementById('confirmPassword').value;
     const branches = getSelectedBranches();
