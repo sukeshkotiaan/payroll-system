@@ -128,6 +128,10 @@ router.get('/template/employees', isLoggedIn, async (req, res) => {
         return res.status(400).json({ success: false, message: 'Location, section, profile required' });
       filter.location = location; filter.section = section; filter.profile = profile;
     }
+    // Management employees never appear in regular attendance
+    if (user.role !== 'admin' && user.role !== 'management') {
+      filter.isManagement = { $ne: true };
+    }
     const employees = await Employee.find(filter).sort({ ein: 1 });
     const daysInMonth = getDaysInMonth(month, year);
     return res.json({ success: true, employees, daysInMonth });
@@ -372,6 +376,13 @@ router.get('/:id', isLoggedIn, async (req, res) => {
       return res.status(403).json({ success: false, message: 'Access denied' });
     const obj = record.toObject();
     obj.status = normaliseStatus(obj.status);
+    // Strip management employees from embedded records for non-admin/management roles
+    if (user.role !== 'admin' && user.role !== 'management') {
+      const mgtEins = await getMgtEins();
+      if (mgtEins.size > 0 && Array.isArray(obj.records)) {
+        obj.records = obj.records.filter(r => !mgtEins.has(r.ein));
+      }
+    }
     return res.json({ success: true, record: obj });
   } catch (err) {
     return res.status(500).json({ success: false, message: safeError(err, 'attendance get') });
