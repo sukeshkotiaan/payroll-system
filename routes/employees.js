@@ -210,7 +210,10 @@ router.get('/', isLoggedIn, async (req, res) => {
 
     // Role-based data scope
     if (user.role === 'accountant') {
-      filter.location = user.branch;
+      const branches = user.branches || (user.branch ? [user.branch] : []);
+      if (branches.length > 0 && !branches.includes('all')) {
+        filter.location = { $in: branches };
+      }
       filter.isRestricted = false;
     }
     if (user.role === 'supervisor') {
@@ -300,9 +303,12 @@ router.get('/search', isLoggedIn, async (req, res) => {
     };
     if (!includeInactive) filter.isActive = true;
 
-    // Accountants scoped to their branch
-    if (role === 'accountant' && req.session.user.branch) {
-      filter.location = req.session.user.branch;
+    // Accountants scoped to their branch(es)
+    if (role === 'accountant') {
+      const branches = req.session.user.branches || (req.session.user.branch ? [req.session.user.branch] : []);
+      if (branches.length > 0 && !branches.includes('all')) {
+        filter.location = { $in: branches };
+      }
     }
 
     // Never return salary in search results — used only for lookup autocompletes
