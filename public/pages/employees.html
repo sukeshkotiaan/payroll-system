@@ -241,6 +241,24 @@
       </div>
       <input type="hidden" id="empId">
 
+      <!-- Photo upload — top of form -->
+      <div style="display:flex;align-items:flex-start;gap:20px;padding:16px 0 20px;border-bottom:1px solid #eee;margin-bottom:20px;flex-wrap:wrap;">
+        <div id="photoBox" style="width:110px;height:130px;border:2px dashed #ccc;border-radius:10px;background:#f8f9fa;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;flex-shrink:0;position:relative;" onclick="document.getElementById('photo').click()">
+          <img id="photoPreview" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;position:absolute;inset:0;border-radius:8px;">
+          <div id="photoPlaceholder" style="text-align:center;pointer-events:none;">
+            <div style="font-size:28px;color:#bbb;">📷</div>
+            <div style="font-size:11px;color:#aaa;margin-top:4px;">Click to upload</div>
+          </div>
+        </div>
+        <div style="flex:1;min-width:160px;">
+          <div style="font-size:13px;font-weight:600;color:#333;margin-bottom:4px;">Employee Photo <span style="font-weight:400;color:#999;">(optional)</span></div>
+          <div style="font-size:12px;color:#666;margin-bottom:10px;">JPG or PNG · Passport-size preferred</div>
+          <label for="photo" style="display:inline-block;padding:7px 14px;background:#e8f0fe;color:#1a73e8;border:1px solid #1a73e8;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">Choose Photo</label>
+          <input type="file" id="photo" accept="image/jpeg,image/png" onchange="previewPhoto()" style="display:none;">
+          <div id="photoFileName" style="font-size:11px;color:#666;margin-top:6px;"></div>
+        </div>
+      </div>
+
       <div class="section-title">📋 Personal Information</div>
       <div class="form-grid">
         <div class="form-group">
@@ -313,11 +331,17 @@
           <label>UAN Number (optional)</label>
           <input type="text" id="uanNumber" placeholder="UAN / PF Number">
         </div>
-        <div class="form-group">
-          <label>Photo (optional)</label>
-          <input type="file" id="photo" accept="image/jpeg,image/png" onchange="previewPhoto()">
-          <img id="photoPreview" class="photo-preview" src="" alt="">
-        </div>
+      </div>
+
+      <div class="form-group" style="max-width:280px;margin-bottom:10px;">
+        <label>Payment Mode</label>
+        <select id="paymentMode" onchange="onPaymentModeChange()">
+          <option value="Bank Transfer">Bank Transfer (IDBI)</option>
+          <option value="NEFT">NEFT (Non-IDBI)</option>
+          <option value="Cash">Cash</option>
+          <option value="Cheque">Cheque</option>
+        </select>
+        <div class="hint">How the salary is disbursed each month</div>
       </div>
 
       <div id="bankDetailsSection">
@@ -401,16 +425,6 @@
           <input type="number" id="ctcAnnual" placeholder="Auto calculated" oninput="onAnnualChange()">
           <div class="hint">Or enter annual → Monthly auto calculates</div>
         </div>
-      </div>
-      <div class="form-group" style="max-width:280px;margin-bottom:10px;">
-        <label>Payment Mode</label>
-        <select id="paymentMode" onchange="onPaymentModeChange()">
-          <option value="Bank Transfer">Bank Transfer (IDBI)</option>
-          <option value="NEFT">NEFT (Non-IDBI)</option>
-          <option value="Cash">Cash</option>
-          <option value="Cheque">Cheque</option>
-        </select>
-        <div class="hint">How the salary is disbursed each month</div>
       </div>
       <div class="salary-preview" id="salaryPreview" style="display:none;">
         <div style="font-size:13px;font-weight:600;color:#333;">Monthly Breakdown — Editable</div>
@@ -1005,7 +1019,15 @@
     const file = document.getElementById('photo').files[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = e => { const p = document.getElementById('photoPreview'); p.src = e.target.result; p.style.display = 'block'; };
+      reader.onload = e => {
+        const p = document.getElementById('photoPreview');
+        const ph = document.getElementById('photoPlaceholder');
+        const fn = document.getElementById('photoFileName');
+        p.src = e.target.result;
+        p.style.display = 'block';
+        if (ph) ph.style.display = 'none';
+        if (fn) fn.textContent = file.name;
+      };
       reader.readAsDataURL(file);
     }
   }
@@ -1047,6 +1069,9 @@
     document.getElementById('einBox').style.display = 'none';
     document.getElementById('salaryPreview').style.display = 'none';
     document.getElementById('photoPreview').style.display = 'none';
+    document.getElementById('photoPreview').src = '';
+    const phPh = document.getElementById('photoPlaceholder'); if (phPh) phPh.style.display = 'flex';
+    const phFn = document.getElementById('photoFileName'); if (phFn) phFn.textContent = '';
     document.getElementById('alertSuccess').style.display = 'none';
     document.getElementById('alertError').style.display = 'none';
     document.getElementById('designationCustom').style.display = 'none';
@@ -1092,6 +1117,15 @@
       document.getElementById('email').value = emp.email || '';
       document.getElementById('address').value = emp.address || '';
       document.getElementById('uanNumber').value = emp.uanNumber || '';
+      // Show existing photo in the top photo box
+      if (emp.photo) {
+        const pp = document.getElementById('photoPreview');
+        const ph = document.getElementById('photoPlaceholder');
+        const fn = document.getElementById('photoFileName');
+        pp.src = emp.photo; pp.style.display = 'block';
+        if (ph) ph.style.display = 'none';
+        if (fn) fn.textContent = 'Current photo';
+      }
       document.getElementById('monthlySalary').value = emp.monthlySalary || Math.round(emp.ctcAnnual / 12) || '';
       document.getElementById('ctcAnnual').value = emp.ctcAnnual || '';
       document.getElementById('paymentMode').value = emp.paymentMode || 'Bank Transfer';
