@@ -23,38 +23,57 @@
   const isSup   = role === 'supervisor';
   const isAdminOrL1 = isAdmin || isL1;
 
-  function can(...roles) { return roles.includes(role); }
+  // ── Fetch Masters permissions for non-admin roles ─────────────
+  let allowedKeys = null; // null = no Masters filter (admin)
+  if (!isAdmin) {
+    try {
+      const res = await fetch('/api/masters/role');
+      const data = await res.json();
+      if (data.success) {
+        const roleData = data.masters.find(m => m.value.toLowerCase() === role.toLowerCase());
+        allowedKeys = roleData ? (roleData.permissions || []) : [];
+      }
+    } catch (e) {
+      allowedKeys = null; // on error fall back to role-only logic
+    }
+  }
+
+  function isAllowed(item) {
+    if (!item.show) return false;
+    if (allowedKeys === null || !item.permKey) return true;
+    return allowedKeys.includes(item.permKey);
+  }
 
   // ── Nav structure ─────────────────────────────────────────────
   const NAV = [
     { section: 'Main' },
-    { label: 'Dashboard',      href: '/dashboard',    icon: 'dashboard',   show: true },
-    { label: 'Employees',      href: '/employees',    icon: 'employees',   show: !isSup },
-    { label: 'Payroll',        href: '/payroll',      icon: 'payroll',     show: !isSup },
-    { label: 'Payroll Status', href: '/payroll-status', icon: 'status',    show: !isSup },
-    { label: 'Payslip',        href: '/payslip',      icon: 'payslip',     show: true },
-    { label: 'Attendance',     href: '/attendance',   icon: 'attendance',  show: true },
+    { label: 'Dashboard',      href: '/dashboard',          icon: 'dashboard',   show: true,                       permKey: 'dashboard' },
+    { label: 'Employees',      href: '/employees',          icon: 'employees',   show: !isSup,                     permKey: 'employees' },
+    { label: 'Payroll',        href: '/payroll',            icon: 'payroll',     show: !isSup,                     permKey: 'payroll' },
+    { label: 'Payroll Status', href: '/payroll-status',     icon: 'status',      show: !isSup,                     permKey: 'payroll' },
+    { label: 'Payslip',        href: '/payslip',            icon: 'payslip',     show: true,                       permKey: 'payslip' },
+    { label: 'Attendance',     href: '/attendance',         icon: 'attendance',  show: true,                       permKey: 'attendance' },
     { section: 'HR & Finance' },
-    { label: 'Exits',          href: '/exits',        icon: 'exits',       show: !isAcct && !isSup },
-    { label: 'Loans',          href: '/loans',        icon: 'loans',       show: !isSup },
-    { label: 'Adjustments',    href: '/adjustments',  icon: 'adjustments', show: !isSup },
-    { label: 'OT',             href: '/ot',           icon: 'ot',          show: !isSup },
-    { label: 'Arrears',        href: '/arrears',      icon: 'arrears',     show: !isSup },
-    { label: 'TDS',            href: '/tds',          icon: 'tds',         show: !isSup },
-    { label: 'Extra Pay',      href: '/extra-pay',    icon: 'extrapay',    show: !isSup },
-    { label: 'Appraisals',     href: '/appraisals',   icon: 'appraisals',  show: !isSup },
-    { label: 'Reports',        href: '/reports',      icon: 'reports',     show: !isSup },
+    { label: 'Exits',          href: '/exits',              icon: 'exits',       show: !isAcct && !isSup,          permKey: 'exits' },
+    { label: 'Loans',          href: '/loans',              icon: 'loans',       show: !isSup,                     permKey: 'loans' },
+    { label: 'Adjustments',    href: '/adjustments',        icon: 'adjustments', show: !isSup,                     permKey: 'adjustments' },
+    { label: 'OT',             href: '/ot',                 icon: 'ot',          show: !isSup,                     permKey: 'ot' },
+    { label: 'Arrears',        href: '/arrears',            icon: 'arrears',     show: !isSup,                     permKey: 'arrears' },
+    { label: 'TDS',            href: '/tds',                icon: 'tds',         show: !isSup,                     permKey: 'tds' },
+    { label: 'Extra Pay',      href: '/extra-pay',          icon: 'extrapay',    show: !isSup,                     permKey: 'extra-pay' },
+    { label: 'Appraisals',     href: '/appraisals',         icon: 'appraisals',  show: !isSup,                     permKey: 'appraisals' },
+    { label: 'Reports',        href: '/reports',            icon: 'reports',     show: !isSup,                     permKey: 'reports' },
     { section: 'Administration' },
-    { label: 'Submissions',    href: '/submissions',  icon: 'submissions', show: isAdmin || isMgt },
-    { label: 'Masters',        href: '/masters',      icon: 'masters',     show: isAdmin || isMgt },
-    { label: 'School Info',    href: '/school-info',  icon: 'school',      show: isAdmin || isMgt },
-    { label: 'Bank Details',   href: '/bank-details', icon: 'bank',        show: isAdmin || isMgt },
-    { label: 'Supervisor Map', href: '/supervisor-mapping', icon: 'supervisor', show: isAdmin || isMgt || isAcct },
-    { label: 'ID Cards',       href: '/id-cards',     icon: 'idcard',      show: isAdmin || isMgt },
-    { label: 'Photo Task',     href: '/photo-task',   icon: 'photo',       show: isAdmin || isMgt },
-    { label: 'Audit Log',      href: '/audit-log',    icon: 'audit',       show: isAdminOrL1 },
-    { label: 'Settings',       href: '/settings',     icon: 'settings',    show: isAdminOrL1 },
-    { label: 'Users',          href: '/users',        icon: 'users',       show: isAdmin || isAcct },
+    { label: 'Submissions',    href: '/submissions',        icon: 'submissions', show: isAdmin || isMgt,           permKey: 'submissions' },
+    { label: 'Masters',        href: '/masters',            icon: 'masters',     show: isAdmin || isMgt,           permKey: 'masters' },
+    { label: 'School Info',    href: '/school-info',        icon: 'school',      show: isAdmin || isMgt,           permKey: 'school-info' },
+    { label: 'Bank Details',   href: '/bank-details',       icon: 'bank',        show: isAdmin || isMgt,           permKey: 'bank-details' },
+    { label: 'Supervisor Map', href: '/supervisor-mapping', icon: 'supervisor',  show: isAdmin || isMgt || isAcct, permKey: 'supervisor-mapping' },
+    { label: 'ID Cards',       href: '/id-cards',           icon: 'idcard',      show: isAdmin || isMgt,           permKey: 'id-cards' },
+    { label: 'Photo Task',     href: '/photo-task',         icon: 'photo',       show: isAdmin || isMgt,           permKey: 'photo-task' },
+    { label: 'Audit Log',      href: '/audit-log',          icon: 'audit',       show: isAdminOrL1 },
+    { label: 'Settings',       href: '/settings',           icon: 'settings',    show: isAdminOrL1,                permKey: 'settings' },
+    { label: 'Users',          href: '/users',              icon: 'users',       show: isAdmin || isAcct,          permKey: 'users' },
   ];
 
   const currentPath = window.location.pathname.replace(/\/$/, '') || '/';
@@ -70,20 +89,27 @@
   }
 
   // ── Sidebar HTML ──────────────────────────────────────────────
+  // Build allowed items first so we can skip empty sections
+  const visibleItems = NAV.map(item => ({
+    ...item,
+    visible: item.section ? false : isAllowed(item)
+  }));
+
   let sidebarHtml = '<nav class="sidebar-nav">';
-  let lastWasSection = false;
-  for (const item of NAV) {
-    if (!item.show && !item.section) continue;
+  for (let i = 0; i < visibleItems.length; i++) {
+    const item = visibleItems[i];
     if (item.section) {
-      sidebarHtml += `<div class="nav-section-label">${item.section}</div>`;
-      lastWasSection = true;
-    } else if (item.show) {
+      // Only render section label if at least one following item is visible
+      const hasVisible = visibleItems.slice(i + 1).some(n => !n.section && n.visible);
+      if (hasVisible) {
+        sidebarHtml += `<div class="nav-section-label">${item.section}</div>`;
+      }
+    } else if (item.visible) {
       const isActive = currentPath === item.href || currentPath.startsWith(item.href + '/');
       sidebarHtml += `<a href="${item.href}" class="nav-item${isActive ? ' active' : ''}">
         ${svgUse(item.icon, 16)}
         <span class="nav-item-label">${item.label}</span>
       </a>`;
-      lastWasSection = false;
     }
   }
   sidebarHtml += '</nav>';
