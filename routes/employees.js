@@ -913,11 +913,23 @@ router.post('/upload-excel', isLoggedIn, isSystemAdmin, excelUpload.single('file
 });
 
 // BULK UPDATE SUPERVISOR
-router.patch('/bulk-update-supervisor', isLoggedIn, isAdmin, async (req, res) => {
+router.patch('/bulk-update-supervisor', isLoggedIn, async (req, res) => {
   try {
+    const requester = req.session.user;
+    if (requester.role !== 'admin' && requester.role !== 'management' && requester.role !== 'accountant') {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
     const { employeeIds, supervisorId, supervisorName } = req.body;
     if (!employeeIds || !employeeIds.length) {
       return res.status(400).json({ success: false, message: 'No employees selected' });
+    }
+    // Accountants can only assign to supervisors or themselves; never to admin/management
+    if (requester.role === 'accountant' && supervisorId) {
+      const User = require('../models/User');
+      const target = await User.findById(supervisorId).select('role');
+      if (!target || (target.role !== 'supervisor' && target._id.toString() !== requester.id)) {
+        return res.status(403).json({ success: false, message: 'Accountants can only assign to supervisors or themselves' });
+      }
     }
     await Employee.updateMany(
       { _id: { $in: employeeIds } },

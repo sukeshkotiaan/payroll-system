@@ -7,17 +7,29 @@ const { safeError } = require('../middleware/security');
 const ALL_MENUS = [
   { key: 'dashboard', label: '📊 Dashboard' },
   { key: 'employees', label: '👥 Employee Master' },
+  { key: 'submissions', label: '📋 Employee Submissions' },
   { key: 'exits', label: '🚪 Exit Management' },
   { key: 'attendance', label: '📋 Attendance Upload' },
   { key: 'payroll', label: '💰 Payroll Processing' },
-  { key: 'arrears', label: '📊 Arrears & Advances' },
+  { key: 'adjustments', label: '🧮 Adjustments' },
+  { key: 'appraisals', label: '📈 Appraisals' },
+  { key: 'loans', label: '💳 Loans' },
+  { key: 'ot', label: '⏱️ OT' },
+  { key: 'arrears', label: '📊 Arrears' },
+  { key: 'tds', label: '💸 TDS' },
+  { key: 'extra-pay', label: '➕ Extra Pay' },
   { key: 'payroll-approval', label: '✅ Payroll Approval' },
   { key: 'payslip', label: '🧾 Payslip' },
+  { key: 'id-cards', label: '🪪 ID Cards' },
+  { key: 'photo-task', label: '📸 Photo Collection' },
   { key: 'archive', label: '📁 Archive' },
-  { key: 'reports', label: '📊 Reports' },
+  { key: 'reports', label: '📈 Reports' },
   { key: 'masters', label: '📋 Masters' },
   { key: 'settings', label: '⚙️ Settings' },
-  { key: 'users', label: '👤 User Management' }
+  { key: 'school-info', label: '🏫 School Info' },
+  { key: 'users', label: '👤 User Management' },
+  { key: 'supervisor-mapping', label: '🗂️ Supervisor Mapping' },
+  { key: 'bank-details', label: '🏦 Bank Details' }
 ];
 
 const seedMasters = async () => {

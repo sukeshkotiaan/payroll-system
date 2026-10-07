@@ -188,6 +188,11 @@
   <div class="container">
     <div class="alert alert-success" id="listAlertSuccess"></div>
     <div class="alert alert-error" id="listAlertError"></div>
+    <!-- My Team tab toggle (accountant only — shown after checkAuth) -->
+    <div id="myTeamTabBar" style="display:none;margin-bottom:12px;">
+      <button id="btnAllRecords" onclick="setAttView('all')" style="padding:8px 18px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;background:#1a73e8;color:white;margin-right:6px;">📋 All Records</button>
+      <button id="btnMyTeam" onclick="setAttView('myteam')" style="padding:8px 18px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;background:white;color:#666;box-shadow:0 1px 4px rgba(0,0,0,0.1);">👥 My Team</button>
+    </div>
     <div class="card">
       <div class="card-body">
         <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
@@ -258,6 +263,17 @@
     <div id="viewEmpty" class="card">
       <div class="card-body">
         <div class="empty-state" id="viewEmptyMsg">Select month and year to view attendance</div>
+      </div>
+    </div>
+
+    <!-- MY TEAM card — accountant only -->
+    <div id="myTeamCard" class="card" style="display:none;margin-top:16px;">
+      <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+        <h3>👥 My Team Attendance</h3>
+        <span id="myTeamCount" style="font-size:12px;color:#666;"></span>
+      </div>
+      <div id="myTeamBody" style="padding:15px;">
+        <div class="empty-state">Select month and year to view your team</div>
       </div>
     </div>
   </div>
@@ -548,8 +564,123 @@
   }
 
   function setupAccountantView() {
-    // Branch access enforced client-side in loadAttendanceList
-    // loadAttendanceList is already called from window.onload after setDefaultMonthYear
+    // Show My Team tab bar for accountants
+    const tabBar = document.getElementById('myTeamTabBar');
+    if (tabBar) tabBar.style.display = 'block';
+  }
+
+  let attViewMode = 'all'; // 'all' | 'myteam'
+
+  function setAttView(mode) {
+    attViewMode = mode;
+    const btnAll = document.getElementById('btnAllRecords');
+    const btnMy = document.getElementById('btnMyTeam');
+    const gridCard = document.getElementById('viewGridCard');
+    const emptyDiv = document.getElementById('viewEmpty');
+    const myTeamCard = document.getElementById('myTeamCard');
+    if (btnAll) { btnAll.style.background = mode === 'all' ? '#1a73e8' : 'white'; btnAll.style.color = mode === 'all' ? 'white' : '#666'; }
+    if (btnMy) { btnMy.style.background = mode === 'myteam' ? '#1a73e8' : 'white'; btnMy.style.color = mode === 'myteam' ? 'white' : '#666'; }
+    if (mode === 'myteam') {
+      if (gridCard) gridCard.style.display = 'none';
+      if (emptyDiv) emptyDiv.style.display = 'none';
+      if (myTeamCard) myTeamCard.style.display = 'block';
+      loadMyTeam();
+    } else {
+      if (myTeamCard) myTeamCard.style.display = 'none';
+      loadAttendanceList();
+    }
+  }
+
+  async function loadMyTeam() {
+    const month = document.getElementById('filterMonth').value;
+    const year = document.getElementById('filterYear').value;
+    const myTeamBody = document.getElementById('myTeamBody');
+    const myTeamCount = document.getElementById('myTeamCount');
+
+    if (!month || !year) {
+      myTeamBody.innerHTML = '<div class="empty-state">Select month and year above to view your team</div>';
+      return;
+    }
+    myTeamBody.innerHTML = '<div class="empty-state">Loading...</div>';
+
+    try {
+      const empData = await fetch('/api/employees?all=true').then(r => r.json());
+      if (!empData.success) { myTeamBody.innerHTML = '<div class="empty-state">Failed to load employees</div>'; return; }
+
+      const team = empData.employees.filter(function(e) {
+        return e.isActive && e.supervisorId && e.supervisorId.toString() === currentUser.id;
+      });
+
+      if (!team.length) {
+        myTeamBody.innerHTML = '<div class="empty-state">No employees mapped to you. Use <a href="/supervisor-mapping" style="color:#1a73e8;">Supervisor Mapping</a> to assign your team.</div>';
+        if (myTeamCount) myTeamCount.textContent = '';
+        return;
+      }
+
+      if (myTeamCount) myTeamCount.textContent = team.length + ' employees';
+
+      // Get unique groups
+      var groups = {};
+      team.forEach(function(emp) {
+        var gkey = emp.location + '|' + emp.section + '|' + emp.profile;
+        if (!groups[gkey]) {
+          var sname = emp.section === 'State' ? 'Xaviers' : 'Global';
+          groups[gkey] = { location: emp.location, section: emp.section, profile: emp.profile,
+            groupName: sname + ' ' + emp.location + ' ' + emp.profile, attId: null, status: '' };
+        }
+      });
+
+      // Fetch attendance status per group
+      await Promise.all(Object.keys(groups).map(async function(gkey) {
+        var g = groups[gkey];
+        try {
+          var attRes = await fetch('/api/attendance?month=' + encodeURIComponent(month) + '&year=' + year +
+            '&location=' + encodeURIComponent(g.location) + '&section=' + encodeURIComponent(g.section) +
+            '&profile=' + encodeURIComponent(g.profile)).then(function(r) { return r.json(); });
+          if (attRes.success && attRes.records && attRes.records.length > 0) {
+            g.attId = attRes.records[0]._id;
+            g.status = attRes.records[0].status || 'Draft';
+          }
+        } catch(ex) {}
+      }));
+
+      var statusColors = { Draft:'#fbbc04', Submit:'#1a73e8', Approved:'#34a853', Locked:'#666' };
+      var rows = team.map(function(emp) {
+        var gkey = emp.location + '|' + emp.section + '|' + emp.profile;
+        var g = groups[gkey];
+        var sname = emp.section === 'State' ? 'Xaviers' : 'Global';
+        var gname = sname + ' ' + emp.location + ' ' + emp.profile;
+        var statusHtml = g.attId
+          ? '<span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:' + (statusColors[g.status]||'#eee') + ';color:white;">' + (g.status||'Draft') + '</span>'
+          : '<span style="color:#999;font-size:12px;">No record</span>';
+        var btn = g.attId
+          ? '<button class="btn-primary" style="padding:4px 10px;font-size:11px;" onclick="editAttendance(\'' + g.attId + '\')">📋 Fill</button>'
+          : '<button class="btn-secondary" style="padding:4px 10px;font-size:11px;" onclick="showNewView()">+ New</button>';
+        return '<tr>' +
+          '<td><strong>' + (emp.ein||'—') + '</strong></td>' +
+          '<td>' + emp.employeeName + '</td>' +
+          '<td>' + (emp.designation||'—') + '</td>' +
+          '<td>' + emp.location + '</td>' +
+          '<td>' + gname + '</td>' +
+          '<td>' + statusHtml + '</td>' +
+          '<td>' + btn + '</td>' +
+          '</tr>';
+      }).join('');
+
+      myTeamBody.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:13px;">' +
+        '<thead><tr style="background:#f8f9fa;">' +
+        '<th style="padding:10px 12px;text-align:left;font-weight:600;color:#555;border-bottom:1px solid #eee;">EIN</th>' +
+        '<th style="padding:10px 12px;text-align:left;font-weight:600;color:#555;border-bottom:1px solid #eee;">Name</th>' +
+        '<th style="padding:10px 12px;text-align:left;font-weight:600;color:#555;border-bottom:1px solid #eee;">Designation</th>' +
+        '<th style="padding:10px 12px;text-align:left;font-weight:600;color:#555;border-bottom:1px solid #eee;">Location</th>' +
+        '<th style="padding:10px 12px;text-align:left;font-weight:600;color:#555;border-bottom:1px solid #eee;">Group</th>' +
+        '<th style="padding:10px 12px;text-align:left;font-weight:600;color:#555;border-bottom:1px solid #eee;">Status</th>' +
+        '<th style="padding:10px 12px;text-align:left;font-weight:600;color:#555;border-bottom:1px solid #eee;"></th>' +
+        '</tr></thead>' +
+        '<tbody>' + rows + '</tbody></table>';
+    } catch(e) {
+      myTeamBody.innerHTML = '<div class="empty-state">Error: ' + e.message + '</div>';
+    }
   }
 
   function hasAccessToLocation(location) {
@@ -762,6 +893,9 @@
   }
 
   async function loadAttendanceList() {
+    // In My Team mode, refresh My Team view instead
+    if (attViewMode === 'myteam') { loadMyTeam(); return; }
+
     const gen = ++_listGeneration;
     const month    = document.getElementById('filterMonth').value;
     const year     = document.getElementById('filterYear').value;

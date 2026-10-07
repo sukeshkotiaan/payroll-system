@@ -238,6 +238,17 @@
         }
         return u.role === 'supervisor';
       });
+      // Accountants can also map employees to themselves ("My Team")
+      if (role === 'accountant') {
+        supervisors.unshift({
+          _id: currentUser.id,
+          fullName: currentUser.fullName + ' (My Team)',
+          username: currentUser.username,
+          branches: currentUser.branches || [],
+          role: 'accountant',
+          isActive: true
+        });
+      }
 
       const empRes = await fetch('/api/employees?all=true');
       const empData = await empRes.json();

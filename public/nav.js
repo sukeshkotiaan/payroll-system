@@ -49,7 +49,7 @@
     { label: 'Masters',        href: '/masters',      icon: 'masters',     show: isAdmin || isMgt },
     { label: 'School Info',    href: '/school-info',  icon: 'school',      show: isAdmin || isMgt },
     { label: 'Bank Details',   href: '/bank-details', icon: 'bank',        show: isAdmin || isMgt },
-    { label: 'Supervisor Map', href: '/supervisor-mapping', icon: 'supervisor', show: isAdmin || isMgt },
+    { label: 'Supervisor Map', href: '/supervisor-mapping', icon: 'supervisor', show: isAdmin || isMgt || isAcct },
     { label: 'ID Cards',       href: '/id-cards',     icon: 'idcard',      show: isAdmin || isMgt },
     { label: 'Photo Task',     href: '/photo-task',   icon: 'photo',       show: isAdmin || isMgt },
     { label: 'Audit Log',      href: '/audit-log',    icon: 'audit',       show: isAdminOrL1 },
