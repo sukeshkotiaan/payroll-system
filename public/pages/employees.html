@@ -1388,13 +1388,31 @@
   }
 
   async function exportEmployees() {
+    const btn = document.getElementById('exportBtn');
+    const origText = btn ? btn.innerHTML : '';
+    if (btn) { btn.innerHTML = '⏳ Exporting…'; btn.disabled = true; }
     try {
-      const res = await fetch('/api/employees?all=true');
-      const data = await res.json();
-      if (!data.success) return;
-      const employees = data.employees;
+      if (typeof XLSX === 'undefined') throw new Error('Excel library not loaded yet — please wait a moment and try again');
+
+      // Fetch employees and all exits in parallel (single call each)
+      const [empRes, exitRes] = await Promise.all([
+        fetch('/api/employees?all=true'),
+        fetch('/api/exits')
+      ]);
+      const [empData, exitData] = await Promise.all([empRes.json(), exitRes.json()]);
+      if (!empData.success) throw new Error(empData.message || 'Failed to load employees');
+
+      // Build exit lookup map: employeeId → latest exit record
+      const exitMap = {};
+      if (exitData.success) {
+        for (const ex of exitData.exits) {
+          const id = ex.employeeId?.toString();
+          if (id && !exitMap[id]) exitMap[id] = ex; // sorted desc so first = latest
+        }
+      }
+
+      const employees = empData.employees;
       const isAcct = currentUser.role === 'accountant';
-      // Header row — PAN/Aadhaar excluded for accountants (backend returns them blank)
       const headers = ['EIN','Title','Name','Gender','Designation','Department','Location','Section','Profile',
         'Date of Birth','Age','Date of Joining','Exit Date',
         ...(isAcct ? [] : ['PAN','Aadhaar']),
@@ -1409,16 +1427,13 @@
         const dob = emp.dateOfBirth ? new Date(emp.dateOfBirth) : null;
         const age = dob ? new Date().getFullYear() - dob.getFullYear() : '';
         const quals = (emp.qualifications || []).map(q => q.degree + '|' + q.institution + '|' + q.yearOfPassing + '|' + q.grade).join('; ');
-        let exitReason='', exitLWD='', noticePeriod='', exitFnF='', exitRelieving='', exitRehire='';
-        try {
-          const exitRes = await fetch('/api/exits?employeeId=' + emp._id);
-          const exitData = await exitRes.json();
-          if (exitData.success && exitData.exits.length > 0) {
-            const ex = exitData.exits[0];
-            exitReason = ex.reasonForLeaving || ''; exitLWD = ex.lastWorkingDate ? new Date(ex.lastWorkingDate).toLocaleDateString('en-IN') : '';
-            noticePeriod = ex.noticePeriod || ''; exitFnF = ex.fnfSettlement || ''; exitRelieving = ex.relievingLetter || ''; exitRehire = ex.eligibleForRehire || '';
-          }
-        } catch(e) {}
+        const ex = exitMap[emp._id?.toString()] || {};
+        const exitReason = ex.reasonForLeaving || '';
+        const exitLWD = ex.lastWorkingDate ? new Date(ex.lastWorkingDate).toLocaleDateString('en-IN') : '';
+        const noticePeriod = ex.noticePeriod || '';
+        const exitFnF = ex.fnfSettlement || '';
+        const exitRelieving = ex.relievingLetter || '';
+        const exitRehire = ex.eligibleForRehire || '';
         rows.push([
           emp.ein||'', emp.title||'', emp.employeeName||'', emp.gender||'',
           emp.designation||'', emp.department||'', emp.location||'', emp.section||'', emp.profile||'',
@@ -1438,7 +1453,11 @@
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Employees');
       XLSX.writeFile(wb, 'Employees_' + new Date().toLocaleDateString('en-IN').replace(/\//g,'-') + '.xlsx');
-    } catch(e) { alert('Export error: ' + e.message); }
+    } catch(e) {
+      showAlert('alertError', 'Export failed: ' + e.message);
+    } finally {
+      if (btn) { btn.innerHTML = origText; btn.disabled = false; }
+    }
   }
 
   function showAlert(id, msg) {
