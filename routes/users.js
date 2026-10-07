@@ -116,8 +116,12 @@ router.put('/:id', isLoggedIn, isAdmin, async (req, res) => {
   }
 });
 
-// RESET password
-router.patch('/:id/reset-password', isLoggedIn, isAdmin, async (req, res) => {
+// RESET password — admin always; accountant may reset supervisor accounts within their branches
+router.patch('/:id/reset-password', isLoggedIn, async (req, res) => {
+  const requester = req.session.user;
+  if (requester.role !== 'admin' && requester.role !== 'accountant') {
+    return res.status(403).json({ success: false, message: 'Access denied' });
+  }
   try {
     const { newPassword } = req.body;
     if (!newPassword || newPassword.length < 8) {
@@ -126,7 +130,20 @@ router.patch('/:id/reset-password', isLoggedIn, isAdmin, async (req, res) => {
         message: 'Password must be at least 8 characters'
       });
     }
-    const targetUser = await User.findById(req.params.id).select('username fullName email role');
+    const targetUser = await User.findById(req.params.id).select('username fullName email role branches branch');
+    if (requester.role === 'accountant') {
+      if (targetUser?.role !== 'supervisor') {
+        return res.status(403).json({ success: false, message: 'Accountants can only reset supervisor passwords' });
+      }
+      const acctBranches = requester.branches || (requester.branch ? [requester.branch] : []);
+      if (!acctBranches.includes('all')) {
+        const supBranches = targetUser.branches || (targetUser.branch ? [targetUser.branch] : []);
+        const overlap = supBranches.some(b => acctBranches.includes(b));
+        if (!overlap) {
+          return res.status(403).json({ success: false, message: 'Supervisor is not in your branch' });
+        }
+      }
+    }
     if (!targetUser) return res.status(404).json({ success: false, message: 'User not found' });
 
     const hashedPassword = await bcrypt.hash(newPassword, 12);

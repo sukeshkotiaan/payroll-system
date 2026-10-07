@@ -626,7 +626,7 @@
         <td>${u.lastLogin ? new Date(u.lastLogin).toLocaleDateString('en-IN') : 'Never'}</td>
         <td>
           ${!isAccountant ? `<button class="btn-warning" onclick="editUser('${u._id}')">Edit</button>` : ''}
-          ${!isAccountant ? `<button class="btn-primary" style="margin-left:4px;padding:6px 12px;font-size:12px;"
+          ${(!isAccountant || u.role === 'supervisor') ? `<button class="btn-primary" style="margin-left:4px;padding:6px 12px;font-size:12px;"
             onclick="openResetModal('${u._id}', '${u.fullName}')">
             🔒 Reset Password
           </button>` : ''}
