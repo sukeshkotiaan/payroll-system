@@ -39,8 +39,11 @@
   }
 
   function isAllowed(item) {
-    if (!item.show) return false;
-    if (allowedKeys === null || !item.permKey) return true;
+    // Items without a permKey use only the role-based show gate (e.g. Audit Log)
+    if (!item.permKey) return item.show;
+    // Admin: role gate is the only check
+    if (allowedKeys === null) return item.show;
+    // Non-admin with Masters: permKey grant is the sole gate (Masters overrides role defaults)
     return allowedKeys.includes(item.permKey);
   }
 
