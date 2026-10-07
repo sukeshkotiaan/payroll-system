@@ -547,7 +547,7 @@
   }
 
   async function checkExportPermission() {
-    if (currentUser.role === 'admin' || currentUser.role === 'management') {
+    if (currentUser.role === 'admin' || currentUser.role === 'management' || currentUser.role === 'accountant') {
       document.getElementById('exportBtn').style.display = 'inline-block';
       return;
     }
